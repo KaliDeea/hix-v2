@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores company information and verification status for businesses.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "companyName": { "type": "string" },
+        "vatNumber": { "type": "string" },
+        "isVetted": { "type": "boolean" },
+        "isVatVerified": { "type": "boolean" },
+        "isSuspended": { "type": "boolean" },
+        "suspensionReason": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin", "superadmin"] },
+        "logoUrl": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "revenue": { "type": "number" },
+        "commissionsPaid": { "type": "number" }
+      },
+      "required": ["uid", "email", "companyName", "role"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "User reports against other users for terms violations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "reportedUserId": { "type": "string" },
+        "reportedUserName": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "listingId": { "type": "string" },
+        "reason": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "resolved", "dismissed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporterId", "reportedUserId", "reason", "description"]
+    },
+    "Listing": {
+      "title": "Listing",
+      "description": "Industrial assets listed for sale.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "quantity": { "type": "number" },
+        "category": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "co2Savings": { "type": "number" },
+        "status": { "type": "string", "enum": ["available", "sold"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sellerId", "title", "price", "quantity", "category"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Records of completed trades between buyers and sellers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "listingId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "amount": { "type": "number" },
+        "quantity": { "type": "number" },
+        "buyerCommission": { "type": "number" },
+        "sellerCommission": { "type": "number" },
+        "co2Saved": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "certificateUrl": { "type": "string" }
+      },
+      "required": ["listingId", "buyerId", "sellerId", "amount", "quantity"]
+    },
+    "HaulingQuoteRequest": {
+      "title": "Hauling Quote Request",
+      "description": "Requests for transport quotes from vetted haulers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "haulerId": { "type": "string" },
+        "haulerName": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "origin": { "type": "string" },
+        "destination": { "type": "string" },
+        "assetDetails": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "responded", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["haulerId", "userId", "origin", "destination", "assetDetails"]
+    },
+    "HaulingPartnerApplication": {
+      "title": "Hauling Partner Application",
+      "description": "Applications from hauling companies to become vetted partners.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyName": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "description": { "type": "string" },
+        "fleetSize": { "type": "number" },
+        "specializations": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyName", "contactEmail", "phoneNumber", "description"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Direct messages between buyers and sellers regarding listings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "listingId": { "type": "string" },
+        "listingTitle": { "type": "string" },
+        "content": { "type": "string" },
+        "status": { "type": "string", "enum": ["unread", "read"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "receiverId", "listingId", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/listings/{listingId}": {
+      "schema": "Listing",
+      "description": "Industrial asset listings"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Trade transaction records"
+    },
+    "/hauling_quotes/{quoteId}": {
+      "schema": "HaulingQuoteRequest",
+      "description": "Hauling quote requests"
+    },
+    "/hauling_applications/{applicationId}": {
+      "schema": "HaulingPartnerApplication",
+      "description": "Hauling partner applications"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Direct messages"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "User reports"
+    }
+  }
+}

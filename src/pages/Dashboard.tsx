@@ -1,0 +1,427 @@
+import React, { useState, useEffect } from "react";
+import { useAuth, db, onSnapshot, collection, query, where, handleFirestoreError, OperationType } from "@/lib/firebase";
+import { Listing, Transaction, Report } from "@/types";
+import { Button } from "@/components/ui/button";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle,
+  CardFooter
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  LayoutDashboard, 
+  Plus, 
+  TrendingUp, 
+  ShoppingCart, 
+  DollarSign, 
+  Leaf,
+  Download,
+  ExternalLink,
+  AlertTriangle,
+  Loader2
+} from "lucide-react";
+import { useSearchParams, Link } from "react-router-dom";
+import { format } from "date-fns";
+import { generateTradeCertificate } from "@/lib/pdf";
+import { toast } from "sonner";
+import { addDoc, serverTimestamp } from "firebase/firestore";
+
+export default function Dashboard() {
+  const { user, profile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [myListings, setMyListings] = useState<Listing[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [reportData, setReportData] = useState({ reason: "", description: "" });
+  const [isReporting, setIsReporting] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("session_id")) {
+      toast.success("Payment successful! Your trade has been recorded.", {
+        duration: 5000,
+      });
+      // Remove the session_id from URL without refreshing
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const listingsPath = "listings";
+    const listingsQuery = query(collection(db, listingsPath), where("sellerId", "==", user.uid));
+    const unsubListings = onSnapshot(listingsQuery, (snapshot) => {
+      setMyListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Listing[]);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, listingsPath));
+
+    const transPath = "transactions";
+    const transQuery = query(collection(db, transPath), where("buyerId", "==", user.uid));
+    const unsubTrans = onSnapshot(transQuery, (snapshot) => {
+      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[]);
+      setLoading(false);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, transPath));
+
+    return () => {
+      unsubListings();
+      unsubTrans();
+    };
+  }, [user]);
+
+  const handleReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !selectedTransaction) return;
+
+    setIsReporting(true);
+    const path = "reports";
+    try {
+      await addDoc(collection(db, path), {
+        reporterId: user.uid,
+        reporterName: profile?.companyName || user.email,
+        reportedUserId: selectedTransaction.sellerId,
+        reportedUserName: "Seller", // In a real app, we'd have the seller's name in the transaction
+        transactionId: selectedTransaction.id,
+        reason: reportData.reason,
+        description: reportData.description,
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+      toast.success("Report submitted to administration.");
+      setIsReportModalOpen(false);
+      setReportData({ reason: "", description: "" });
+      setSelectedTransaction(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, path);
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
+  const stats = {
+    revenue: profile?.revenue || 0,
+    commissions: profile?.commissionsPaid || 0,
+    co2Saved: transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0),
+    activeListings: myListings.length
+  };
+
+  if (!user) {
+    return (
+      <div className="container py-20 text-center">
+        <h2 className="text-2xl font-bold">Please log in to view your dashboard.</h2>
+        <Button className="mt-4 rounded-full" asChild><Link to="/">Go Home</Link></Button>
+      </div>
+    );
+  }
+
+  if (loading) return <div className="container py-20 text-center">Loading dashboard...</div>;
+
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Manage your industrial exchange activities.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {!profile?.isVatVerified && (
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-3 py-1">
+              Unverified VAT
+            </Badge>
+          )}
+          <Button className="rounded-full gap-2" asChild>
+            <Link to="/create-listing">
+              <Plus className="h-4 w-4" />
+              New Listing
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <Card className="glass">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">£{stats.revenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Generated from sales</p>
+          </CardContent>
+        </Card>
+        <Card className="glass">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Commissions Paid</CardTitle>
+            <TrendingUp className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">£{stats.commissions.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">HiX platform fees</p>
+          </CardContent>
+        </Card>
+        <Card className="glass">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">CO2 Saved</CardTitle>
+            <Leaf className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.co2Saved} kg</div>
+            <p className="text-xs text-muted-foreground">Sustainability impact</p>
+          </CardContent>
+        </Card>
+        <Card className="glass">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeListings}</div>
+            <p className="text-xs text-muted-foreground">Items in marketplace</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="glass p-1 rounded-full">
+          <TabsTrigger value="overview" className="rounded-full px-6">Overview</TabsTrigger>
+          <TabsTrigger value="listings" className="rounded-full px-6">My Listings</TabsTrigger>
+          <TabsTrigger value="history" className="rounded-full px-6">Trade History</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="glass">
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>Your latest trades and listing updates.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {transactions.length > 0 ? (
+                  <div className="space-y-4">
+                    {transactions.slice(0, 5).map((t) => (
+                      <div key={t.id} className="flex items-center justify-between border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Trade Completed</p>
+                          <p className="text-xs text-muted-foreground">{format(new Date(t.createdAt), 'PPP')}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-emerald-500">+£{t.amount.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground py-4">No recent activity found.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="glass">
+              <CardHeader>
+                <CardTitle>Sustainability Impact</CardTitle>
+                <CardDescription>Your contribution to the circular economy.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center py-6">
+                <div className="relative h-32 w-32 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin-slow"></div>
+                  <Leaf className="h-12 w-12 text-emerald-500" />
+                </div>
+                <div className="mt-4 text-center">
+                  <p className="text-2xl font-bold text-emerald-500">{stats.co2Saved} kg CO2</p>
+                  <p className="text-sm text-muted-foreground">Total carbon emissions saved</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="listings">
+          <Card className="glass">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>My Listings</CardTitle>
+                <CardDescription>Manage your industrial assets listed on HiX.</CardDescription>
+              </div>
+              <Button variant="outline" className="rounded-full" asChild>
+                <Link to="/marketplace">View Marketplace</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Asset</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {myListings.map((listing) => (
+                    <TableRow key={listing.id}>
+                      <TableCell className="font-medium">{listing.title}</TableCell>
+                      <TableCell>£{listing.price.toLocaleString()}</TableCell>
+                      <TableCell>{listing.quantity}</TableCell>
+                      <TableCell>
+                        <Badge variant={listing.status === 'available' ? 'default' : 'secondary'}>
+                          {listing.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to={`/listing/${listing.id}`}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {myListings.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                        You haven't listed any assets yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle>Trade History</CardTitle>
+              <CardDescription>A record of all your purchases and sales.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>CO2 Saved</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>{format(new Date(t.createdAt), 'MMM d, yyyy')}</TableCell>
+                      <TableCell className="font-mono text-xs">{t.id}</TableCell>
+                      <TableCell>£{t.amount.toLocaleString()}</TableCell>
+                      <TableCell className="text-emerald-500 font-medium">{t.co2Saved} kg</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="gap-2"
+                          onClick={() => {
+                            toast.info("Generating certificate...");
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                          PDF
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-muted-foreground hover:text-destructive gap-2"
+                          onClick={() => {
+                            setSelectedTransaction(t);
+                            setIsReportModalOpen(true);
+                          }}
+                        >
+                          <AlertTriangle className="h-4 w-4" />
+                          Report
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {transactions.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                        No trade history found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
+        <DialogContent className="glass sm:max-w-[425px]">
+          <form onSubmit={handleReport}>
+            <DialogHeader>
+              <DialogTitle>Report Transaction</DialogTitle>
+              <DialogDescription>
+                Report a dispute or violation related to this trade.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="reason">Reason for Report</Label>
+                <Input 
+                  id="reason" 
+                  placeholder="e.g., Item not as described, Logistics issue..." 
+                  value={reportData.reason}
+                  onChange={(e) => setReportData({...reportData, reason: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="report-desc">Detailed Description</Label>
+                <Textarea 
+                  id="report-desc" 
+                  placeholder="Provide more details about the violation..." 
+                  value={reportData.description}
+                  onChange={(e) => setReportData({...reportData, description: e.target.value})}
+                  className="h-32"
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" variant="destructive" className="w-full rounded-full" disabled={isReporting}>
+                {isReporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit Report
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

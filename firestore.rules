@@ -1,0 +1,258 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - uid: string (required) - Firebase Auth UID
+//   - email: string (required) - Company email
+//   - companyName: string (required) - Registered name
+//   - vatNumber: string (optional) - VAT registration
+//   - isVetted: boolean (required) - Admin approval status
+//   - isVatVerified: boolean (required) - VAT confirmation status
+//   - role: string (required) - 'user' or 'admin'
+//   - logoUrl: string (optional) - URL to company logo
+//   - revenue: number (required) - Total sales revenue
+//   - commissionsPaid: number (required) - Total HiX fees paid
+//   - createdAt: timestamp (required) - Account creation date
+//
+// Collection: listings
+// Document ID: {listingId}
+// Fields:
+//   - sellerId: string (required) - UID of seller
+//   - sellerName: string (required) - Name of seller company
+//   - title: string (required) - Asset title
+//   - description: string (required) - Asset details
+//   - price: number (required) - Price per unit
+//   - quantity: number (required) - Available units
+//   - category: string (required) - Industrial category
+//   - images: list (required) - URLs of asset images
+//   - co2Savings: number (required) - Estimated kg CO2 saved
+//   - status: string (required) - 'available' or 'sold'
+//   - createdAt: timestamp (required) - Listing date
+//
+// Collection: transactions
+// Document ID: {transactionId}
+// Fields:
+//   - listingId: string (required) - Reference to listing
+//   - buyerId: string (required) - UID of buyer
+//   - sellerId: string (required) - UID of seller
+//   - amount: number (required) - Total trade value
+//   - quantity: number (required) - Units traded
+//   - buyerCommission: number (required) - 3% fee
+//   - sellerCommission: number (required) - 7% fee
+//   - co2Saved: number (required) - Total CO2 impact
+//   - status: string (required) - 'pending', 'completed', 'cancelled'
+//   - createdAt: timestamp (required) - Trade date
+//   - certificateUrl: string (optional) - URL to PDF certificate
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email in ["admin@hix.co.uk", "superadmin@hix.co.uk"] ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin']));
+    }
+
+    function isVetted() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isVetted == true;
+    }
+
+    function isNotSuspended() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuspended == false;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'companyName', 'vatNumber', 'phoneNumber', 'isVetted', 'isVatVerified', 'isSuspended', 'suspensionReason', 'role', 'logoUrl', 'revenue', 'commissionsPaid', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.email == request.auth.token.email &&
+             data.companyName is string && data.companyName.size() > 0 && data.companyName.size() < 100 &&
+             data.role in ['user', 'admin', 'superadmin'] &&
+             data.isSuspended is bool &&
+             data.revenue is number &&
+             data.commissionsPaid is number;
+    }
+
+    function isValidListing(data) {
+      return hasOnlyAllowedFields(['sellerId', 'sellerName', 'title', 'description', 'price', 'quantity', 'category', 'images', 'co2Savings', 'status', 'createdAt']) &&
+             data.sellerId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.price is number && data.price >= 0 &&
+             data.quantity is number && data.quantity >= 0 &&
+             data.status in ['available', 'sold'];
+    }
+
+    function isValidHaulingQuote(data) {
+      return hasOnlyAllowedFields(['haulerId', 'haulerName', 'userId', 'userName', 'userEmail', 'origin', 'destination', 'assetDetails', 'status', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.origin is string && data.origin.size() > 0 && data.origin.size() < 500 &&
+             data.destination is string && data.destination.size() > 0 && data.destination.size() < 500 &&
+             data.assetDetails is string && data.assetDetails.size() > 0 && data.assetDetails.size() < 1000 &&
+             data.status in ['pending', 'responded', 'closed'];
+    }
+
+    function isValidHaulingApplication(data) {
+      return hasOnlyAllowedFields(['companyName', 'contactEmail', 'phoneNumber', 'description', 'fleetSize', 'specializations', 'status', 'createdAt']) &&
+             data.companyName is string && data.companyName.size() > 0 && data.companyName.size() < 200 &&
+             isValidEmail(data.contactEmail) &&
+             data.phoneNumber is string && data.phoneNumber.size() > 0 && data.phoneNumber.size() < 50 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 2000 &&
+             data.fleetSize is number && data.fleetSize >= 0 &&
+             data.status in ['pending', 'reviewed', 'approved', 'rejected'];
+    }
+
+    function isValidMessage(data) {
+      return hasOnlyAllowedFields(['senderId', 'senderName', 'receiverId', 'listingId', 'listingTitle', 'content', 'status', 'createdAt']) &&
+             data.senderId == request.auth.uid &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
+             data.status in ['unread', 'read'];
+    }
+
+    function isValidReport(data) {
+      return hasOnlyAllowedFields(['reporterId', 'reporterName', 'reportedUserId', 'reportedUserName', 'transactionId', 'listingId', 'reason', 'description', 'status', 'createdAt']) &&
+             data.reporterId == request.auth.uid &&
+             data.reportedUserId is string &&
+             data.reason is string && data.reason.size() > 0 &&
+             data.description is string && data.description.size() > 0 &&
+             data.status in ['pending', 'reviewed', 'resolved', 'dismissed'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /reports/{reportId} {
+      // Only reporter or admin can read
+      allow read: if isAuthenticated() && (resource.data.reporterId == request.auth.uid || isAdmin());
+      // Any non-suspended user can report
+      allow create: if isNotSuspended() && isValidReport(request.resource.data);
+      // Only admin can update
+      allow update: if isAdmin();
+    }
+
+    match /messages/{messageId} {
+      // Only sender or receiver can read
+      allow read: if isAuthenticated() && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid || isAdmin());
+      
+      // Any authenticated non-suspended user can send a message
+      allow create: if isNotSuspended() && isValidMessage(request.resource.data);
+      
+      // Receiver can mark as read
+      allow update: if isNotSuspended() && (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) || isAdmin();
+    }
+
+    match /hauling_quotes/{quoteId} {
+      // Users can read their own quotes. Admins can read all.
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Vetted non-suspended users can create quote requests
+      allow create: if isVetted() && isNotSuspended() && isValidHaulingQuote(request.resource.data);
+      
+      // Only admin can update status
+      allow update: if isAdmin();
+    }
+
+    match /hauling_applications/{applicationId} {
+      // Only admin can read applications
+      allow read: if isAdmin();
+      
+      // Any authenticated non-suspended user can apply
+      allow create: if isNotSuspended() && isValidHaulingApplication(request.resource.data);
+      
+      // Only admin can update status
+      allow update: if isAdmin();
+    }
+
+    match /users/{userId} {
+      // Users can read their own profile. Admins can read all profiles.
+      // Public profiles (names/logos) are allowed for marketplace display.
+      allow read: if isAuthenticated();
+      
+      // Users can create their own profile as 'user' role. Admins can create any.
+      // Bootstrap admin can create their own superadmin profile.
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == 'user' && request.resource.data.isVetted == false && request.resource.data.isVatVerified == false && request.resource.data.isSuspended == false || 
+                     request.auth.token.email in ["admin@hix.co.uk", "superadmin@hix.co.uk"] ||
+                     isAdmin());
+      
+      // Users can update their own non-privileged fields. Admins can update everything.
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && isValidUser(request.resource.data) && 
+         request.resource.data.role == resource.data.role && 
+         request.resource.data.isVetted == resource.data.isVetted && 
+         request.resource.data.isVatVerified == resource.data.isVatVerified &&
+         request.resource.data.isSuspended == resource.data.isSuspended) || 
+        isAdmin()
+      );
+
+      // Super admin can delete users
+      allow delete: if isAdmin();
+    }
+
+    match /listings/{listingId} {
+      allow read: if true; // Marketplace is public
+      
+      // Only vetted non-suspended companies can list assets
+      allow create: if isVetted() && isNotSuspended() && isValidListing(request.resource.data);
+      
+      // Only owner or admin can update
+      allow update: if isNotSuspended() && (
+        (request.auth.uid == resource.data.sellerId && isValidListing(request.resource.data)) || 
+        isAdmin()
+      );
+      
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.sellerId || isAdmin());
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /transactions/{transactionId} {
+      // Only parties involved or admin can read
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.buyerId || 
+        request.auth.uid == resource.data.sellerId || 
+        isAdmin()
+      );
+      
+      // Creation usually happens via a secure process (like after Stripe success)
+      // For this prototype, we allow vetted non-suspended users to record trades
+      allow create: if isVetted() && isNotSuspended() && 
+                    request.resource.data.buyerId == request.auth.uid &&
+                    request.resource.data.status == 'pending';
+                    
+      allow update: if isAdmin(); // Only admin can finalize or cancel for now
+    }
+  }
+}
