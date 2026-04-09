@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
@@ -556,19 +557,23 @@ export default function Dashboard() {
                     <Download className="mr-2 h-4 w-4" />
                     Download Template
                   </Button>
-                  <label>
-                    <Button variant="default" className="rounded-full cursor-pointer pointer-events-none" disabled={isBulkUploading}>
-                      {isBulkUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                      Select CSV File
-                    </Button>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept=".csv" 
-                      onChange={handleBulkUpload}
-                      disabled={isBulkUploading}
-                    />
-                  </label>
+                  <Button 
+                    variant="default" 
+                    className="rounded-full" 
+                    disabled={isBulkUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {isBulkUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                    Select CSV File
+                  </Button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    className="hidden" 
+                    accept=".csv" 
+                    onChange={handleBulkUpload}
+                    disabled={isBulkUploading}
+                  />
                 </div>
               </div>
 

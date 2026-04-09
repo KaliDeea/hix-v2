@@ -118,7 +118,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 interface AuthContextType {
   user: User | null;
   profile: any | null;
-  loading: boolean;
+  isAuthReady: boolean;
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string, data: any) => Promise<void>;
   logout: () => Promise<void>;
@@ -200,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, profile, isAuthReady: !loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
