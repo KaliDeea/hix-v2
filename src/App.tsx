@@ -9,8 +9,12 @@ import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import ListingDetail from "@/pages/ListingDetail";
 import CreateListing from "@/pages/CreateListing";
+import EditListing from "@/pages/EditListing";
+import Messages from "@/pages/Messages";
 import Admin from "@/pages/Admin";
 import Hauling from "@/pages/Hauling";
+import Wishlist from "@/pages/Wishlist";
+import Notifications from "@/pages/Notifications";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Terms from "@/pages/Terms";
@@ -32,11 +36,15 @@ export default function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/marketplace" element={<Marketplace />} />
                 <Route path="/create-listing" element={<CreateListing />} />
+                <Route path="/edit-listing/:id" element={<EditListing />} />
                 <Route path="/listing/:id" element={<ListingDetail />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/messages" element={<Messages />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/hauling" element={<Hauling />} />
+                <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/notifications" element={<Notifications />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/terms" element={<Terms />} />

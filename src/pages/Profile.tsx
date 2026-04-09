@@ -4,6 +4,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Card, 
   CardContent, 
@@ -14,16 +15,59 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ShieldCheck, AlertCircle, Upload, Building2 } from "lucide-react";
+import { ShieldCheck, AlertCircle, Upload, Building2, Loader2 } from "lucide-react";
 
 export default function Profile() {
-  const { user, profile } = useAuth();
+  const { user, profile, isAuthReady } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     companyName: profile?.companyName || "",
     vatNumber: profile?.vatNumber || "",
-    logoUrl: profile?.logoUrl || ""
+    logoUrl: profile?.logoUrl || "",
+    address: profile?.address || "",
+    website: profile?.website || "",
+    bio: profile?.bio || "",
+    phoneNumber: profile?.phoneNumber || ""
   });
+  const [uploading, setUploading] = useState(false);
+
+  // Update form data when profile is loaded
+  React.useEffect(() => {
+    if (profile) {
+      setFormData({
+        companyName: profile.companyName || "",
+        vatNumber: profile.vatNumber || "",
+        logoUrl: profile.logoUrl || "",
+        address: profile.address || "",
+        website: profile.website || "",
+        bio: profile.bio || "",
+        phoneNumber: profile.phoneNumber || ""
+      });
+    }
+  }, [profile]);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5000 * 1024) {
+      toast.error("File size too large. Max 5000KB.");
+      return;
+    }
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, logoUrl: reader.result as string }));
+      setUploading(false);
+      toast.success("Logo uploaded to profile (pending save)");
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read file");
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -49,6 +93,15 @@ export default function Profile() {
       setLoading(false);
     }
   };
+
+  if (!isAuthReady) {
+    return (
+      <div className="container py-20 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+        <p className="text-muted-foreground">Loading profile...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -109,13 +162,25 @@ export default function Profile() {
                   ) : (
                     <Building2 className="h-10 w-10 text-muted-foreground" />
                   )}
-                  <button className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <label className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
                     <Upload className="h-6 w-6 text-white" />
-                  </button>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      disabled={uploading}
+                    />
+                  </label>
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="font-medium">Company Logo</h3>
-                  <p className="text-sm text-muted-foreground">JPG, PNG or SVG. Max 2MB.</p>
+                  <p className="text-sm text-muted-foreground">JPG, PNG or SVG. Max 5000KB.</p>
                 </div>
               </div>
 
@@ -141,6 +206,16 @@ export default function Profile() {
                   <p className="text-[10px] text-muted-foreground">Email cannot be changed as it is linked to your account.</p>
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input 
+                    id="phone" 
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                    placeholder="e.g. +44 123 456 7890" 
+                    className="rounded-xl"
+                  />
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="vat">VAT Number</Label>
                   <div className="relative">
                     <Input 
@@ -155,6 +230,39 @@ export default function Profile() {
                     )}
                   </div>
                   <p className="text-[10px] text-muted-foreground">Required for B2B transactions and Stripe Connect.</p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="address">Business Address</Label>
+                  <Input 
+                    id="address" 
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    placeholder="123 Industrial Way, Hartlepool, TS24 0RE" 
+                    className="rounded-xl"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input 
+                    id="website" 
+                    value={formData.website}
+                    onChange={(e) => setFormData({...formData, website: e.target.value})}
+                    placeholder="https://www.yourcompany.co.uk" 
+                    className="rounded-xl"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="bio">Company Bio</Label>
+                  <Textarea 
+                    id="bio" 
+                    value={formData.bio}
+                    onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                    placeholder="Tell other members about your business..." 
+                    className="rounded-xl min-h-[100px]"
+                  />
                 </div>
               </div>
             </CardContent>

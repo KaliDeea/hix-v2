@@ -38,13 +38,13 @@ async function startServer() {
   // Stripe Checkout Session
   app.post("/api/stripe/create-checkout-session", async (req, res) => {
     try {
-      const { listingId, buyerId, quantity } = req.body;
+      const { listingId, buyerId, quantity, co2Savings, sellerId, amount } = req.body;
       const stripe = getStripe();
       
       // In a real app, you'd fetch the listing from Firestore here to get the price
       // For now, we'll assume a fixed price or pass it in (less secure)
-      // We'll use a placeholder price of £450 (45000 cents)
-      const unitAmount = 45000; 
+      // We'll use the price passed from client or fallback to £450 (45000 cents)
+      const unitAmount = (amount ? amount * 100 : 45000); 
       
       // Commission logic: 3% buyer commission
       const buyerCommission = Math.round(unitAmount * 0.03);
@@ -66,11 +66,14 @@ async function startServer() {
           },
         ],
         mode: "payment",
-        success_url: `${process.env.APP_URL || "http://localhost:3000"}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${process.env.APP_URL || "http://localhost:3000"}/dashboard?session_id={CHECKOUT_SESSION_ID}&listing_id=${listingId}&co2=${co2Savings}&seller=${sellerId}&amount=${amount}`,
         cancel_url: `${process.env.APP_URL || "http://localhost:3000"}/marketplace`,
         metadata: {
           listingId,
           buyerId,
+          sellerId,
+          co2Savings: String(co2Savings),
+          amount: String(amount),
           type: "hix_trade"
         }
       });

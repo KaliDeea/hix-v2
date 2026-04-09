@@ -27,6 +27,11 @@
 //   - price: number (required) - Price per unit
 //   - quantity: number (required) - Available units
 //   - category: string (required) - Industrial category
+//   - brand: string (optional)
+//   - model: string (optional)
+//   - year: number (optional)
+//   - condition: string (required)
+//   - location: string (required)
 //   - images: list (required) - URLs of asset images
 //   - co2Savings: number (required) - Estimated kg CO2 saved
 //   - status: string (required) - 'available' or 'sold'
@@ -46,6 +51,24 @@
 //   - status: string (required) - 'pending', 'completed', 'cancelled'
 //   - createdAt: timestamp (required) - Trade date
 //   - certificateUrl: string (optional) - URL to PDF certificate
+//
+// Collection: notifications
+// Document ID: {notificationId}
+// Fields:
+//   - userId: string (required) - Recipient UID
+//   - title: string (required)
+//   - message: string (required)
+//   - type: string (required) - 'message', 'bid', 'system', 'auction', 'wishlist'
+//   - link: string (optional)
+//   - read: boolean (required)
+//   - createdAt: timestamp (required)
+//
+// Collection: wishlists
+// Document ID: {wishlistId}
+// Fields:
+//   - userId: string (required)
+//   - listingId: string (required)
+//   - createdAt: timestamp (required)
 //
 // ===============================================================
 
@@ -67,17 +90,22 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (request.auth.token.email in ["admin@hix.co.uk", "superadmin@hix.co.uk"] ||
+        ((request.auth.token.email == "admin@hix.co.uk" || request.auth.token.email == "superadmin@hix.co.uk" || (request.auth.token.email == "vasiliu.crs@gmail.com" && request.auth.token.email_verified == true)) ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin']));
     }
 
     function isVetted() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isVetted == true;
+      return isAuthenticated() && 
+        (request.auth.token.email in ["admin@hix.co.uk", "superadmin@hix.co.uk"] ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isVetted', false) == true));
     }
 
     function isNotSuspended() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuspended == false;
+      return isAuthenticated() && 
+        (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isSuspended', false) == false);
     }
 
     function hasOnlyAllowedFields(fields) {
@@ -104,7 +132,7 @@ service cloud.firestore {
     }
 
     function isValidListing(data) {
-      return hasOnlyAllowedFields(['sellerId', 'sellerName', 'title', 'description', 'price', 'quantity', 'category', 'images', 'co2Savings', 'status', 'createdAt']) &&
+      return hasOnlyAllowedFields(['sellerId', 'sellerName', 'title', 'description', 'price', 'quantity', 'category', 'brand', 'model', 'year', 'condition', 'location', 'weight', 'dimensions', 'images', 'co2Savings', 'status', 'listingType', 'reservePrice', 'auctionEndTime', 'createdAt']) &&
              data.sellerId == request.auth.uid &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.price is number && data.price >= 0 &&
@@ -112,22 +140,40 @@ service cloud.firestore {
              data.status in ['available', 'sold'];
     }
 
+    function isValidChat(data) {
+      return hasOnlyAllowedFields(['participants', 'participantNames', 'participantLogos', 'listingId', 'listingTitle', 'listingImage', 'lastMessage', 'lastMessageTime', 'updatedAt', 'createdAt']) &&
+             request.auth.uid in data.participants &&
+             data.participants.size() == 2;
+    }
+
+    function isValidChatMessage(data) {
+      return hasOnlyAllowedFields(['chatId', 'senderId', 'text', 'createdAt']) &&
+             data.senderId == request.auth.uid &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 5000;
+    }
+
+    function isValidBid(data) {
+      return hasOnlyAllowedFields(['listingId', 'bidderId', 'bidderName', 'amount', 'createdAt']) &&
+             data.bidderId == request.auth.uid &&
+             data.amount is number && data.amount > 0;
+    }
+
+    function isValidHaulingPartner(data) {
+      return hasOnlyAllowedFields(['name', 'location', 'rating', 'specializations', 'fleetSize', 'status', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.status in ['active', 'inactive'];
+    }
+
     function isValidHaulingQuote(data) {
-      return hasOnlyAllowedFields(['haulerId', 'haulerName', 'userId', 'userName', 'userEmail', 'origin', 'destination', 'assetDetails', 'status', 'createdAt']) &&
+      return hasOnlyAllowedFields(['userId', 'partnerId', 'partnerName', 'origin', 'destination', 'assetDescription', 'weight', 'dimensions', 'preferredDate', 'status', 'createdAt']) &&
              data.userId == request.auth.uid &&
-             data.origin is string && data.origin.size() > 0 && data.origin.size() < 500 &&
-             data.destination is string && data.destination.size() > 0 && data.destination.size() < 500 &&
-             data.assetDetails is string && data.assetDetails.size() > 0 && data.assetDetails.size() < 1000 &&
              data.status in ['pending', 'responded', 'closed'];
     }
 
     function isValidHaulingApplication(data) {
-      return hasOnlyAllowedFields(['companyName', 'contactEmail', 'phoneNumber', 'description', 'fleetSize', 'specializations', 'status', 'createdAt']) &&
-             data.companyName is string && data.companyName.size() > 0 && data.companyName.size() < 200 &&
-             isValidEmail(data.contactEmail) &&
-             data.phoneNumber is string && data.phoneNumber.size() > 0 && data.phoneNumber.size() < 50 &&
-             data.description is string && data.description.size() > 0 && data.description.size() < 2000 &&
-             data.fleetSize is number && data.fleetSize >= 0 &&
+      return hasOnlyAllowedFields(['companyName', 'contactPerson', 'email', 'phone', 'fleetSize', 'specializations', 'insuranceDetails', 'status', 'createdAt']) &&
+             data.companyName is string && data.companyName.size() > 0 &&
+             isValidEmail(data.email) &&
              data.status in ['pending', 'reviewed', 'approved', 'rejected'];
     }
 
@@ -147,6 +193,19 @@ service cloud.firestore {
              data.status in ['pending', 'reviewed', 'resolved', 'dismissed'];
     }
 
+    function isValidNotification(data) {
+      return hasOnlyAllowedFields(['userId', 'title', 'message', 'type', 'link', 'read', 'createdAt']) &&
+             data.userId is string &&
+             data.title is string && data.title.size() > 0 &&
+             data.read == false;
+    }
+
+    function isValidWishlistItem(data) {
+      return hasOnlyAllowedFields(['userId', 'listingId', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.listingId is string;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -160,43 +219,49 @@ service cloud.firestore {
       allow update: if isAdmin();
     }
 
-    match /messages/{messageId} {
-      // Only sender or receiver can read
-      allow read: if isAuthenticated() && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid || isAdmin());
+    match /chats/{chatId} {
+      // Only participants or admin can read
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participants || isAdmin());
       
-      // Any authenticated non-suspended user can send a message
-      allow create: if isNotSuspended() && isValidMessage(request.resource.data);
+      // Any authenticated user can start a chat if they are a participant
+      allow create: if isNotSuspended() && isValidChat(request.resource.data);
       
-      // Receiver can mark as read
-      allow update: if isNotSuspended() && (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) || isAdmin();
+      // Participants can update chat metadata (last message, etc)
+      allow update: if isNotSuspended() && (request.auth.uid in resource.data.participants || isAdmin());
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants || isAdmin());
+        allow create: if isNotSuspended() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants) && isValidChatMessage(request.resource.data);
+      }
+    }
+
+    match /bids/{bidId} {
+      // Bids are public for the listing
+      allow read: if true;
+      // Vetted users can place bids
+      allow create: if isVetted() && isNotSuspended() && isValidBid(request.resource.data);
+    }
+
+    match /hauling_partners/{partnerId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /hauling_quotes/{quoteId} {
-      // Users can read their own quotes. Admins can read all.
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      
-      // Vetted non-suspended users can create quote requests
-      allow create: if isVetted() && isNotSuspended() && isValidHaulingQuote(request.resource.data);
-      
-      // Only admin can update status
+      allow create: if isNotSuspended() && isValidHaulingQuote(request.resource.data);
       allow update: if isAdmin();
     }
 
-    match /hauling_applications/{applicationId} {
-      // Only admin can read applications
+    match /hauling_partner_applications/{applicationId} {
       allow read: if isAdmin();
-      
-      // Any authenticated non-suspended user can apply
       allow create: if isNotSuspended() && isValidHaulingApplication(request.resource.data);
-      
-      // Only admin can update status
       allow update: if isAdmin();
     }
 
     match /users/{userId} {
       // Users can read their own profile. Admins can read all profiles.
-      // Public profiles (names/logos) are allowed for marketplace display.
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
       
       // Users can create their own profile as 'user' role. Admins can create any.
       // Bootstrap admin can create their own superadmin profile.
@@ -253,6 +318,19 @@ service cloud.firestore {
                     request.resource.data.status == 'pending';
                     
       allow update: if isAdmin(); // Only admin can finalize or cancel for now
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /wishlists/{wishlistId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidWishlistItem(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
   }
 }

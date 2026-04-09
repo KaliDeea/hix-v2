@@ -12,12 +12,18 @@ import {
   doc, 
   getDoc, 
   setDoc,
+  updateDoc,
+  deleteDoc,
   collection,
   query,
   where,
   onSnapshot,
   getDocFromServer,
-  serverTimestamp
+  getDocs,
+  serverTimestamp,
+  addDoc,
+  orderBy,
+  limit
 } from "firebase/firestore";
 import { initializeApp } from "firebase/app";
 import firebaseConfig from "@/firebase-applet-config.json";
@@ -31,11 +37,18 @@ export {
   doc, 
   getDoc, 
   setDoc,
+  updateDoc,
+  deleteDoc,
   collection,
   query,
   where,
   onSnapshot,
-  getDocFromServer
+  getDocFromServer,
+  getDocs,
+  serverTimestamp,
+  addDoc,
+  orderBy,
+  limit
 };
 
 // Connection test
@@ -170,6 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phoneNumber: data.phoneNumber || "",
       isVetted: isBootstrapAdmin,
       isVatVerified: isBootstrapAdmin,
+      isSuspended: false,
+      suspensionReason: "",
       role: isBootstrapAdmin ? "superadmin" : "user",
       revenue: 0,
       commissionsPaid: 0,

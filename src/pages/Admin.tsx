@@ -39,7 +39,9 @@ import {
   AlertTriangle,
   Trash2,
   Ban,
-  Unlock
+  Unlock,
+  Leaf,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { addDoc, serverTimestamp } from "firebase/firestore";
@@ -48,6 +50,7 @@ export default function Admin() {
   const { user, profile } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSeeding, setIsSeeding] = useState(false);
 
@@ -72,15 +75,27 @@ export default function Admin() {
         ...doc.data()
       })) as Report[];
       setReports(data);
-      setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, reportsPath);
+    });
+
+    const transPath = "transactions";
+    const unsubscribeTrans = onSnapshot(collection(db, transPath), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Transaction[];
+      setTransactions(data);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, transPath);
       setLoading(false);
     });
 
     return () => {
       unsubscribeUsers();
       unsubscribeReports();
+      unsubscribeTrans();
     };
   }, [profile]);
 
@@ -201,9 +216,15 @@ export default function Admin() {
           price: 1200,
           quantity: 2,
           category: "Machinery",
+          brand: "Atlas Copco",
+          model: "GA37",
+          year: 2019,
+          condition: "used-excellent",
+          location: "Manchester, UK",
           images: ["https://picsum.photos/seed/compressor/800/600"],
           co2Savings: 450,
           status: "available",
+          listingType: "fixed",
           sellerId: profile.uid,
           sellerName: profile.companyName,
           createdAt: serverTimestamp()
@@ -214,22 +235,38 @@ export default function Admin() {
           price: 85,
           quantity: 50,
           category: "Storage",
+          brand: "Dexion",
+          model: "P90",
+          year: 2021,
+          condition: "used-good",
+          location: "Leeds, UK",
           images: ["https://picsum.photos/seed/racking/800/600"],
           co2Savings: 1200,
           status: "available",
+          listingType: "fixed",
           sellerId: profile.uid,
           sellerName: profile.companyName,
           createdAt: serverTimestamp()
         },
         {
-          title: "Electric Forklift - 2 Ton",
-          description: "Linde electric forklift, 2019 model. Includes charger. 4500mm lift height.",
-          price: 8500,
+          title: "CNC Lathe - Precision Series",
+          description: "High precision CNC lathe for industrial metalworking. Auction starting at reserve.",
+          price: 5000,
           quantity: 1,
-          category: "Vehicles",
-          images: ["https://picsum.photos/seed/forklift/800/600"],
-          co2Savings: 2500,
+          category: "Machinery",
+          brand: "Haas",
+          model: "ST-10",
+          year: 2018,
+          condition: "used-excellent",
+          location: "Sheffield, UK",
+          images: ["https://picsum.photos/seed/cnc/800/600"],
+          co2Savings: 3500,
           status: "available",
+          listingType: "auction",
+          reservePrice: 4500,
+          currentBid: 5000,
+          bidCount: 0,
+          auctionEndTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           sellerId: profile.uid,
           sellerName: profile.companyName,
           createdAt: serverTimestamp()
@@ -240,7 +277,42 @@ export default function Admin() {
         await addDoc(collection(db, "listings"), listing);
       }
 
-      toast.success("Mock data seeded successfully!");
+      // Mock Hauling Partners
+      const mockPartners = [
+        {
+          name: "HeavyLift Logistics",
+          location: "Newcastle, UK",
+          rating: 4.9,
+          specializations: ["Heavy Machinery", "Abnormal Loads"],
+          fleetSize: 25,
+          status: "active",
+          createdAt: serverTimestamp()
+        },
+        {
+          name: "Precision Hauling Co.",
+          location: "Birmingham, UK",
+          rating: 4.7,
+          specializations: ["Sensitive Equipment", "Express Delivery"],
+          fleetSize: 12,
+          status: "active",
+          createdAt: serverTimestamp()
+        },
+        {
+          name: "Global Industrial Freight",
+          location: "London, UK",
+          rating: 4.8,
+          specializations: ["International Shipping", "Customs Clearance"],
+          fleetSize: 150,
+          status: "active",
+          createdAt: serverTimestamp()
+        }
+      ];
+
+      for (const partner of mockPartners) {
+        await addDoc(collection(db, "hauling_partners"), partner);
+      }
+
+      toast.success("Marketplace and Hauling data seeded successfully!");
     } catch (error) {
       console.error("Error seeding data:", error);
       toast.error("Failed to seed mock data");
@@ -248,6 +320,15 @@ export default function Admin() {
       setIsSeeding(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="container py-20 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+        <p className="text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   if (!['admin', 'superadmin'].includes(profile?.role)) {
     // Fallback for bootstrap admin whose profile might be broken
@@ -427,6 +508,7 @@ export default function Admin() {
                     <TableHead>Reporter</TableHead>
                     <TableHead>Reported User</TableHead>
                     <TableHead>Reason</TableHead>
+                    <TableHead>CO2 Saved</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -452,6 +534,12 @@ export default function Admin() {
                         <TableCell>
                           <div className="font-medium">{r.reason}</div>
                           <div className="text-xs text-muted-foreground max-w-xs truncate">{r.description}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-emerald-500 font-medium">
+                            <Leaf className="h-3 w-3" />
+                            {(r as any).co2Saved || 0} kg
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={r.status === 'pending' ? 'outline' : 'secondary'} className={
@@ -495,15 +583,15 @@ export default function Admin() {
                     <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                     Total CO2 Saved
                   </h4>
-                  <p className="text-3xl font-bold">45,200 kg</p>
-                  <p className="text-xs text-muted-foreground mt-1">Equivalent to 2,100 trees planted.</p>
+                  <p className="text-3xl font-bold">{transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0).toLocaleString()} kg</p>
+                  <p className="text-xs text-muted-foreground mt-1">Equivalent to {Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 21.7)} trees planted.</p>
                 </div>
                 <div className="p-6 rounded-2xl bg-blue-500/5 border border-blue-500/10">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <FileText className="h-5 w-5 text-blue-500" />
                     Certificates Issued
                   </h4>
-                  <p className="text-3xl font-bold">128</p>
+                  <p className="text-3xl font-bold">{transactions.length}</p>
                   <p className="text-xs text-muted-foreground mt-1">Automated PDF generation active.</p>
                 </div>
               </div>
@@ -525,7 +613,7 @@ export default function Admin() {
                     Seed Marketplace
                   </h4>
                   <p className="text-sm text-muted-foreground mb-4">
-                    This will add 3 sample industrial listings to the marketplace.
+                    This will add sample industrial listings, auctions, and hauling partners to the platform.
                   </p>
                   <Button 
                     onClick={seedMockData} 
