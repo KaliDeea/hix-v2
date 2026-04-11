@@ -23,7 +23,8 @@ import {
   serverTimestamp,
   addDoc,
   orderBy,
-  limit
+  limit,
+  writeBatch
 } from "firebase/firestore";
 import { initializeApp } from "firebase/app";
 import firebaseConfig from "@/firebase-applet-config.json";
@@ -48,7 +49,8 @@ export {
   serverTimestamp,
   addDoc,
   orderBy,
-  limit
+  limit,
+  writeBatch
 };
 
 // Connection test

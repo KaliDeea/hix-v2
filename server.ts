@@ -3,6 +3,21 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
+import admin from "firebase-admin";
+import firebaseConfig from "./src/firebase-applet-config.json" assert { type: "json" };
+
+// Initialize Firebase Admin
+if (admin.apps.length === 0) {
+  admin.initializeApp({
+    projectId: firebaseConfig.projectId,
+  });
+}
+
+const db = admin.firestore();
+if (firebaseConfig.firestoreDatabaseId) {
+  // Note: In some versions of firebase-admin, you might need to specify the databaseId differently
+  // but for many cases, the default database is used or it's handled via the projectId.
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,13 +56,23 @@ async function startServer() {
       const { listingId, buyerId, quantity, co2Savings, sellerId, amount } = req.body;
       const stripe = getStripe();
       
+      // Fetch platform settings for commission rates
+      const settingsDoc = await db.collection("platform_settings").doc("branding").get();
+      const settings = settingsDoc.exists ? settingsDoc.data() : {};
+      const buyerRate = settings?.buyerCommission ?? 3;
+      const sellerRate = settings?.sellerCommission ?? 7;
+      const maintenanceMode = settings?.maintenanceMode ?? false;
+
+      if (maintenanceMode) {
+        throw new Error("Platform is currently in maintenance mode. Transactions are disabled.");
+      }
+      
       // In a real app, you'd fetch the listing from Firestore here to get the price
       // For now, we'll assume a fixed price or pass it in (less secure)
-      // We'll use the price passed from client or fallback to £450 (45000 cents)
       const unitAmount = (amount ? amount * 100 : 45000); 
       
-      // Commission logic: 3% buyer commission
-      const buyerCommission = Math.round(unitAmount * 0.03);
+      // Commission logic
+      const buyerCommission = Math.round(unitAmount * (buyerRate / 100));
       const totalAmount = unitAmount + buyerCommission;
 
       const session = await stripe.checkout.sessions.create({
@@ -66,7 +91,7 @@ async function startServer() {
           },
         ],
         mode: "payment",
-        success_url: `${process.env.APP_URL || "http://localhost:3000"}/dashboard?session_id={CHECKOUT_SESSION_ID}&listing_id=${listingId}&co2=${co2Savings}&seller=${sellerId}&amount=${amount}`,
+        success_url: `${process.env.APP_URL || "http://localhost:3000"}/dashboard?session_id={CHECKOUT_SESSION_ID}&listing_id=${listingId}&co2=${co2Savings}&seller=${sellerId}&amount=${amount}&buyer_rate=${buyerRate}&seller_rate=${sellerRate}`,
         cancel_url: `${process.env.APP_URL || "http://localhost:3000"}/marketplace`,
         metadata: {
           listingId,
@@ -74,6 +99,8 @@ async function startServer() {
           sellerId,
           co2Savings: String(co2Savings),
           amount: String(amount),
+          buyerRate: String(buyerRate),
+          sellerRate: String(sellerRate),
           type: "hix_trade"
         }
       });

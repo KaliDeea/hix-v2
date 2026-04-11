@@ -37,7 +37,7 @@ export default function About() {
               </div>
             </div>
             <div className="flex items-start gap-4">
-              <div className="mt-1 h-6 w-6 text-emerald-500"><Leaf /></div>
+              <div className="mt-1 h-6 w-6 text-orange-500"><Leaf /></div>
               <div>
                 <h4 className="font-semibold">CO2 Impact</h4>
                 <p className="text-sm text-muted-foreground">Every transaction on HiX reflects real-world CO2 savings, promoting a circular economy.</p>

@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/lib/firebase";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navbar } from "@/components/Navbar";
+import { SystemBanner } from "@/components/SystemBanner";
 import { Footer } from "@/components/Footer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Home from "@/pages/Home";
@@ -20,6 +22,7 @@ import Contact from "@/pages/Contact";
 import Terms from "@/pages/Terms";
 import Auth from "@/pages/Auth";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Placeholder components for other pages
 // All pages are now imported from @/pages
@@ -27,35 +30,40 @@ import { Toaster } from "@/components/ui/sonner";
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <div className="flex min-h-screen flex-col">
-            <Navbar />
-            <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/create-listing" element={<CreateListing />} />
-                <Route path="/edit-listing/:id" element={<EditListing />} />
-                <Route path="/listing/:id" element={<ListingDetail />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/messages" element={<Messages />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/hauling" element={<Hauling />} />
-                <Route path="/wishlist" element={<Wishlist />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/auth" element={<Auth />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-          <Toaster />
-        </Router>
-      </AuthProvider>
+      <ThemeProvider defaultTheme="dark" storageKey="hix-theme">
+        <AuthProvider>
+          <TooltipProvider>
+            <Router>
+              <div className="flex min-h-screen flex-col">
+                <SystemBanner />
+                <Navbar />
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/marketplace" element={<Marketplace />} />
+                    <Route path="/create-listing" element={<CreateListing />} />
+                    <Route path="/edit-listing/:id" element={<EditListing />} />
+                    <Route path="/listing/:id" element={<ListingDetail />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/admin" element={<Admin />} />
+                    <Route path="/hauling" element={<Hauling />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/auth" element={<Auth />} />
+                  </Routes>
+                </main>
+                <Footer />
+              </div>
+              <Toaster />
+            </Router>
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

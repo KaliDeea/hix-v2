@@ -214,8 +214,8 @@ export default function Messages() {
                   <h3 className="font-bold">
                     {selectedChat.participantNames[selectedChat.participants.find(p => p !== user.uid) || ""]}
                   </h3>
-                  <p className="text-[10px] text-emerald-500 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <p className="text-[10px] text-orange-500 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
                     Online
                   </p>
                 </div>

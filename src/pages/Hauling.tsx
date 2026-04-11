@@ -188,11 +188,11 @@ export default function Hauling() {
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      <ShieldCheck className="h-4 w-4 text-orange-500" />
                       <span>Fully Insured & Vetted</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      <CheckCircle2 className="h-4 w-4 text-orange-500" />
                       <span>{partner.fleetSize} Vehicles in Fleet</span>
                     </div>
                   </div>

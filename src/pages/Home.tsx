@@ -44,7 +44,7 @@ export default function Home() {
         
         {/* Background Elements */}
         <div className="absolute top-0 left-1/2 -z-10 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute bottom-0 right-0 -z-10 h-[400px] w-[400px] rounded-full bg-emerald-500/10 blur-[100px]" />
+        <div className="absolute bottom-0 right-0 -z-10 h-[400px] w-[400px] rounded-full bg-orange-500/10 blur-[100px]" />
       </section>
 
       {/* Features Grid */}
@@ -63,7 +63,7 @@ export default function Home() {
                 desc: "Every business on HiX is manually verified for VAT and legitimacy."
               },
               {
-                icon: <Leaf className="h-8 w-8 text-emerald-500" />,
+                icon: <Leaf className="h-8 w-8 text-orange-500" />,
                 title: "Sustainability First",
                 desc: "Track CO2 savings for every transaction and receive ESG certificates."
               },

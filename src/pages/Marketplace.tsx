@@ -1,4 +1,5 @@
 import { useState, useEffect, MouseEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { 
   useAuth, 
   db, 
@@ -42,8 +43,9 @@ import { toast } from "sonner";
 
 export default function Marketplace() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState<Listing[]>([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("q") || "");
   const [category, setCategory] = useState("all");
   const [condition, setCondition] = useState("all");
   const [location, setLocation] = useState("");
@@ -55,6 +57,22 @@ export default function Marketplace() {
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [wishlist, setWishlist] = useState<string[]>([]);
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q !== null) {
+      setSearch(q);
+    }
+  }, [searchParams]);
+
+  const updateSearch = (val: string) => {
+    setSearch(val);
+    if (val) {
+      setSearchParams({ q: val });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   useEffect(() => {
     const path = "listings";
@@ -140,6 +158,10 @@ export default function Marketplace() {
     return matchesSearch && matchesCategory && matchesCondition && matchesLocation && matchesMinPrice && matchesMaxPrice && matchesBrand && matchesModel && matchesYear;
   });
 
+  const getCategoryColor = (category: string) => {
+    return 'border-primary/20 hover:border-primary/50';
+  };
+
   const MarketplaceSkeleton = () => (
     <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -185,7 +207,7 @@ export default function Marketplace() {
               placeholder="Search assets..." 
               className="pl-10 rounded-full"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => updateSearch(e.target.value)}
             />
           </div>
           <Button 
@@ -324,16 +346,16 @@ export default function Marketplace() {
         </motion.div>
       )}
 
-      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-4 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredListings.map((listing) => (
           <motion.div
             key={listing.id}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ y: -5 }}
-            transition={{ duration: 0.2 }}
+            whileHover={{ y: -8, transition: { duration: 0.2 } }}
+            className="h-full"
           >
-            <Card className="overflow-hidden glass h-full flex flex-col">
+            <Card className={`overflow-hidden glass h-full flex flex-col border-2 transition-all duration-300 shadow-lg hover:shadow-primary/20 ${getCategoryColor(listing.category)}`}>
               <div className="relative aspect-[4/3] overflow-hidden">
                 <img 
                   src={listing.images?.[0] || "https://picsum.photos/seed/industrial/400/300"} 
@@ -374,9 +396,14 @@ export default function Marketplace() {
                     <ShieldCheck className="h-3 w-3 text-primary" />
                     {listing.sellerName}
                   </div>
-                  <div className="flex items-center gap-1 text-xs font-bold text-emerald-500">
-                    <Leaf className="h-3 w-3" />
-                    {listing.co2Savings}kg CO2
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-1 text-xs font-bold text-orange-500">
+                      <Leaf className="h-3 w-3" />
+                      {listing.co2Savings}kg CO2
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      ≈ {Math.round(listing.co2Savings / 20)} trees/yr
+                    </div>
                   </div>
                 </div>
                 <CardTitle className="line-clamp-1 text-lg">{listing.title}</CardTitle>

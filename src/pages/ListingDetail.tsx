@@ -72,6 +72,23 @@ export default function ListingDetail() {
   const [isStartingChat, setIsStartingChat] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
+  const [platformSettings, setPlatformSettings] = useState({
+    buyerCommission: 3,
+    maintenanceMode: false
+  });
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "platform_settings", "branding"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setPlatformSettings({
+          buyerCommission: data.buyerCommission ?? 3,
+          maintenanceMode: data.maintenanceMode || false
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!user || !id) return;
@@ -304,6 +321,10 @@ export default function ListingDetail() {
     }
   };
 
+  const getCategoryColor = (category: string) => {
+    return 'border-primary/20';
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-12 animate-pulse">
@@ -344,6 +365,7 @@ export default function ListingDetail() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            className={`p-6 rounded-3xl border-2 transition-colors ${getCategoryColor(listing.category)}`}
           >
             <div className="aspect-[16/10] overflow-hidden rounded-3xl glass border-white/10 shadow-2xl relative group">
               <img 
@@ -369,7 +391,7 @@ export default function ListingDetail() {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex flex-col lg:sticky lg:top-24 space-y-8"
+            className={`flex flex-col lg:sticky lg:top-24 space-y-8 p-8 rounded-3xl border-2 transition-colors ${getCategoryColor(listing.category)}`}
           >
             <div>
               <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -379,9 +401,14 @@ export default function ListingDetail() {
                 <Badge variant="outline" className="capitalize">
                   {(listing.condition || 'used-good').replace('-', ' ')}
                 </Badge>
-                <div className="flex items-center gap-2 text-emerald-500 font-bold ml-auto">
-                  <Leaf className="h-5 w-5" />
-                  {listing.co2Savings}kg CO2
+                <div className="flex flex-col items-end ml-auto">
+                  <div className="flex items-center gap-2 text-orange-500 font-bold">
+                    <Leaf className="h-5 w-5" />
+                    {listing.co2Savings}kg CO2
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    ≈ {Math.round(listing.co2Savings / 20)} trees/yr
+                  </div>
                 </div>
               </div>
 
@@ -483,9 +510,13 @@ export default function ListingDetail() {
                         onChange={(e) => setBidAmount(e.target.value)}
                       />
                     </div>
-                    <Button className="rounded-full h-12 px-8" onClick={handlePlaceBid} disabled={isBidding}>
+                    <Button 
+                      className="rounded-full h-12 px-8" 
+                      onClick={handlePlaceBid} 
+                      disabled={isBidding || platformSettings.maintenanceMode}
+                    >
                       {isBidding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
-                      Bid
+                      {platformSettings.maintenanceMode ? "System Maintenance" : "Bid"}
                     </Button>
                   </div>
                 </div>
@@ -501,9 +532,14 @@ export default function ListingDetail() {
                       <p className="text-xl font-semibold">{listing.quantity} units</p>
                     </div>
                   </div>
-                  <Button size="lg" className="w-full rounded-full h-14 text-lg shadow-lg shadow-primary/20" onClick={handleBuy}>
+                  <Button 
+                    size="lg" 
+                    className="w-full rounded-full h-14 text-lg shadow-lg shadow-primary/20" 
+                    onClick={handleBuy}
+                    disabled={platformSettings.maintenanceMode}
+                  >
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    Buy Now
+                    {platformSettings.maintenanceMode ? "System Maintenance" : "Buy Now"}
                   </Button>
                 </>
               )}
@@ -520,7 +556,7 @@ export default function ListingDetail() {
               </div>
               
               <p className="text-center text-[10px] text-muted-foreground mt-4">
-                Secure transaction via Stripe Connect. 3% buyer commission applies.
+                Secure transaction via Stripe Connect. {platformSettings.buyerCommission}% buyer commission applies.
               </p>
             </div>
 
@@ -619,31 +655,43 @@ export default function ListingDetail() {
               </div>
             </div>
 
-            <div className="glass p-8 rounded-3xl border-emerald-500/20 bg-emerald-500/5 relative overflow-hidden">
+            <div className="glass p-8 rounded-3xl border-orange-500/20 bg-orange-500/5 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Leaf className="h-24 w-24 text-emerald-500" />
+                <Leaf className="h-24 w-24 text-orange-500" />
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-xl bg-emerald-500/20">
-                    <Leaf className="h-6 w-6 text-emerald-500" />
+                  <div className="p-2 rounded-xl bg-orange-500/20">
+                    <Leaf className="h-6 w-6 text-orange-500" />
                   </div>
                   <h2 className="text-xl font-bold">Sustainability Impact</h2>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <p className="text-4xl font-bold text-emerald-500">{listing.co2Savings}kg</p>
-                    <p className="text-sm text-muted-foreground">Estimated CO2 emissions avoided by choosing this circular asset instead of buying new.</p>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-4xl font-bold text-orange-500">{listing.co2Savings}kg</p>
+                      <p className="text-sm text-muted-foreground font-medium">CO2 Emissions Avoided</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
+                        <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 20)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">Trees/Year</p>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
+                        <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 0.4).toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase">Car Miles</p>
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-2 flex-1 bg-emerald-500/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-emerald-500 w-[85%]" />
+                      <div className="h-2 flex-1 bg-orange-500/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-orange-500 w-[85%]" />
                       </div>
-                      <span className="text-xs font-medium text-emerald-500">85% Lower Footprint</span>
+                      <span className="text-xs font-medium text-orange-500">85% Lower Footprint</span>
                     </div>
-                    <p className="text-xs text-muted-foreground italic">
-                      "Circular procurement is the most effective way for industrial companies to reach Net Zero targets."
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Choosing this circular asset instead of buying new prevents significant carbon emissions associated with manufacturing and raw material extraction.
                     </p>
                   </div>
                 </div>

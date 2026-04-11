@@ -75,7 +75,7 @@ export default function Wishlist() {
     return (
       <div className="container py-20 text-center">
         <h2 className="text-2xl font-bold mb-4">Please log in to view your wishlist.</h2>
-        <Button asChild rounded-full>
+        <Button asChild className="rounded-full">
           <Link to="/login">Login</Link>
         </Button>
       </div>
@@ -140,7 +140,7 @@ export default function Wishlist() {
                         <ShieldCheck className="h-3 w-3 text-primary" />
                         {listing.sellerName}
                       </div>
-                      <div className="flex items-center gap-1 text-xs font-bold text-emerald-500">
+                      <div className="flex items-center gap-1 text-xs font-bold text-orange-500">
                         <Leaf className="h-3 w-3" />
                         {listing.co2Savings}kg
                       </div>

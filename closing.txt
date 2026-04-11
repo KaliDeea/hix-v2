@@ -1,0 +1,263 @@
+1:import React, { useState, useEffect } from "react";
+2:import { useAuth, db, onSnapshot, handleFirestoreError, OperationType } from "@/lib/firebase";
+3:import { UserProfile, Transaction, Report } from "@/types";
+11:} from "firebase/firestore";
+18:} from "@/components/ui/card";
+26:} from "@/components/ui/table";
+27:import { Button } from "@/components/ui/button";
+28:import { Badge } from "@/components/ui/badge";
+29:import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+53:} from "lucide-react";
+54:import { toast } from "sonner";
+56:import { addDoc, serverTimestamp, setDoc } from "firebase/firestore";
+57:import { compressImage } from "@/lib/image-utils";
+58:import { Input } from "@/components/ui/input";
+65:} from "@/components/ui/select";
+74:} from "@/components/ui/dialog";
+75:import { Textarea } from "@/components/ui/textarea";
+76:import { Label } from "@/components/ui/label";
+79:  const { user, profile } = useAuth();
+92:  });
+97:  const [userSort, setUserSort] = useState<{ key: keyof UserProfile; direction: 'asc' | 'desc' }>({ key: 'companyName', direction: 'asc' });
+100:  const [reportSort, setReportSort] = useState<{ key: keyof Report; direction: 'asc' | 'desc' }>({ key: 'status', direction: 'asc' });
+102:  const [announcement, setAnnouncement] = useState({ title: "", message: "" });
+118:        });
+119:      }
+120:    });
+122:  }, []);
+132:    }
+140:        setPlatformSettings(prev => ({ ...prev, hixLogoUrl: compressed }));
+142:      } catch (err) {
+145:      }
+146:    };
+148:  };
+153:      await setDoc(doc(db, "platform_settings", "branding"), platformSettings, { merge: true });
+155:    } catch (error) {
+157:    } finally {
+159:    }
+160:  };
+174:      });
+176:    } catch (error) {
+178:    } finally {
+180:    }
+181:  };
+191:      })) as UserProfile[];
+193:    }, (error) => {
+195:    });
+202:      })) as Report[];
+204:    }, (error) => {
+206:    });
+213:      })) as Transaction[];
+216:    }, (error) => {
+219:    });
+225:    };
+226:  }, [profile]);
+229:    const path = `users/${userId}`;
+233:      });
+244:      });
+247:    } catch (error) {
+249:    }
+250:  };
+253:    const path = `users/${userId}`;
+257:      });
+268:      });
+271:    } catch (error) {
+273:    }
+274:  };
+277:    const path = `users/${userId}`;
+282:      });
+293:      });
+296:    } catch (error) {
+298:    }
+299:  };
+302:    const path = `users/${userId}`;
+307:      });
+309:    } catch (error) {
+311:    }
+312:  };
+318:    }
+322:    const path = `users/${userId}`;
+326:    } catch (error) {
+328:    }
+329:  };
+332:    const path = `reports/${reportId}`;
+339:      });
+342:    } catch (error) {
+344:    }
+345:  };
+348:    const path = `reports/${reportId}`;
+352:      });
+354:    } catch (error) {
+356:    }
+357:  };
+366:      });
+368:    } catch (e) {
+371:    }
+372:  };
+378:    }
+393:        })
+397:      toast.success(`Announcement sent to ${users.length} users!`);
+398:      setAnnouncement({ title: "", message: "" });
+399:    } catch (error) {
+402:    } finally {
+404:    }
+405:  };
+433:              });
+435:            } catch (err) {
+438:            }
+439:          }
+441:          toast.success(`Bulk upload complete: ${successCount} items added, ${errorCount} errors.`);
+442:        } catch (err) {
+444:        } finally {
+448:        }
+449:      },
+453:      }
+454:    });
+455:  };
+472:      }
+474:    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+487:    }));
+488:  };
+494:    }));
+495:  };
+506:    })
+513:    });
+523:    });
+548:        },
+567:        },
+590:        }
+595:      }
+607:        },
+616:        },
+625:        }
+630:      }
+633:    } catch (error) {
+636:    } finally {
+638:    }
+639:  };
+648:  }
+664:            onClick={handleRepairProfile}
+670:    }
+678:  }
+705:                  {users.filter(u => !u.isVetted || !u.isVatVerified).length}
+707:              )}
+714:                  {reports.filter(r => r.status === 'pending').length}
+716:              )}
+753:                      value={userSearch}
+754:                      onChange={(e) => setUserSearch(e.target.value)}
+757:                  <Select value={userFilter} onValueChange={setUserFilter}>
+776:                    <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('companyName')}>
+782:                    <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('isVatVerified')}>
+788:                    <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('isVetted')}>
+794:                    <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('isSuspended')}>
+806:                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+812:                      <TableRow key={u.uid} className="hover:bg-primary/5 transition-colors">
+814:                          <div className="font-medium">{u.companyName}</div>
+815:                          <div className="text-xs text-muted-foreground">{u.email}</div>
+822:                          )}
+829:                          )}
+839:                          )}
+843:                            <Button size="sm" variant="outline" className="h-8 rounded-full" onClick={() => handleVerifyVat(u.uid)}>
+846:                          )}
+848:                            <Button size="sm" className="h-8 rounded-full" onClick={() => handleVetCompany(u.uid)}>
+851:                          )}
+853:                            <Button size="sm" variant="outline" className="h-8 rounded-full border-orange-500/50 text-orange-500 hover:bg-orange-500/10" onClick={() => handleUnsuspendUser(u.uid)}>
+858:                            <Button size="sm" variant="outline" className="h-8 rounded-full border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => handleSuspendUser(u.uid)}>
+862:                          )}
+863:                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-full text-destructive hover:bg-destructive/10" onClick={() => handleDeleteUser(u.uid)}>
+869:                  )}
+884:                <Select value={reportFilter} onValueChange={setReportFilter}>
+902:                    <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortReports('reporterName')}>
+908:                    <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortReports('reportedUserName')}>
+915:                    <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortReports('status')}>
+927:                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+933:                      <TableRow key={r.id} className="hover:bg-primary/5 transition-colors">
+935:                          <div className="font-medium">{r.reporterName}</div>
+936:                          <div className="text-xs text-muted-foreground">ID: {r.reporterId.slice(0, 8)}...</div>
+939:                          <div className="font-medium">{r.reportedUserName}</div>
+940:                          <div className="text-xs text-muted-foreground">ID: {r.reportedUserId.slice(0, 8)}...</div>
+943:                          <div className="font-medium">{r.reason}</div>
+944:                          <div className="text-xs text-muted-foreground max-w-xs truncate">{r.description}</div>
+947:                          <Badge variant={r.status === 'pending' ? 'outline' : 'secondary'} className={
+951:                          }>
+952:                            {r.status}
+958:                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-full" onClick={() => setSelectedReport(r)}>
+966:                                  Review the full details of the report against {r.reportedUserName}.
+973:                                    <p className="font-medium">{r.reporterName}</p>
+977:                                    <p className="font-medium">{r.reportedUserName}</p>
+982:                                  <p className="font-medium">{r.reason}</p>
+986:                                  <p className="text-sm bg-muted/50 p-3 rounded-lg border border-white/10">{r.description}</p>
+995:                                      value={resolutionNote}
+996:                                      onChange={(e) => setResolutionNote(e.target.value)}
+999:                                )}
+1003:                                    <p className="text-sm bg-primary/5 p-3 rounded-lg border border-primary/20 italic">"{r.resolutionNote}"</p>
+1005:                                )}
+1011:                                )}
+1016:                                    <Button variant="outline" className="rounded-full" onClick={() => handleDismissReport(r.id)}>
+1019:                                    <Button className="rounded-full" onClick={() => handleResolveReport(r.id)}>
+1022:                                    <Button variant="destructive" className="rounded-full" onClick={() => handleSuspendUser(r.reportedUserId)}>
+1026:                                )}
+1032:                              <Button size="sm" variant="outline" className="h-8 rounded-full" onClick={() => handleResolveReport(r.id)}>
+1035:                              <Button size="sm" variant="ghost" className="h-8 rounded-full" onClick={() => handleDismissReport(r.id)}>
+1039:                          )}
+1043:                  )}
+1068:                    <TableRow key={u.uid}>
+1070:                        <div className="font-medium">{u.companyName}</div>
+1071:                        <div className="text-xs text-muted-foreground">{u.email}</div>
+1074:                        <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{u.vatNumber || "Not provided"}</code>
+1078:                          {!u.isVatVerified && <Badge variant="outline" className="text-amber-500 border-amber-500/20">VAT Pending</Badge>}
+1079:                          {!u.isVetted && <Badge variant="outline" className="text-amber-500 border-amber-500/20">Identity Pending</Badge>}
+1085:                            <Button size="sm" variant="ghost" className="h-8 rounded-full" onClick={() => setSelectedUserForVetting(u)}>
+1091:                              <DialogTitle>Company Vetting: {u.companyName}</DialogTitle>
+1100:                                  <p className="font-medium">{u.companyName}</p>
+1104:                                  <p className="font-medium">{u.email}</p>
+1108:                                  <p className="font-medium">{u.vatNumber || "Not provided"}</p>
+1112:                                  <p className="font-medium">{u.createdAt ? new Date(u.createdAt.seconds * 1000).toLocaleDateString() : "N/A"}</p>
+1123:                                      <div className={`h-2 w-2 rounded-full ${u.isVatVerified ? 'bg-green-500' : 'bg-amber-500'}`} />
+1127:                                      <div className={`h-2 w-2 rounded-full ${u.isVetted ? 'bg-green-500' : 'bg-amber-500'}`} />
+1140:                                <Button variant="outline" className="rounded-full" onClick={() => handleVerifyVat(u.uid)}>
+1143:                              )}
+1145:                                <Button className="rounded-full" onClick={() => handleVetCompany(u.uid)}>
+1148:                              )}
+1153:                          <Button size="sm" variant="outline" className="h-8 rounded-full" onClick={() => handleVerifyVat(u.uid)}>
+1156:                        )}
+1158:                          <Button size="sm" className="h-8 rounded-full" onClick={() => handleVetCompany(u.uid)}>
+1161:                        )}
+1164:                  ))}
+1167:                      <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+1171:                  )}
+1199:                      <Button variant="outline" className="rounded-full" onClick={downloadTemplate}>
+1205:                          <input type="file" className="hidden" accept=".csv" onChange={handleBulkUpload} />
+1210:                )}
+1230:                    <p className="text-3xl font-bold">{transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0).toLocaleString()} kg</p>
+1241:                    <p className="text-3xl font-bold">{Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 21.7).toLocaleString()}</p>
+1252:                    <p className="text-3xl font-bold">{Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 0.4).toLocaleString()}</p>
+1263:                    <p className="text-3xl font-bold">{Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 30).toLocaleString()}</p>
+1276:                    <p className="font-medium">{transactions.length} Certificates Issued</p>
+1301:                          <img src={platformSettings.hixLogoUrl} alt="Logo" className="h-full w-full object-contain p-2" />
+1304:                        )}
+1309:                          <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+1325:                        value={platformSettings.commissionRate}
+1326:                        onChange={(e) => setPlatformSettings({...platformSettings, commissionRate: parseFloat(e.target.value)})}
+1341:                      variant={platformSettings.maintenanceMode ? "destructive" : "outline"}
+1344:                      onClick={() => setPlatformSettings({...platformSettings, maintenanceMode: !platformSettings.maintenanceMode})}
+1346:                      {platformSettings.maintenanceMode ? "Active" : "Inactive"}
+1359:                      value={platformSettings.announcementBanner}
+1360:                      onChange={(e) => setPlatformSettings({...platformSettings, announcementBanner: e.target.value})}
+1367:                <Button onClick={savePlatformSettings} disabled={isSavingSettings} className="rounded-full px-8">
+1368:                  {isSavingSettings ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+1395:                      value={announcement.title}
+1396:                      onChange={(e) => setAnnouncement({...announcement, title: e.target.value})}
+1405:                      value={announcement.message}
+1406:                      onChange={(e) => setAnnouncement({...announcement, message: e.target.value})}
+1410:                    onClick={handleSendAnnouncement} 
+1411:                    disabled={isSendingAnnouncement}
+1417:                        Sending to {users.length} users...
+1424:                    )}
+1439:                    onClick={seedMockData} 
+1440:                    disabled={isSeeding}
+1444:                    {isSeeding ? "Seeding..." : "Seed Mock Data"}
+1457:                    onClick={sendTestNotification} 
+1458:                    disabled={isSendingTest}
+1462:                    {isSendingTest ? "Sending..." : "Send Test Notification"}
+1473:}

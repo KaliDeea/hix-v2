@@ -22,8 +22,24 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ImagePlus, Leaf, ShieldAlert, Sparkles, Loader2 } from "lucide-react";
+import { 
+  ImagePlus, 
+  Leaf, 
+  ShieldAlert, 
+  Sparkles, 
+  Loader2, 
+  HelpCircle, 
+  Trash2, 
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 export default function CreateListing() {
   const { user, profile } = useAuth();
@@ -50,28 +66,54 @@ export default function CreateListing() {
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.title) newErrors.title = "Title is required";
+    else if (formData.title.length < 10) newErrors.title = "Title must be at least 10 characters";
+    else if (formData.title.length > 100) newErrors.title = "Title must be less than 100 characters";
 
-    if (file.size > 5000 * 1024) {
-      toast.error("File size too large. Max 5000KB.");
-      return;
+    if (!formData.price) newErrors.price = "Price is required";
+    else if (parseFloat(formData.price) < 0) newErrors.price = "Price cannot be negative";
+
+    if (!formData.quantity) newErrors.quantity = "Quantity is required";
+    else if (parseInt(formData.quantity) <= 0) newErrors.quantity = "Quantity must be at least 1";
+
+    if (!formData.category) newErrors.category = "Category is required";
+    if (!formData.location) newErrors.location = "Location is required";
+
+    if (formData.listingType === 'auction') {
+      if (!formData.auctionEndTime) newErrors.auctionEndTime = "Auction end time is required";
+      else if (new Date(formData.auctionEndTime) <= new Date()) newErrors.auctionEndTime = "End time must be in the future";
     }
 
-    setUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImages(prev => [...prev, reader.result as string]);
-      setUploading(false);
-      toast.success("Image added");
-    };
-    reader.onerror = () => {
-      toast.error("Failed to read file");
-      setUploading(false);
-    };
-    reader.readAsDataURL(file);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newImages: string[] = [];
+    let hasError = false;
+
+    (Array.from(files) as File[]).forEach(file => {
+      if (file.size > 5000 * 1024) {
+        toast.error(`${file.name} is too large. Max 5MB.`);
+        hasError = true;
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImages(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (!hasError) toast.success("Images added");
   };
 
   const removeImage = (index: number) => {
@@ -155,42 +197,18 @@ export default function CreateListing() {
   };
 
   const handleSubmit = async (e: React.FormEvent, status: 'available' | 'draft' = 'available') => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
-    // Basic validation
-    if (!formData.title || !formData.price || !formData.category || !formData.quantity || !formData.location) {
-      toast.error("Please fill in all required fields");
+    if (status === 'available' && !validateForm()) {
+      toast.error("Please fix the errors before publishing");
       return;
     }
 
-    const price = parseFloat(formData.price);
-    const quantity = parseInt(formData.quantity);
-    const co2Savings = parseFloat(formData.co2Savings) || 0;
-
-    if (isNaN(price) || price < 0) {
-      toast.error("Price must be a positive number");
+    // For drafts, we only need a title
+    if (status === 'draft' && !formData.title) {
+      toast.error("Please enter at least a title to save a draft");
+      setErrors({ title: "Title is required for drafts" });
       return;
-    }
-
-    if (isNaN(quantity) || quantity <= 0) {
-      toast.error("Quantity must be at least 1");
-      return;
-    }
-
-    if (formData.listingType === 'auction') {
-      const reservePrice = formData.reservePrice ? parseFloat(formData.reservePrice) : null;
-      if (reservePrice !== null && (isNaN(reservePrice) || reservePrice < 0)) {
-        toast.error("Reserve price must be a positive number");
-        return;
-      }
-      if (!formData.auctionEndTime) {
-        toast.error("Auction end time is required for auctions");
-        return;
-      }
-      if (new Date(formData.auctionEndTime) <= new Date()) {
-        toast.error("Auction end time must be in the future");
-        return;
-      }
     }
 
     setLoading(true);
@@ -244,15 +262,26 @@ export default function CreateListing() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-2">
-                <Label htmlFor="title">Listing Title *</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="title" className={errors.title ? "text-destructive" : ""}>
+                    Listing Title *
+                  </Label>
+                  <span className={`text-[10px] font-medium ${formData.title.length > 100 ? "text-destructive" : "text-muted-foreground"}`}>
+                    {formData.title.length}/100
+                  </span>
+                </div>
                 <Input 
                   id="title" 
                   placeholder="e.g. Used Hydraulic Press 50T" 
-                  className="rounded-xl"
+                  className={`rounded-xl ${errors.title ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, title: e.target.value});
+                    if (errors.title) setErrors({...errors, title: ""});
+                  }}
                   required
                 />
+                {errors.title && <p className="text-[10px] text-destructive font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.title}</p>}
               </div>
 
               <div className="grid gap-2">
@@ -375,15 +404,21 @@ export default function CreateListing() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="location">Location (City/Region) *</Label>
+                  <Label htmlFor="location" className={errors.location ? "text-destructive" : ""}>
+                    Location (City/Region) *
+                  </Label>
                   <Input 
                     id="location" 
                     placeholder="e.g. Hartlepool, UK" 
-                    className="rounded-xl"
+                    className={`rounded-xl ${errors.location ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     value={formData.location}
-                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    onChange={(e) => {
+                      setFormData({...formData, location: e.target.value});
+                      if (errors.location) setErrors({...errors, location: ""});
+                    }}
                     required
                   />
+                  {errors.location && <p className="text-[10px] text-destructive font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.location}</p>}
                 </div>
               </div>
 
@@ -413,9 +448,14 @@ export default function CreateListing() {
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select onValueChange={(v) => setFormData({...formData, category: v})}>
-                    <SelectTrigger className="rounded-xl">
+                  <Label htmlFor="category" className={errors.category ? "text-destructive" : ""}>
+                    Category *
+                  </Label>
+                  <Select onValueChange={(v) => {
+                    setFormData({...formData, category: v});
+                    if (errors.category) setErrors({...errors, category: ""});
+                  }}>
+                    <SelectTrigger className={`rounded-xl ${errors.category ? "border-destructive focus-visible:ring-destructive" : ""}`}>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -424,9 +464,23 @@ export default function CreateListing() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.category && <p className="text-[10px] text-destructive font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.category}</p>}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="co2">Estimated CO2 Savings (kg)</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="co2">Estimated CO2 Savings (kg)</Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs glass border-primary/20 p-3">
+                        <p className="text-xs leading-relaxed">
+                          Carbon savings are estimated based on the emissions avoided by reusing this asset instead of manufacturing a new one. 
+                          Industrial reuse typically saves 70-90% of the original manufacturing carbon footprint.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <div className="relative">
                     <Input 
                       id="co2" 
@@ -436,72 +490,101 @@ export default function CreateListing() {
                       value={formData.co2Savings}
                       onChange={(e) => setFormData({...formData, co2Savings: e.target.value})}
                     />
-                    <Leaf className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
+                    <Leaf className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-orange-500" />
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="price">Price per Unit (£) *</Label>
+                  <Label htmlFor="price" className={errors.price ? "text-destructive" : ""}>
+                    Price per Unit (£) *
+                  </Label>
                   <Input 
                     id="price" 
                     type="number" 
                     placeholder="0.00" 
-                    className="rounded-xl"
+                    className={`rounded-xl ${errors.price ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                    onChange={(e) => {
+                      setFormData({...formData, price: e.target.value});
+                      if (errors.price) setErrors({...errors, price: ""});
+                    }}
                     required
                   />
+                  {errors.price && <p className="text-[10px] text-destructive font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.price}</p>}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="quantity">Quantity Available *</Label>
+                  <Label htmlFor="quantity" className={errors.quantity ? "text-destructive" : ""}>
+                    Quantity Available *
+                  </Label>
                   <Input 
                     id="quantity" 
                     type="number" 
                     placeholder="1" 
-                    className="rounded-xl"
+                    className={`rounded-xl ${errors.quantity ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     value={formData.quantity}
-                    onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                    onChange={(e) => {
+                      setFormData({...formData, quantity: e.target.value});
+                      if (errors.quantity) setErrors({...errors, quantity: ""});
+                    }}
                     required
                   />
+                  {errors.quantity && <p className="text-[10px] text-destructive font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.quantity}</p>}
                 </div>
               </div>
 
               <div className="grid gap-2">
-                <Label>Asset Images</Label>
+                <div className="flex justify-between items-center">
+                  <Label>Asset Images</Label>
+                  <span className="text-[10px] text-muted-foreground font-medium">{images.length} images added</span>
+                </div>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                   {images.map((img, idx) => (
                     <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
                       <img src={img} alt={`Asset ${idx}`} className="h-full w-full object-cover" />
-                      <button 
-                        type="button"
-                        onClick={() => removeImage(idx)}
-                        className="absolute top-2 right-2 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <span className="text-white text-xs">×</span>
-                      </button>
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button 
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          className="h-8 w-8 rounded-full bg-destructive/80 text-white flex items-center justify-center hover:bg-destructive transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        {idx === 0 && (
+                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-primary text-[8px] font-bold uppercase tracking-widest text-white">
+                            Primary
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
-                  <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors bg-white/5 relative">
+                  <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors bg-white/5 relative group">
                     {uploading ? (
                       <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                     ) : (
                       <>
-                        <ImagePlus className="h-8 w-8 text-muted-foreground mb-2" />
-                        <span className="text-[10px] text-muted-foreground">Add Image</span>
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors mb-2">
+                          <ImagePlus className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Add Images</span>
+                        <span className="text-[8px] text-muted-foreground/60 mt-1">Multiple allowed</span>
                       </>
                     )}
                     <input 
                       type="file" 
                       className="hidden" 
                       accept="image/*" 
+                      multiple
                       onChange={handleImageUpload}
                       disabled={uploading}
                     />
                   </label>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2">Max 5000KB per image.</p>
+                <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Max 5MB per image. First image will be used as the primary thumbnail.
+                </p>
               </div>
             </CardContent>
             <CardFooter className="border-t border-white/5 pt-6 flex flex-col sm:flex-row gap-4">

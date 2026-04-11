@@ -16,6 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ShieldCheck, AlertCircle, Upload, Building2, Loader2 } from "lucide-react";
+import { compressImage } from "@/lib/image-utils";
 
 export default function Profile() {
   const { user, profile, isAuthReady } = useAuth();
@@ -50,17 +51,38 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5000 * 1024) {
-      toast.error("File size too large. Max 5000KB.");
+    // Basic size check before processing (5MB raw limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size too large. Max 5MB for processing.");
       return;
     }
 
     setUploading(true);
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData(prev => ({ ...prev, logoUrl: reader.result as string }));
-      setUploading(false);
-      toast.success("Logo uploaded to profile (pending save)");
+    reader.onloadend = async () => {
+      try {
+        const base64 = reader.result as string;
+        // Compress the image to ensure it fits in Firestore
+        const compressed = await compressImage(base64, 400, 400, 0.8);
+        setFormData(prev => ({ ...prev, logoUrl: compressed }));
+        
+        // Auto-save logo to profile
+        if (user) {
+          try {
+            const userRef = doc(db, "users", user.uid);
+            await setDoc(userRef, { logoUrl: compressed }, { merge: true });
+            toast.success("Profile picture updated and saved!");
+          } catch (error) {
+            console.error("Error auto-saving logo:", error);
+            toast.error("Logo uploaded but failed to save to database.");
+          }
+        }
+      } catch (err) {
+        console.error("Compression error:", err);
+        toast.error("Failed to process image");
+      } finally {
+        setUploading(false);
+      }
     };
     reader.onerror = () => {
       toast.error("Failed to read file");
@@ -156,14 +178,17 @@ export default function Profile() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-6 mb-6">
-                <div className="relative h-24 w-24 rounded-2xl bg-muted flex items-center justify-center overflow-hidden border-2 border-dashed border-white/10">
+                <div className="relative h-24 w-24 rounded-2xl bg-muted flex items-center justify-center overflow-hidden border-2 border-primary/20 hover:border-primary/50 transition-all group shadow-lg">
                   {formData.logoUrl ? (
-                    <img src={formData.logoUrl} alt="Logo" className="h-full w-full object-cover" />
+                    <img src={formData.logoUrl} alt="Logo" className="h-full w-full object-cover transition-transform group-hover:scale-110" />
                   ) : (
                     <Building2 className="h-10 w-10 text-muted-foreground" />
                   )}
-                  <label className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                    <Upload className="h-6 w-6 text-white" />
+                  <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer backdrop-blur-[2px]">
+                    <div className="flex flex-col items-center gap-1">
+                      <Upload className="h-6 w-6 text-white" />
+                      <span className="text-[10px] text-white font-medium">Change</span>
+                    </div>
                     <input 
                       type="file" 
                       className="hidden" 

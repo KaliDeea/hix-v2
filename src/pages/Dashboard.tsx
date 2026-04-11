@@ -47,11 +47,23 @@ import {
   Pencil
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
-import { format } from "date-fns";
-import { generateTradeCertificate } from "@/lib/pdf";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from "recharts";
+import { format, subDays } from "date-fns";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { addDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import Papa from "papaparse";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
@@ -79,6 +91,8 @@ export default function Dashboard() {
         const co2Saved = parseFloat(searchParams.get("co2") || "0");
         const sellerId = searchParams.get("seller");
         const amount = parseFloat(searchParams.get("amount") || "0");
+        const buyerRate = parseFloat(searchParams.get("buyer_rate") || "3");
+        const sellerRate = parseFloat(searchParams.get("seller_rate") || "7");
 
         if (user && listingId) {
           const path = "transactions";
@@ -89,8 +103,8 @@ export default function Dashboard() {
               sellerId,
               amount,
               quantity: 1,
-              buyerCommission: amount * 0.03,
-              sellerCommission: 0,
+              buyerCommission: amount * (buyerRate / 100),
+              sellerCommission: amount * (sellerRate / 100),
               co2Saved,
               status: "completed",
               createdAt: new Date().toISOString()
@@ -137,6 +151,10 @@ export default function Dashboard() {
     };
   }, [user]);
 
+  const getCategoryColor = (category: string) => {
+    return 'border-primary/20 hover:border-primary/50';
+  };
+
   const handleReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !selectedTransaction) return;
@@ -150,6 +168,7 @@ export default function Dashboard() {
         reportedUserId: selectedTransaction.sellerId,
         reportedUserName: "Seller", // In a real app, we'd have the seller's name in the transaction
         transactionId: selectedTransaction.id,
+        listingId: selectedTransaction.listingId,
         co2Saved: selectedTransaction.co2Saved,
         reason: reportData.reason,
         description: reportData.description,
@@ -237,31 +256,56 @@ export default function Dashboard() {
   };
 
   const downloadTemplate = () => {
-    const csv = Papa.unparse([
-      {
-        title: "Used Hydraulic Press 50T",
-        description: "Industrial grade hydraulic press in good working condition.",
-        price: 1500,
-        quantity: 1,
-        category: "Machinery",
-        condition: "used-good",
-        location: "Manchester, UK",
-        weight: 1200,
-        dimensions: "150x100x200",
-        co2Savings: 450,
-        image: "https://picsum.photos/seed/press/800/600"
-      }
-    ]);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "hix_bulk_upload_template.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const csv = Papa.unparse([
+        {
+          title: "Used Hydraulic Press 50T",
+          description: "Industrial grade hydraulic press in good working condition.",
+          price: 1500,
+          quantity: 1,
+          category: "Machinery",
+          condition: "used-good",
+          location: "Manchester, UK",
+          weight: 1200,
+          dimensions: "150x100x200",
+          co2Savings: 450,
+          image: "https://picsum.photos/seed/press/800/600"
+        }
+      ]);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "hix_bulk_upload_template.csv");
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      toast.error("Failed to download template");
+    }
   };
+
+  const DashboardSkeleton = () => (
+    <div className="container mx-auto px-4 py-12">
+      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-10 w-32 rounded-full" />
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+      </div>
+      <Skeleton className="h-12 w-full max-w-md rounded-full mb-8" />
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-[400px] lg:col-span-2 rounded-xl" />
+        <Skeleton className="h-[400px] rounded-xl" />
+      </div>
+    </div>
+  );
 
   const stats = {
     revenue: profile?.revenue || 0,
@@ -279,7 +323,7 @@ export default function Dashboard() {
     );
   }
 
-  if (loading) return <div className="container py-20 text-center">Loading dashboard...</div>;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -303,7 +347,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card className="glass">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -324,16 +368,18 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground">HiX platform fees</p>
           </CardContent>
         </Card>
-        <Card className="glass">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">CO2 Saved</CardTitle>
-            <Leaf className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.co2Saved} kg</div>
-            <p className="text-xs text-muted-foreground">Sustainability impact</p>
-          </CardContent>
-        </Card>
+        <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
+          <Card className="glass border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">CO2 Saved</CardTitle>
+              <Leaf className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.co2Saved} kg</div>
+              <p className="text-xs text-muted-foreground">≈ {Math.round(stats.co2Saved / 20)} trees/yr</p>
+            </CardContent>
+          </Card>
+        </motion.div>
         <Card className="glass">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
@@ -355,30 +401,60 @@ export default function Dashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="glass">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="glass lg:col-span-2">
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Your latest trades and listing updates.</CardDescription>
+                <CardTitle>7-Day Chat Activity</CardTitle>
+                <CardDescription>Messages sent and received over the last week.</CardDescription>
               </CardHeader>
-              <CardContent>
-                {transactions.length > 0 ? (
-                  <div className="space-y-4">
-                    {transactions.slice(0, 5).map((t) => (
-                      <div key={t.id} className="flex items-center justify-between border-b border-white/5 pb-4 last:border-0 last:pb-0">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">Trade Completed</p>
-                          <p className="text-xs text-muted-foreground">{format(new Date(t.createdAt), 'PPP')}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-emerald-500">+£{t.amount.toLocaleString()}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground py-4">No recent activity found.</p>
-                )}
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={[
+                      { name: format(subDays(new Date(), 6), 'EEE'), messages: 12 },
+                      { name: format(subDays(new Date(), 5), 'EEE'), messages: 18 },
+                      { name: format(subDays(new Date(), 4), 'EEE'), messages: 15 },
+                      { name: format(subDays(new Date(), 3), 'EEE'), messages: 25 },
+                      { name: format(subDays(new Date(), 2), 'EEE'), messages: 32 },
+                      { name: format(subDays(new Date(), 1), 'EEE'), messages: 20 },
+                      { name: format(new Date(), 'EEE'), messages: 28 },
+                    ]}
+                  >
+                    <defs>
+                      <linearGradient id="colorMsg" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke="#ffffff50" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      stroke="#ffffff50" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #f9731633', borderRadius: '12px' }}
+                      itemStyle={{ color: '#f97316' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="messages" 
+                      stroke="#f97316" 
+                      fillOpacity={1} 
+                      fill="url(#colorMsg)" 
+                      strokeWidth={3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
 
@@ -389,12 +465,13 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="relative h-32 w-32 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin-slow"></div>
-                  <Leaf className="h-12 w-12 text-emerald-500" />
+                  <div className="absolute inset-0 rounded-full border-4 border-orange-500/20 border-t-orange-500 animate-spin-slow"></div>
+                  <Leaf className="h-12 w-12 text-orange-500" />
                 </div>
                 <div className="mt-4 text-center">
-                  <p className="text-2xl font-bold text-emerald-500">{stats.co2Saved} kg CO2</p>
-                  <p className="text-sm text-muted-foreground">Total carbon emissions saved</p>
+                  <p className="text-2xl font-bold text-orange-500">{stats.co2Saved} kg CO2</p>
+                  <p className="text-sm text-muted-foreground">≈ {Math.round(stats.co2Saved / 20)} trees planted</p>
+                  <p className="text-xs text-muted-foreground mt-1">or {Math.round(stats.co2Saved / 0.4).toLocaleString()} car miles saved</p>
                 </div>
               </CardContent>
             </Card>
@@ -496,7 +573,7 @@ export default function Dashboard() {
                       <TableCell>{format(new Date(t.createdAt), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="font-mono text-xs">{t.id}</TableCell>
                       <TableCell>£{t.amount.toLocaleString()}</TableCell>
-                      <TableCell className="text-emerald-500 font-medium">{t.co2Saved} kg</TableCell>
+                      <TableCell className="text-orange-500 font-medium">{t.co2Saved} kg</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button 
                           variant="ghost" 

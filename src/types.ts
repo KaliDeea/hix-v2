@@ -160,3 +160,14 @@ export interface HaulingPartnerApplication {
   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   createdAt: any;
 }
+
+export interface AuditLog {
+  id: string;
+  adminId: string;
+  adminName: string;
+  action: string;
+  targetId?: string;
+  targetType?: 'user' | 'listing' | 'report' | 'system';
+  details: string;
+  createdAt: any;
+}
