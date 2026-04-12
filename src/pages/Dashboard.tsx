@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAuth, db, onSnapshot, collection, query, where, handleFirestoreError, OperationType, deleteDoc, doc, updateDoc } from "@/lib/firebase";
+import { useAuth, db, onSnapshot, collection, query, where, handleFirestoreError, OperationType, deleteDoc, doc, updateDoc, increment } from "@/lib/firebase";
 import { Listing, Transaction, Report } from "@/types";
 import { Button } from "@/components/ui/button";
 import { 
@@ -29,6 +29,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,7 +51,8 @@ import {
   AlertTriangle,
   Loader2,
   Trash2,
-  Pencil
+  Pencil,
+  Search
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
 import { 
@@ -56,7 +64,10 @@ import {
   Tooltip, 
   ResponsiveContainer,
   AreaChart,
-  Area
+  Area,
+  BarChart,
+  Bar,
+  Cell
 } from "recharts";
 import { format, subDays } from "date-fns";
 import { motion } from "framer-motion";
@@ -72,6 +83,11 @@ export default function Dashboard() {
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [listingSearch, setListingSearch] = useState("");
+  const [listingStatusFilter, setListingStatusFilter] = useState("all");
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyTypeFilter, setHistoryTypeFilter] = useState("all");
   
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -114,6 +130,18 @@ export default function Dashboard() {
             await updateDoc(doc(db, "listings", listingId), {
               status: "sold"
             });
+
+            // Update user's total CO2 saved
+            await updateDoc(doc(db, "users", user.uid), {
+              totalCo2Saved: increment(co2Saved)
+            });
+
+            // Update seller's revenue
+            if (sellerId) {
+              await updateDoc(doc(db, "users", sellerId), {
+                revenue: increment(amount)
+              });
+            }
 
             toast.success("Payment successful! Your trade has been recorded and CO2 savings added.", {
               duration: 5000,
@@ -297,7 +325,7 @@ export default function Dashboard() {
         <Skeleton className="h-10 w-32 rounded-full" />
       </div>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+        {[1, 2, 3, 4].map(i => <Skeleton key={`skeleton-${i}`} className="h-32 rounded-xl" />)}
       </div>
       <Skeleton className="h-12 w-full max-w-md rounded-full mb-8" />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -307,12 +335,43 @@ export default function Dashboard() {
     </div>
   );
 
+  const filteredMyListings = myListings.filter(l => {
+    const matchesSearch = l.title.toLowerCase().includes(listingSearch.toLowerCase()) || 
+                         l.category.toLowerCase().includes(listingSearch.toLowerCase());
+    const matchesStatus = listingStatusFilter === "all" || l.status === listingStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredTransactions = transactions.filter(t => {
+    const matchesSearch = t.id.toLowerCase().includes(historySearch.toLowerCase()) || 
+                         t.listingId.toLowerCase().includes(historySearch.toLowerCase());
+    const isPurchase = t.buyerId === user?.uid;
+    const matchesType = historyTypeFilter === "all" || 
+                       (historyTypeFilter === "purchase" && isPurchase) || 
+                       (historyTypeFilter === "sale" && !isPurchase);
+    return matchesSearch && matchesType;
+  });
+
   const stats = {
     revenue: profile?.revenue || 0,
     commissions: profile?.commissionsPaid || 0,
     co2Saved: transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0),
     activeListings: myListings.length
   };
+
+  const co2ByCategory = transactions.reduce((acc: any, t) => {
+    // In a real app, we'd fetch the listing to get the category
+    // For now, we'll use some mock distribution or try to find it if listings are loaded
+    const listing = myListings.find(l => l.id === t.listingId);
+    const category = listing?.category || "Other";
+    acc[category] = (acc[category] || 0) + (t.co2Saved || 0);
+    return acc;
+  }, {});
+
+  const esgChartData = Object.entries(co2ByCategory).map(([name, value]) => ({
+    name,
+    value
+  })).sort((a: any, b: any) => b.value - a.value);
 
   if (!user) {
     return (
@@ -369,10 +428,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
-          <Card className="glass border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+          <Card className="glass border-primary/20 shadow-[0_0_15px_var(--primary)]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">CO2 Saved</CardTitle>
-              <Leaf className="h-4 w-4 text-orange-500" />
+              <Leaf className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.co2Saved} kg</div>
@@ -422,8 +481,8 @@ export default function Dashboard() {
                   >
                     <defs>
                       <linearGradient id="colorMsg" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
@@ -442,13 +501,13 @@ export default function Dashboard() {
                       tickFormatter={(value) => `${value}`}
                     />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #f9731633', borderRadius: '12px' }}
-                      itemStyle={{ color: '#f97316' }}
+                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid var(--primary)', borderRadius: '12px' }}
+                      itemStyle={{ color: 'var(--primary)' }}
                     />
                     <Area 
                       type="monotone" 
                       dataKey="messages" 
-                      stroke="#f97316" 
+                      stroke="var(--primary)" 
                       fillOpacity={1} 
                       fill="url(#colorMsg)" 
                       strokeWidth={3}
@@ -465,14 +524,56 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="flex flex-col items-center justify-center py-6">
                 <div className="relative h-32 w-32 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-4 border-orange-500/20 border-t-orange-500 animate-spin-slow"></div>
-                  <Leaf className="h-12 w-12 text-orange-500" />
+                  <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin-slow"></div>
+                  <Leaf className="h-12 w-12 text-primary" />
                 </div>
                 <div className="mt-4 text-center">
-                  <p className="text-2xl font-bold text-orange-500">{stats.co2Saved} kg CO2</p>
+                  <p className="text-2xl font-bold text-primary">{stats.co2Saved} kg CO2</p>
                   <p className="text-sm text-muted-foreground">≈ {Math.round(stats.co2Saved / 20)} trees planted</p>
                   <p className="text-xs text-muted-foreground mt-1">or {Math.round(stats.co2Saved / 0.4).toLocaleString()} car miles saved</p>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass lg:col-span-3">
+              <CardHeader>
+                <CardTitle>CO2 Savings by Category</CardTitle>
+                <CardDescription>Breakdown of environmental impact across different asset classes.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                {esgChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={esgChartData} layout="vertical" margin={{ left: 40, right: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        stroke="#ffffff50" 
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        width={100}
+                      />
+                      <Tooltip 
+                        cursor={{ fill: '#ffffff05' }}
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid var(--primary)', borderRadius: '12px' }}
+                        itemStyle={{ color: 'var(--primary)' }}
+                        formatter={(value: number) => [`${value} kg CO2`, 'Savings']}
+                      />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
+                        {esgChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={`oklch(0.85 0.25 145 / ${1 - (index * 0.15)})`} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+                    <Leaf className="h-8 w-8 opacity-20" />
+                    <p>No trade data available for ESG breakdown.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -480,14 +581,36 @@ export default function Dashboard() {
 
         <TabsContent value="listings">
           <Card className="glass">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>My Listings</CardTitle>
                 <CardDescription>Manage your industrial assets listed on HiX.</CardDescription>
               </div>
-              <Button variant="outline" className="rounded-full" asChild>
-                <Link to="/marketplace">View Marketplace</Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative w-full sm:w-48">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search listings..." 
+                    className="pl-8 h-9 text-xs rounded-full"
+                    value={listingSearch}
+                    onChange={(e) => setListingSearch(e.target.value)}
+                  />
+                </div>
+                <Select value={listingStatusFilter} onValueChange={setListingStatusFilter}>
+                  <SelectTrigger className="h-9 text-xs rounded-full w-full sm:w-32">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="sold">Sold</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" className="rounded-full h-9" asChild>
+                  <Link to="/marketplace">View Marketplace</Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -501,8 +624,8 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {myListings.map((listing) => (
-                    <TableRow key={listing.id}>
+                  {filteredMyListings.map((listing) => (
+                    <TableRow key={`my-listing-${listing.id}`}>
                       <TableCell className="font-medium">{listing.title}</TableCell>
                       <TableCell>£{listing.price.toLocaleString()}</TableCell>
                       <TableCell>{listing.quantity}</TableCell>
@@ -552,9 +675,32 @@ export default function Dashboard() {
 
         <TabsContent value="history">
           <Card className="glass">
-            <CardHeader>
-              <CardTitle>Trade History</CardTitle>
-              <CardDescription>A record of all your purchases and sales.</CardDescription>
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Trade History</CardTitle>
+                <CardDescription>A record of all your purchases and sales.</CardDescription>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative w-full sm:w-48">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search history..." 
+                    className="pl-8 h-9 text-xs rounded-full"
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                  />
+                </div>
+                <Select value={historyTypeFilter} onValueChange={setHistoryTypeFilter}>
+                  <SelectTrigger className="h-9 text-xs rounded-full w-full sm:w-32">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="purchase">Purchases</SelectItem>
+                    <SelectItem value="sale">Sales</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -568,12 +714,12 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((t) => (
-                    <TableRow key={t.id}>
+                  {filteredTransactions.map((t) => (
+                    <TableRow key={`transaction-${t.id}`}>
                       <TableCell>{format(new Date(t.createdAt), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="font-mono text-xs">{t.id}</TableCell>
                       <TableCell>£{t.amount.toLocaleString()}</TableCell>
-                      <TableCell className="text-orange-500 font-medium">{t.co2Saved} kg</TableCell>
+                      <TableCell className="text-primary font-medium">{t.co2Saved} kg</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button 
                           variant="ghost" 

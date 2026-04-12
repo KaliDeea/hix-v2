@@ -116,7 +116,7 @@ export default function Notifications() {
           <div className="space-y-4">
             {notifications.map((n) => (
               <motion.div
-                key={n.id}
+                key={`page-notif-${n.id}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
               >
@@ -136,7 +136,7 @@ export default function Notifications() {
                         <div className="flex items-center justify-between mb-1">
                           <h3 className={`font-semibold ${!n.read ? 'text-primary' : ''}`}>{n.title}</h3>
                           <span className="text-[10px] text-muted-foreground">
-                            {n.createdAt && formatDistanceToNow(n.createdAt.toDate())} ago
+                            {n.createdAt && formatDistanceToNow(n.createdAt?.toDate ? n.createdAt.toDate() : new Date(n.createdAt))} ago
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground leading-relaxed">{n.message}</p>

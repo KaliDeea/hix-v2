@@ -166,7 +166,7 @@ export default function Messages() {
 
                   return (
                     <button
-                      key={chat.id}
+                      key={`chat-item-${chat.id}`}
                       onClick={() => setSelectedChat(chat)}
                       className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all relative ${
                         isSelected ? "bg-primary/20 border border-primary/20" : "hover:bg-white/5 border border-transparent"
@@ -214,8 +214,8 @@ export default function Messages() {
                   <h3 className="font-bold">
                     {selectedChat.participantNames[selectedChat.participants.find(p => p !== user.uid) || ""]}
                   </h3>
-                  <p className="text-[10px] text-orange-500 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                  <p className="text-[10px] text-primary flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
                     Online
                   </p>
                 </div>
@@ -232,7 +232,7 @@ export default function Messages() {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      key={msg.id || idx}
+                      key={msg.id ? `msg-${msg.id}` : `msg-idx-${idx}`}
                       className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                     >
                       <div className={`max-w-[70%] p-3 rounded-2xl ${

@@ -158,7 +158,12 @@ export default function Admin() {
   const [userSort, setUserSort] = useState<{ key: keyof UserProfile; direction: 'asc' | 'desc' }>({ key: 'companyName', direction: 'asc' });
   
   const [reportFilter, setReportFilter] = useState("all");
+  const [reportSearch, setReportSearch] = useState("");
   const [reportSort, setReportSort] = useState<{ key: keyof Report; direction: 'asc' | 'desc' }>({ key: 'status', direction: 'asc' });
+
+  const [vettingSearch, setVettingSearch] = useState("");
+  const [vettingTypeFilter, setVettingTypeFilter] = useState("all");
+  const [vettingStatusFilter, setVettingStatusFilter] = useState("all");
 
   const [announcement, setAnnouncement] = useState({ title: "", message: "" });
   const [isSendingAnnouncement, setIsSendingAnnouncement] = useState(false);
@@ -167,6 +172,8 @@ export default function Admin() {
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [resolutionNote, setResolutionNote] = useState("");
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditActionFilter, setAuditActionFilter] = useState("all");
   const [suspensionReason, setSuspensionReason] = useState("");
   const [isSuspending, setIsSuspending] = useState(false);
   const [selectedUserForSuspension, setSelectedUserForSuspension] = useState<UserProfile | null>(null);
@@ -311,7 +318,7 @@ export default function Admin() {
     };
   }, [profile]);
 
-  const createAuditLog = async (action: string, details: string, targetId?: string, targetType?: AuditLog['targetType']) => {
+  const createAuditLog = async (action: string, details: string, targetId?: string, targetType?: AuditLog['targetType'], targetName?: string, targetEmail?: string) => {
     if (!user || !profile) return;
     try {
       await addDoc(collection(db, "audit_logs"), {
@@ -321,6 +328,8 @@ export default function Admin() {
         details,
         targetId,
         targetType,
+        targetName,
+        targetEmail,
         createdAt: serverTimestamp()
       });
     } catch (error) {
@@ -329,13 +338,14 @@ export default function Admin() {
   };
 
   const handleVerifyVat = async (userId: string) => {
+    const targetUser = users.find(u => u.uid === userId);
     const path = `users/${userId}`;
     try {
       await updateDoc(doc(db, "users", userId), {
         isVatVerified: true
       });
       
-      await createAuditLog("VERIFY_VAT", "Verified user VAT registration", userId, 'user');
+      await createAuditLog("VERIFY_VAT", "Verified user VAT registration", userId, 'user', targetUser?.companyName, targetUser?.email);
       
       // Send notification to user
       await addDoc(collection(db, "notifications"), {
@@ -354,33 +364,39 @@ export default function Admin() {
     }
   };
 
-  const handleVetCompany = async (userId: string) => {
+  const handleVetCompany = async (userId: string, status: 'approved' | 'rejected' | 'under_review' = 'approved') => {
+    const targetUser = users.find(u => u.uid === userId);
     const path = `users/${userId}`;
     try {
       await updateDoc(doc(db, "users", userId), {
-        isVetted: true
+        isVetted: status === 'approved',
+        vettingStatus: status
       });
       
-      await createAuditLog("VET_COMPANY", "Vetted and approved company", userId, 'user');
+      await createAuditLog("VET_COMPANY", `Vetting status updated to ${status}`, userId, 'user', targetUser?.companyName, targetUser?.email);
       
       // Send notification to user
       await addDoc(collection(db, "notifications"), {
         userId,
-        title: "Company Vetted",
-        message: "Congratulations! Your company has been fully vetted and approved on the HiX exchange.",
+        title: status === 'approved' ? "Company Vetted" : "Vetting Update",
+        message: status === 'approved' 
+          ? "Congratulations! Your company has been fully vetted and approved on the HiX exchange."
+          : `Your vetting status has been updated to: ${status.replace('_', ' ')}.`,
         type: 'system',
         link: '/profile',
         read: false,
         createdAt: serverTimestamp()
       });
       
-      toast.success("Company vetted and user notified");
+      toast.success(`Company vetting status updated to ${status}`);
+      setSelectedUserForVetting(null);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, path);
     }
   };
 
   const handleSuspendUser = async (userId: string) => {
+    const targetUser = users.find(u => u.uid === userId);
     const path = `users/${userId}`;
     try {
       await updateDoc(doc(db, "users", userId), {
@@ -388,7 +404,7 @@ export default function Admin() {
         suspensionReason: suspensionReason || "Violated platform terms"
       });
       
-      await createAuditLog("SUSPEND_USER", `Suspended user. Reason: ${suspensionReason || "Violated platform terms"}`, userId, 'user');
+      await createAuditLog("SUSPEND_USER", `Suspended user. Reason: ${suspensionReason || "Violated platform terms"}`, userId, 'user', targetUser?.companyName, targetUser?.email);
 
       // Send notification to user
       await addDoc(collection(db, "notifications"), {
@@ -416,24 +432,26 @@ export default function Admin() {
       return;
     }
     
+    const targetUser = users.find(u => u.uid === userId);
     const path = `users/${userId}`;
     try {
       await updateDoc(doc(db, "users", userId), { role: newRole });
       toast.success(`User role updated to ${newRole}`);
-      await createAuditLog("UPDATE_ROLE", `Changed user role to ${newRole}`, userId, 'user');
+      await createAuditLog("UPDATE_ROLE", `Changed user role to ${newRole}`, userId, 'user', targetUser?.companyName, targetUser?.email);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, path);
     }
   };
 
   const handleUnsuspendUser = async (userId: string) => {
+    const targetUser = users.find(u => u.uid === userId);
     const path = `users/${userId}`;
     try {
       await updateDoc(doc(db, "users", userId), {
         isSuspended: false,
         suspensionReason: null
       });
-      await createAuditLog("UNSUSPEND_USER", "Unsuspended user account", userId, 'user');
+      await createAuditLog("UNSUSPEND_USER", "Unsuspended user account", userId, 'user', targetUser?.companyName, targetUser?.email);
       toast.success("User unsuspended successfully");
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, path);
@@ -446,13 +464,14 @@ export default function Admin() {
       return;
     }
     
+    const targetUser = users.find(u => u.uid === userId);
     // Using a custom dialog would be better, but for now we'll stick to basic confirmation
     if (!window.confirm("Are you absolutely sure you want to delete this user? This action cannot be undone.")) return;
     
     const path = `users/${userId}`;
     try {
       await deleteDoc(doc(db, "users", userId));
-      await createAuditLog("DELETE_USER", "Deleted user account", userId, 'user');
+      await createAuditLog("DELETE_USER", "Deleted user account", userId, 'user', targetUser?.companyName, targetUser?.email);
       toast.success("User deleted successfully");
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
@@ -460,6 +479,7 @@ export default function Admin() {
   };
 
   const handleResolveReport = async (reportId: string) => {
+    const report = reports.find(r => r.id === reportId);
     const path = `reports/${reportId}`;
     try {
       await updateDoc(doc(db, "reports", reportId), {
@@ -468,7 +488,7 @@ export default function Admin() {
         resolvedAt: serverTimestamp(),
         resolvedBy: user?.uid
       });
-      await createAuditLog("RESOLVE_REPORT", `Resolved report. Note: ${resolutionNote || "No note"}`, reportId, 'report');
+      await createAuditLog("RESOLVE_REPORT", `Resolved report. Note: ${resolutionNote || "No note"}`, reportId, 'report', report?.reportedUserName);
       toast.success("Report marked as resolved");
       setResolutionNote("");
     } catch (error) {
@@ -477,12 +497,13 @@ export default function Admin() {
   };
 
   const handleDismissReport = async (reportId: string) => {
+    const report = reports.find(r => r.id === reportId);
     const path = `reports/${reportId}`;
     try {
       await updateDoc(doc(db, "reports", reportId), {
         status: 'dismissed'
       });
-      await createAuditLog("DISMISS_REPORT", "Dismissed report", reportId, 'report');
+      await createAuditLog("DISMISS_REPORT", "Dismissed report", reportId, 'report', report?.reportedUserName);
       toast.success("Report dismissed");
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, path);
@@ -651,7 +672,16 @@ export default function Admin() {
     });
 
   const filteredReports = reports
-    .filter(r => reportFilter === 'all' || r.status === reportFilter)
+    .filter(r => {
+      const matchesStatus = reportFilter === 'all' || r.status === reportFilter;
+      const matchesReason = reportReasonFilter === 'all' || r.reason === reportReasonFilter;
+      const matchesSearch = 
+        r.reporterName?.toLowerCase().includes(reportSearch.toLowerCase()) ||
+        r.reportedUserName?.toLowerCase().includes(reportSearch.toLowerCase()) ||
+        r.reason?.toLowerCase().includes(reportSearch.toLowerCase()) ||
+        r.description?.toLowerCase().includes(reportSearch.toLowerCase());
+      return matchesStatus && matchesReason && matchesSearch;
+    })
     .sort((a, b) => {
       const aVal = a[reportSort.key];
       const bVal = b[reportSort.key];
@@ -659,6 +689,36 @@ export default function Admin() {
       if (aVal > bVal) return reportSort.direction === 'asc' ? 1 : -1;
       return 0;
     });
+
+  const filteredVettingUsers = users
+    .filter(u => u.vettingStatus !== 'approved' || !u.isVatVerified)
+    .filter(u => {
+      const matchesSearch = 
+        u.companyName?.toLowerCase().includes(vettingSearch.toLowerCase()) ||
+        u.email?.toLowerCase().includes(vettingSearch.toLowerCase()) ||
+        u.vatNumber?.toLowerCase().includes(vettingSearch.toLowerCase());
+      
+      const matchesType = vettingTypeFilter === 'all' ||
+                         (vettingTypeFilter === 'vat' && !u.isVatVerified) ||
+                         (vettingTypeFilter === 'identity' && u.vettingStatus !== 'approved');
+      
+      const matchesStatus = vettingStatusFilter === 'all' || u.vettingStatus === vettingStatusFilter;
+      
+      return matchesSearch && matchesType && matchesStatus;
+    });
+
+  const filteredAuditLogs = auditLogs.filter(log => {
+    const matchesSearch = 
+      log.adminName?.toLowerCase().includes(auditSearch.toLowerCase()) ||
+      log.action?.toLowerCase().includes(auditSearch.toLowerCase()) ||
+      log.details?.toLowerCase().includes(auditSearch.toLowerCase()) ||
+      log.targetName?.toLowerCase().includes(auditSearch.toLowerCase()) ||
+      log.targetEmail?.toLowerCase().includes(auditSearch.toLowerCase());
+    
+    const matchesAction = auditActionFilter === 'all' || log.action === auditActionFilter;
+    
+    return matchesSearch && matchesAction;
+  });
 
   const seedMockData = async () => {
     setIsSeeding(true);
@@ -875,7 +935,7 @@ export default function Admin() {
                   { value: "system", label: "System Tools", icon: RefreshCw },
                 ].map((tab) => (
                   <TabsTrigger 
-                    key={tab.value}
+                    key={`admin-tab-${tab.value}`}
                     value={tab.value} 
                     className="justify-start px-5 py-2.5 rounded-xl data-active:bg-primary data-active:text-primary-foreground data-active:shadow-lg data-active:shadow-primary/20 hover:bg-white/5 transition-all relative group shrink-0 border-none"
                   >
@@ -908,7 +968,7 @@ export default function Admin() {
                       { label: "Active Listings", value: Math.round(users.length * 2.5), sub: "Across all categories", icon: Package, color: "text-purple-500" },
                     ].map((stat, i) => (
                       <motion.div
-                        key={stat.label}
+                        key={`admin-stat-${stat.label}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
@@ -947,11 +1007,16 @@ export default function Admin() {
                 <CardContent>
                   <div className="space-y-4">
                     {auditLogs.slice(0, 4).map((log) => (
-                      <div key={log.id} className="flex items-start gap-3 pb-3 border-b border-white/5 last:border-0">
+                      <div key={`overview-log-${log.id}`} className="flex items-start gap-3 pb-3 border-b border-white/5 last:border-0">
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">
                             {log.adminName} <span className="font-normal text-muted-foreground">{log.details}</span>
                           </p>
+                          {log.targetName && (
+                            <p className="text-[10px] text-primary font-medium mt-0.5">
+                              Target: {log.targetName} ({log.targetType})
+                            </p>
+                          )}
                           <p className="text-[10px] text-muted-foreground mt-0.5">
                             {log.createdAt ? new Date(log.createdAt.seconds * 1000).toLocaleTimeString() : "Just now"}
                           </p>
@@ -1135,7 +1200,7 @@ export default function Admin() {
                           </TableRow>
                         ) : (
                           filteredUsers.slice((userPage - 1) * itemsPerPage, userPage * itemsPerPage).map((u) => (
-                            <TableRow key={u.uid} className="hover:bg-primary/5 transition-colors group">
+                            <TableRow key={`user-row-${u.uid}`} className="hover:bg-primary/5 transition-colors group">
                               <TableCell className="pl-6">
                                 <div className="font-bold text-foreground">{u.companyName}</div>
                                 <div className="text-xs text-muted-foreground">{u.email}</div>
@@ -1148,10 +1213,12 @@ export default function Admin() {
                                 )}
                               </TableCell>
                               <TableCell>
-                                {u.isVetted ? (
+                                {u.vettingStatus === 'approved' ? (
                                   <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 rounded-md">Vetted</Badge>
                                 ) : (
-                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 rounded-md">Pending</Badge>
+                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 rounded-md capitalize">
+                                    {u.vettingStatus?.replace('_', ' ') || 'Pending'}
+                                  </Badge>
                                 )}
                               </TableCell>
                               <TableCell>
@@ -1190,8 +1257,8 @@ export default function Admin() {
                                       VAT
                                     </Button>
                                   )}
-                                  {!u.isVetted && (
-                                    <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleVetCompany(u.uid)}>
+                                  {u.vettingStatus !== 'approved' && (
+                                    <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => setSelectedUserForVetting(u)}>
                                       Vet
                                     </Button>
                                   )}
@@ -1244,6 +1311,15 @@ export default function Admin() {
                       <CardDescription>Review disputes and terms violations reported by users.</CardDescription>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input 
+                          placeholder="Search reports..." 
+                          className="pl-10 rounded-xl glass border-primary/20"
+                          value={reportSearch}
+                          onChange={(e) => setReportSearch(e.target.value)}
+                        />
+                      </div>
                       <Select value={reportFilter} onValueChange={setReportFilter}>
                         <SelectTrigger className="w-full sm:w-[160px] rounded-xl glass border-primary/20">
                           <Filter className="h-4 w-4 mr-2" />
@@ -1312,7 +1388,7 @@ export default function Admin() {
                           </TableRow>
                         ) : (
                           filteredReports.slice((reportPage - 1) * itemsPerPage, reportPage * itemsPerPage).map((r) => (
-                            <TableRow key={r.id} className="hover:bg-primary/5 transition-colors group">
+                            <TableRow key={`report-row-${r.id}`} className="hover:bg-primary/5 transition-colors group">
                               <TableCell className="pl-6">
                                 <div className="font-bold">{r.reporterName}</div>
                                 <div className="text-[10px] text-muted-foreground font-mono">ID: {r.reporterId.slice(0, 8)}</div>
@@ -1447,8 +1523,46 @@ export default function Admin() {
             >
               <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
-                  <CardTitle className="text-xl">Vetting Queue</CardTitle>
-                  <CardDescription>Review companies waiting for VAT and identity verification.</CardDescription>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-xl">Vetting Queue</CardTitle>
+                      <CardDescription>Review companies waiting for VAT and identity verification.</CardDescription>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input 
+                          placeholder="Search companies..." 
+                          className="pl-10 rounded-xl glass border-primary/20"
+                          value={vettingSearch}
+                          onChange={(e) => setVettingSearch(e.target.value)}
+                        />
+                      </div>
+                      <Select value={vettingTypeFilter} onValueChange={setVettingTypeFilter}>
+                        <SelectTrigger className="w-full sm:w-[160px] rounded-xl glass border-primary/20">
+                          <Filter className="h-4 w-4 mr-2" />
+                          <SelectValue placeholder="Filter Type" />
+                        </SelectTrigger>
+                        <SelectContent className="glass">
+                          <SelectItem value="all">All Pending</SelectItem>
+                          <SelectItem value="vat">VAT Pending</SelectItem>
+                          <SelectItem value="identity">Identity Pending</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={vettingStatusFilter} onValueChange={setVettingStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-[160px] rounded-xl glass border-primary/20">
+                          <ShieldCheck className="h-4 w-4 mr-2" />
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent className="glass">
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="under_review">Under Review</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
@@ -1462,8 +1576,18 @@ export default function Admin() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.filter(u => !u.isVetted || !u.isVatVerified).map((u) => (
-                        <TableRow key={u.uid} className="hover:bg-primary/5 transition-colors group">
+                      {filteredVettingUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <ShieldCheck className="h-8 w-8 opacity-20" />
+                              <p>No companies in the vetting queue matching your criteria.</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredVettingUsers.map((u) => (
+                        <TableRow key={`vetting-row-${u.uid}`} className="hover:bg-primary/5 transition-colors group">
                           <TableCell className="pl-6">
                             <div className="font-bold">{u.companyName}</div>
                             <div className="text-xs text-muted-foreground">{u.email}</div>
@@ -1474,7 +1598,11 @@ export default function Admin() {
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
                               {!u.isVatVerified && <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] rounded-md">VAT Pending</Badge>}
-                              {!u.isVetted && <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] rounded-md">Identity Pending</Badge>}
+                              {u.vettingStatus !== 'approved' && (
+                                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] rounded-md capitalize">
+                                  {u.vettingStatus?.replace('_', ' ') || 'Identity Pending'}
+                                </Badge>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="text-right pr-6 space-x-1">
@@ -1540,10 +1668,18 @@ export default function Admin() {
                                         Verify VAT
                                       </Button>
                                     )}
-                                    {!u.isVetted && (
-                                      <Button className="rounded-xl px-6" onClick={() => handleVetCompany(u.uid)}>
-                                        Approve Company
-                                      </Button>
+                                    {u.vettingStatus !== 'approved' && (
+                                      <>
+                                        <Button variant="outline" className="rounded-xl px-6 border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => handleVetCompany(u.uid, 'rejected')}>
+                                          Reject
+                                        </Button>
+                                        <Button variant="outline" className="rounded-xl px-6" onClick={() => handleVetCompany(u.uid, 'under_review')}>
+                                          Under Review
+                                        </Button>
+                                        <Button className="rounded-xl px-6" onClick={() => handleVetCompany(u.uid, 'approved')}>
+                                          Approve Company
+                                        </Button>
+                                      </>
                                     )}
                                   </DialogFooter>
                                 </DialogContent>
@@ -1553,26 +1689,15 @@ export default function Admin() {
                                   VAT
                                 </Button>
                               )}
-                              {!u.isVetted && (
-                                <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleVetCompany(u.uid)}>
+                              {u.vettingStatus !== 'approved' && (
+                                <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleVetCompany(u.uid, 'approved')}>
                                   Approve
                                 </Button>
                               )}
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
-                      {users.filter(u => !u.isVetted || !u.isVatVerified).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-16 text-muted-foreground">
-                            <div className="flex flex-col items-center gap-3">
-                              <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                                <CheckCircle2 className="h-6 w-6 text-green-500" />
-                              </div>
-                              <p className="font-medium">Vetting queue is empty. All users are verified!</p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                        ))
                       )}
                     </TableBody>
                   </Table>
@@ -1652,8 +1777,8 @@ export default function Admin() {
                       { label: 'Tree Equivalent', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 21.7).toLocaleString(), icon: CheckCircle2, color: 'primary', sub: 'Offset' },
                       { label: 'Miles Saved', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 0.4).toLocaleString(), icon: Car, color: 'blue', sub: 'Travel' },
                       { label: 'Homes Powered', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 30).toLocaleString(), icon: Home, color: 'amber', sub: 'Energy' }
-                    ].map((stat, i) => (
-                      <Card key={i} className={`bg-${stat.color === 'primary' ? 'primary' : stat.color}-500/5 border-${stat.color === 'primary' ? 'primary' : stat.color}-500/10 overflow-hidden relative group`}>
+                    ].map((stat) => (
+                      <Card key={`esg-stat-${stat.label}`} className={`bg-${stat.color === 'primary' ? 'primary' : stat.color}-500/5 border-${stat.color === 'primary' ? 'primary' : stat.color}-500/10 overflow-hidden relative group`}>
                         <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity`}>
                           <stat.icon className="h-16 w-16" />
                         </div>
@@ -1715,8 +1840,40 @@ export default function Admin() {
             >
               <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
-                  <CardTitle className="text-xl">System Audit Logs</CardTitle>
-                  <CardDescription>Track administrative actions and system events for security and compliance.</CardDescription>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-xl">System Audit Logs</CardTitle>
+                      <CardDescription>Track administrative actions and system events for security and compliance.</CardDescription>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          placeholder="Search logs..." 
+                          className="pl-9 glass border-primary/20 rounded-xl h-10"
+                          value={auditSearch}
+                          onChange={(e) => setAuditSearch(e.target.value)}
+                        />
+                      </div>
+                      <Select value={auditActionFilter} onValueChange={setAuditActionFilter}>
+                        <SelectTrigger className="w-[180px] glass border-primary/20 rounded-xl h-10">
+                          <SelectValue placeholder="All Actions" />
+                        </SelectTrigger>
+                        <SelectContent className="glass border-primary/20">
+                          <SelectItem value="all">All Actions</SelectItem>
+                          <SelectItem value="VERIFY_VAT">Verify VAT</SelectItem>
+                          <SelectItem value="VET_COMPANY">Vet Company</SelectItem>
+                          <SelectItem value="SUSPEND_USER">Suspend User</SelectItem>
+                          <SelectItem value="UNSUSPEND_USER">Unsuspend User</SelectItem>
+                          <SelectItem value="DELETE_USER">Delete User</SelectItem>
+                          <SelectItem value="UPDATE_ROLE">Update Role</SelectItem>
+                          <SelectItem value="RESOLVE_REPORT">Resolve Report</SelectItem>
+                          <SelectItem value="DISMISS_REPORT">Dismiss Report</SelectItem>
+                          <SelectItem value="SEND_ANNOUNCEMENT">Announcement</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
@@ -1731,7 +1888,7 @@ export default function Admin() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {auditLogs.length === 0 ? (
+                        {filteredAuditLogs.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                               <div className="flex flex-col items-center gap-2">
@@ -1741,8 +1898,8 @@ export default function Admin() {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          auditLogs.slice((auditPage - 1) * itemsPerPage, auditPage * itemsPerPage).map((log) => (
-                            <TableRow key={log.id} className="hover:bg-primary/5 transition-colors">
+                          filteredAuditLogs.slice((auditPage - 1) * itemsPerPage, auditPage * itemsPerPage).map((log) => (
+                            <TableRow key={`audit-row-${log.id}`} className="hover:bg-primary/5 transition-colors">
                               <TableCell className="font-bold pl-6">{log.adminName}</TableCell>
                               <TableCell>
                                 <Badge variant="outline" className="uppercase text-[10px] font-bold tracking-widest rounded-md bg-white/5">{log.action}</Badge>
@@ -1750,9 +1907,13 @@ export default function Admin() {
                               <TableCell className="max-w-xs truncate text-xs italic text-muted-foreground">"{log.details}"</TableCell>
                               <TableCell className="text-[10px] font-mono text-muted-foreground">
                                 {log.targetType && log.targetId ? (
-                                  <span className="bg-muted/30 px-1.5 py-0.5 rounded border border-white/5">
-                                    {log.targetType}: {log.targetId.slice(0, 8)}
-                                  </span>
+                                  <div className="flex flex-col gap-1">
+                                    <span className="bg-muted/30 px-1.5 py-0.5 rounded border border-white/5 w-fit">
+                                      {log.targetType}: {log.targetId.slice(0, 8)}
+                                    </span>
+                                    {log.targetName && <span className="text-foreground font-medium">{log.targetName}</span>}
+                                    {log.targetEmail && <span className="opacity-70">{log.targetEmail}</span>}
+                                  </div>
                                 ) : "N/A"}
                               </TableCell>
                               <TableCell className="text-right pr-6 text-[10px] font-medium text-muted-foreground">
@@ -1766,7 +1927,7 @@ export default function Admin() {
                   </div>
                   <Pagination 
                     currentPage={auditPage}
-                    totalItems={auditLogs.length}
+                    totalItems={filteredAuditLogs.length}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setAuditPage}
                   />
@@ -2039,8 +2200,11 @@ export default function Admin() {
                 placeholder="e.g., Multiple reports of fraudulent behavior, Violation of terms section 4.2..."
                 value={suspensionReason}
                 onChange={(e) => setSuspensionReason(e.target.value)}
-                className="glass border-primary/20 min-h-[100px]"
+                className={`glass border-primary/20 min-h-[100px] ${suspensionReason.length > 0 && suspensionReason.length < 10 ? 'border-destructive/50' : ''}`}
               />
+              {suspensionReason.length > 0 && suspensionReason.length < 10 && (
+                <p className="text-[10px] text-destructive font-bold uppercase tracking-widest">Reason must be at least 10 characters</p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -2054,7 +2218,7 @@ export default function Admin() {
             <Button 
               variant="destructive" 
               onClick={() => selectedUserForSuspension && handleSuspendUser(selectedUserForSuspension.uid)}
-              disabled={!suspensionReason.trim()}
+              disabled={suspensionReason.trim().length < 10}
             >
               Confirm Suspension
             </Button>

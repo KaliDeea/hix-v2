@@ -29,7 +29,9 @@ export interface UserProfile {
   isVatVerified: boolean;
   isSuspended: boolean;
   suspensionReason?: string;
-  role: 'user' | 'admin' | 'superadmin';
+  role: 'user' | 'admin' | 'superadmin' | 'hauler' | 'buyer' | 'seller';
+  vettingStatus: 'pending' | 'approved' | 'rejected' | 'under_review';
+  totalCo2Saved: number;
   logoUrl?: string;
   createdAt: any;
   stripeAccountId?: string;
@@ -59,6 +61,8 @@ export interface Listing {
   co2Savings: number; // in kg
   status: 'available' | 'sold' | 'draft';
   listingType: 'fixed' | 'auction';
+  shippingOptions: ('collection' | 'standard' | 'express' | 'international')[];
+  shippingCost?: number;
   reservePrice?: number;
   auctionEndTime?: string;
   currentBid?: number;
@@ -106,6 +110,8 @@ export interface Transaction {
   buyerCommission: number;
   sellerCommission: number;
   co2Saved: number;
+  shippingMethod?: 'collection' | 'standard' | 'express' | 'international';
+  shippingCost?: number;
   status: 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled';
   createdAt: any;
   invoiceUrl?: string;
@@ -168,6 +174,8 @@ export interface AuditLog {
   action: string;
   targetId?: string;
   targetType?: 'user' | 'listing' | 'report' | 'system';
+  targetName?: string;
+  targetEmail?: string;
   details: string;
   createdAt: any;
 }

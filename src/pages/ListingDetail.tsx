@@ -333,7 +333,7 @@ export default function ListingDetail() {
           <div className="space-y-6">
             <div className="aspect-[4/3] bg-white/5 rounded-3xl" />
             <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map(i => <div key={i} className="aspect-square bg-white/5 rounded-xl" />)}
+              {[1, 2, 3, 4].map(i => <div key={`skeleton-img-${i}`} className="aspect-square bg-white/5 rounded-xl" />)}
             </div>
           </div>
           <div className="space-y-6">
@@ -341,7 +341,7 @@ export default function ListingDetail() {
             <div className="h-12 w-3/4 bg-white/5 rounded" />
             <div className="h-10 w-1/2 bg-white/5 rounded-2xl" />
             <div className="grid grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-white/5 rounded-2xl" />)}
+              {[1, 2, 3, 4].map(i => <div key={`skeleton-info-${i}`} className="h-20 bg-white/5 rounded-2xl" />)}
             </div>
             <div className="h-40 w-full bg-white/5 rounded-2xl" />
           </div>
@@ -378,7 +378,7 @@ export default function ListingDetail() {
             </div>
             <div className="mt-6 grid grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square rounded-2xl glass overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                <div key={`thumb-${i}`} className="aspect-square rounded-2xl glass overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
                   <img src={`https://picsum.photos/seed/steel-${i}/200/200`} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                 </div>
               ))}
@@ -402,7 +402,7 @@ export default function ListingDetail() {
                   {(listing.condition || 'used-good').replace('-', ' ')}
                 </Badge>
                 <div className="flex flex-col items-end ml-auto">
-                  <div className="flex items-center gap-2 text-orange-500 font-bold">
+                  <div className="flex items-center gap-2 text-primary font-bold">
                     <Leaf className="h-5 w-5" />
                     {listing.co2Savings}kg CO2
                   </div>
@@ -565,14 +565,29 @@ export default function ListingDetail() {
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Truck className="h-4 w-4 text-blue-500" />
-                    Logistics
+                    Shipping & Logistics
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <p className="text-xs text-muted-foreground">
-                    Contact vetted hauling companies for transport quotes.
+                <CardContent className="p-4 pt-0 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {listing.shippingOptions?.map((opt, idx) => (
+                      <Badge key={`${opt}-${idx}`} variant="secondary" className="bg-white/5 text-[10px] capitalize">
+                        {opt.replace('-', ' ')}
+                      </Badge>
+                    ))}
+                    {(!listing.shippingOptions || listing.shippingOptions.length === 0) && (
+                      <Badge variant="outline" className="text-[10px]">Contact Seller</Badge>
+                    )}
+                  </div>
+                  {listing.shippingCost !== undefined && listing.shippingCost > 0 && (
+                    <p className="text-xs font-medium text-primary">
+                      Base Shipping: £{listing.shippingCost.toLocaleString()}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    Contact vetted hauling companies for transport quotes or arrange with the seller.
                   </p>
-                  <Button variant="link" className="p-0 h-auto text-xs mt-2 text-primary" asChild>
+                  <Button variant="link" className="p-0 h-auto text-xs mt-1 text-primary" asChild>
                     <Link to="/hauling">View Haulers</Link>
                   </Button>
                 </CardContent>
@@ -655,21 +670,21 @@ export default function ListingDetail() {
               </div>
             </div>
 
-            <div className="glass p-8 rounded-3xl border-orange-500/20 bg-orange-500/5 relative overflow-hidden">
+            <div className="glass p-8 rounded-3xl border-primary/20 bg-primary/5 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Leaf className="h-24 w-24 text-orange-500" />
+                <Leaf className="h-24 w-24 text-primary" />
               </div>
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-xl bg-orange-500/20">
-                    <Leaf className="h-6 w-6 text-orange-500" />
+                  <div className="p-2 rounded-xl bg-primary/20">
+                    <Leaf className="h-6 w-6 text-primary" />
                   </div>
                   <h2 className="text-xl font-bold">Sustainability Impact</h2>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-8">
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <p className="text-4xl font-bold text-orange-500">{listing.co2Savings}kg</p>
+                      <p className="text-4xl font-bold text-primary">{listing.co2Savings}kg</p>
                       <p className="text-sm text-muted-foreground font-medium">CO2 Emissions Avoided</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -685,10 +700,10 @@ export default function ListingDetail() {
                   </div>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-2 flex-1 bg-orange-500/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-orange-500 w-[85%]" />
+                      <div className="h-2 flex-1 bg-primary/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary w-[85%]" />
                       </div>
-                      <span className="text-xs font-medium text-orange-500">85% Lower Footprint</span>
+                      <span className="text-xs font-medium text-primary">85% Lower Footprint</span>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       Choosing this circular asset instead of buying new prevents significant carbon emissions associated with manufacturing and raw material extraction.

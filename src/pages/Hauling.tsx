@@ -181,18 +181,18 @@ export default function Hauling() {
                 <CardContent className="flex-1 space-y-4">
                   <div className="flex flex-wrap gap-2">
                     {partner.specializations.map((spec, idx) => (
-                      <Badge key={idx} variant="secondary" className="bg-white/5 text-[10px]">
+                      <Badge key={`${spec}-${idx}`} variant="secondary" className="bg-white/5 text-[10px]">
                         {spec}
                       </Badge>
                     ))}
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4 text-orange-500" />
+                      <ShieldCheck className="h-4 w-4 text-primary" />
                       <span>Fully Insured & Vetted</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-orange-500" />
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
                       <span>{partner.fleetSize} Vehicles in Fleet</span>
                     </div>
                   </div>

@@ -113,7 +113,7 @@ export default function Wishlist() {
             const wishlistItem = wishlistItems.find(item => item.listingId === listing.id);
             return (
               <motion.div
-                key={listing.id}
+                key={`wishlist-listing-${listing.id}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >

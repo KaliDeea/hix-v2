@@ -30,7 +30,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 export default function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark" storageKey="hix-theme">
+      <ThemeProvider defaultTheme="light" storageKey="hix-theme">
         <AuthProvider>
           <TooltipProvider>
             <Router>

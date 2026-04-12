@@ -71,7 +71,7 @@ function NotificationDropdown({ notifications, unreadCount, markAsRead, markAllA
           ) : (
             notifications.map((n) => (
               <div 
-                key={n.id} 
+                key={`nav-notif-${n.id}`} 
                 className={`p-4 border-b border-white/5 hover:bg-white/5 border-l-2 border-l-transparent hover:border-l-primary cursor-pointer transition-all ${!n.read ? 'bg-primary/5' : ''}`}
                 onClick={() => {
                   if (!n.read) markAsRead(n.id);
@@ -239,7 +239,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-primary/20 bg-[#0f172a]/90 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/90 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group shrink-0">
           {platformLogo ? (

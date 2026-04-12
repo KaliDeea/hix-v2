@@ -61,7 +61,9 @@ export default function CreateListing() {
     dimensions: "",
     listingType: "fixed" as 'fixed' | 'auction',
     reservePrice: "",
-    auctionEndTime: ""
+    auctionEndTime: "",
+    shippingOptions: ['collection'] as ('collection' | 'standard' | 'express' | 'international')[],
+    shippingCost: ""
   });
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -235,6 +237,8 @@ export default function CreateListing() {
         images: images.length > 0 ? images : ["https://picsum.photos/seed/" + listingId + "/800/600"],
         status: status,
         listingType: formData.listingType,
+        shippingOptions: formData.shippingOptions,
+        shippingCost: formData.shippingCost ? parseFloat(formData.shippingCost) : 0,
         reservePrice: formData.reservePrice ? parseFloat(formData.reservePrice) : null,
         auctionEndTime: formData.auctionEndTime || null,
         createdAt: new Date().toISOString()
@@ -534,6 +538,56 @@ export default function CreateListing() {
                 </div>
               </div>
 
+              <div className="space-y-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                <Label className="text-base font-bold">Shipping & Logistics</Label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    <Label className="text-xs text-muted-foreground uppercase tracking-wider">Available Methods</Label>
+                    <div className="flex flex-col gap-2">
+                      {[
+                        { id: 'collection', label: 'Collection Only' },
+                        { id: 'standard', label: 'Standard Shipping' },
+                        { id: 'express', label: 'Express Shipping' },
+                        { id: 'international', label: 'International' }
+                      ].map((opt) => (
+                        <label key={opt.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/10">
+                          <input 
+                            type="checkbox" 
+                            className="h-4 w-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary"
+                            checked={formData.shippingOptions.includes(opt.id as any)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setFormData(prev => ({
+                                ...prev,
+                                shippingOptions: checked 
+                                  ? [...prev.shippingOptions, opt.id as any]
+                                  : prev.shippingOptions.filter(o => o !== opt.id)
+                              }));
+                            }}
+                          />
+                          <span className="text-sm">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="shippingCost" className="text-xs text-muted-foreground uppercase tracking-wider">Base Shipping Cost (£)</Label>
+                    <Input 
+                      id="shippingCost" 
+                      type="number" 
+                      placeholder="0.00" 
+                      className="rounded-xl"
+                      value={formData.shippingCost}
+                      onChange={(e) => setFormData({...formData, shippingCost: e.target.value})}
+                      disabled={formData.shippingOptions.length === 1 && formData.shippingOptions.includes('collection')}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Set to 0 if shipping is included or for collection only.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-2">
                 <div className="flex justify-between items-center">
                   <Label>Asset Images</Label>
@@ -541,7 +595,7 @@ export default function CreateListing() {
                 </div>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                   {images.map((img, idx) => (
-                    <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
+                    <div key={`${img}-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
                       <img src={img} alt={`Asset ${idx}`} className="h-full w-full object-cover" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <button 

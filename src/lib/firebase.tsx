@@ -24,7 +24,8 @@ import {
   addDoc,
   orderBy,
   limit,
-  writeBatch
+  writeBatch,
+  increment
 } from "firebase/firestore";
 import { initializeApp } from "firebase/app";
 import firebaseConfig from "@/firebase-applet-config.json";
@@ -50,7 +51,8 @@ export {
   addDoc,
   orderBy,
   limit,
-  writeBatch
+  writeBatch,
+  increment
 };
 
 // Connection test
@@ -188,6 +190,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuspended: false,
       suspensionReason: "",
       role: isBootstrapAdmin ? "superadmin" : "user",
+      vettingStatus: isBootstrapAdmin ? "approved" : "pending",
+      totalCo2Saved: 0,
       revenue: 0,
       commissionsPaid: 0,
       createdAt: serverTimestamp(),
