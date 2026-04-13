@@ -18,6 +18,7 @@ import Hauling from "@/pages/Hauling";
 import Wishlist from "@/pages/Wishlist";
 import Notifications from "@/pages/Notifications";
 import About from "@/pages/About";
+import Sustainability from "@/pages/Sustainability";
 import Contact from "@/pages/Contact";
 import Terms from "@/pages/Terms";
 import Auth from "@/pages/Auth";
@@ -52,6 +53,7 @@ export default function App() {
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/notifications" element={<Notifications />} />
                     <Route path="/about" element={<About />} />
+                    <Route path="/sustainability" element={<Sustainability />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/auth" element={<Auth />} />
