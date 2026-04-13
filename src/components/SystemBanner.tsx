@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db, onSnapshot, doc } from "@/lib/firebase";
 import { AlertTriangle, Megaphone, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 
 export function SystemBanner() {
   const [settings, setSettings] = useState({

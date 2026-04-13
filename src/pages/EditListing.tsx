@@ -342,7 +342,7 @@ export default function EditListing() {
                     </SelectTrigger>
                     <SelectContent>
                       {CATEGORIES.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                        <SelectItem key={`edit-cat-${c}`} value={c}>{c}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -428,7 +428,7 @@ export default function EditListing() {
                         { id: 'express', label: 'Express Shipping' },
                         { id: 'international', label: 'International' }
                       ].map((opt) => (
-                        <label key={opt.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/10">
+                        <label key={`edit-ship-${opt.id}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/10">
                           <input 
                             type="checkbox" 
                             className="h-4 w-4 rounded border-white/20 bg-white/5 text-primary focus:ring-primary"
@@ -473,7 +473,7 @@ export default function EditListing() {
                 </div>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                   {images.map((img, idx) => (
-                    <div key={`${img}-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
+                    <div key={`edit-img-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
                       <img src={img} alt={`Asset ${idx}`} className="h-full w-full object-cover" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <button 

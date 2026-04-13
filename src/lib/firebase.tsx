@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setLoading(false);
         }, (error) => {
-          console.error("Profile snapshot error:", error);
+          handleFirestoreError(error, OperationType.GET, `users/${u.uid}`);
           setLoading(false);
         });
       } else {

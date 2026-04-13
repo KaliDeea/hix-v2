@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { ArrowRight, Leaf, ShieldCheck, Zap, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/firebase";
@@ -28,8 +28,8 @@ export default function Home() {
                 Hartlepool Industrial Exchange (HiX) connects businesses across the UK and Europe for secure, efficient, and sustainable industrial transactions.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button size="lg" className="rounded-full px-8 text-lg" asChild>
-                  <Link to="/auth">
+                <Button size="lg" className="rounded-full px-8 text-lg shadow-lg shadow-primary/20" asChild>
+                  <Link to="/auth?tab=register">
                     Register Your Business
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
@@ -79,7 +79,7 @@ export default function Home() {
               }
             ].map((feature, i) => (
               <motion.div
-                key={feature.title}
+                key={`home-feature-${feature.title}`}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}

@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Leaf, Globe, ShieldCheck, TrendingUp, Users } from "lucide-react";
 
 export default function About() {

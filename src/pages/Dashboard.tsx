@@ -70,7 +70,7 @@ import {
   Cell
 } from "recharts";
 import { format, subDays } from "date-fns";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { addDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import Papa from "papaparse";
@@ -325,7 +325,7 @@ export default function Dashboard() {
         <Skeleton className="h-10 w-32 rounded-full" />
       </div>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {[1, 2, 3, 4].map(i => <Skeleton key={`skeleton-${i}`} className="h-32 rounded-xl" />)}
+        {[1, 2, 3, 4].map(i => <Skeleton key={`dashboard-skeleton-${i}`} className="h-32 rounded-xl" />)}
       </div>
       <Skeleton className="h-12 w-full max-w-md rounded-full mb-8" />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -563,7 +563,7 @@ export default function Dashboard() {
                       />
                       <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
                         {esgChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={`oklch(0.85 0.25 145 / ${1 - (index * 0.15)})`} />
+                          <Cell key={`dashboard-esg-cell-${index}`} fill={`oklch(0.75 0.22 145 / ${1 - (index * 0.15)})`} />
                         ))}
                       </Bar>
                     </BarChart>

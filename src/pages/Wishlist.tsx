@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Heart, Trash2, ArrowRight, ShoppingCart, Leaf, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 

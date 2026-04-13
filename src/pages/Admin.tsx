@@ -76,6 +76,16 @@ import {
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from "motion/react";
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
   Dialog,
   DialogContent,
   DialogDescription,
@@ -177,6 +187,8 @@ export default function Admin() {
   const [suspensionReason, setSuspensionReason] = useState("");
   const [isSuspending, setIsSuspending] = useState(false);
   const [selectedUserForSuspension, setSelectedUserForSuspension] = useState<UserProfile | null>(null);
+  const [isUserDeleteDialogOpen, setIsUserDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const [reportReasonFilter, setReportReasonFilter] = useState("all");
 
   // Pagination State
@@ -465,14 +477,13 @@ export default function Admin() {
     }
     
     const targetUser = users.find(u => u.uid === userId);
-    // Using a custom dialog would be better, but for now we'll stick to basic confirmation
-    if (!window.confirm("Are you absolutely sure you want to delete this user? This action cannot be undone.")) return;
-    
     const path = `users/${userId}`;
     try {
       await deleteDoc(doc(db, "users", userId));
       await createAuditLog("DELETE_USER", "Deleted user account", userId, 'user', targetUser?.companyName, targetUser?.email);
       toast.success("User deleted successfully");
+      setIsUserDeleteDialogOpen(false);
+      setUserToDelete(null);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
     }
@@ -952,7 +963,7 @@ export default function Admin() {
           </div>
 
           <div className="w-full">
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
               <TabsContent value="dashboard" className="mt-0 outline-none">
                 <motion.div 
                   initial={{ opacity: 0, x: 20 }}
@@ -1274,7 +1285,10 @@ export default function Admin() {
                                       <Ban className="h-3.5 w-3.5" />
                                     </Button>
                                   )}
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-destructive hover:bg-destructive/10" onClick={() => handleDeleteUser(u.uid)}>
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-destructive hover:bg-destructive/10" onClick={() => {
+                                    setUserToDelete(u);
+                                    setIsUserDeleteDialogOpen(true);
+                                  }}>
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
@@ -2225,6 +2239,27 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={isUserDeleteDialogOpen} onOpenChange={setIsUserDeleteDialogOpen}>
+        <AlertDialogContent className="glass border-primary/20">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the account for 
+              <span className="font-bold text-foreground"> {userToDelete?.companyName} </span> 
+              and remove their data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl" onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => userToDelete && handleDeleteUser(userToDelete.uid)}
+            >
+              Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   </div>
   );

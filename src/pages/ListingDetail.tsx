@@ -53,7 +53,7 @@ import {
   FileText,
   Heart
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -333,7 +333,7 @@ export default function ListingDetail() {
           <div className="space-y-6">
             <div className="aspect-[4/3] bg-white/5 rounded-3xl" />
             <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map(i => <div key={`skeleton-img-${i}`} className="aspect-square bg-white/5 rounded-xl" />)}
+              {[1, 2, 3, 4].map(i => <div key={`listing-skeleton-img-${i}`} className="aspect-square bg-white/5 rounded-xl" />)}
             </div>
           </div>
           <div className="space-y-6">
@@ -341,7 +341,7 @@ export default function ListingDetail() {
             <div className="h-12 w-3/4 bg-white/5 rounded" />
             <div className="h-10 w-1/2 bg-white/5 rounded-2xl" />
             <div className="grid grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map(i => <div key={`skeleton-info-${i}`} className="h-20 bg-white/5 rounded-2xl" />)}
+              {[1, 2, 3, 4].map(i => <div key={`listing-skeleton-info-${i}`} className="h-20 bg-white/5 rounded-2xl" />)}
             </div>
             <div className="h-40 w-full bg-white/5 rounded-2xl" />
           </div>
@@ -378,7 +378,7 @@ export default function ListingDetail() {
             </div>
             <div className="mt-6 grid grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
-                <div key={`thumb-${i}`} className="aspect-square rounded-2xl glass overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                <div key={`listing-thumb-${i}`} className="aspect-square rounded-2xl glass overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
                   <img src={`https://picsum.photos/seed/steel-${i}/200/200`} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                 </div>
               ))}

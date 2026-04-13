@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/firebase";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,16 @@ import { Building2, Mail, Lock, Phone, Hash } from "lucide-react";
 export default function Auth() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "register" ? "register" : "login");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "register" || tab === "login") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Login state
   const [loginEmail, setLoginEmail] = useState("");
@@ -102,7 +111,7 @@ export default function Auth() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="register">Register</TabsTrigger>

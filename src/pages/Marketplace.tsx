@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
 export default function Marketplace() {
@@ -114,6 +114,8 @@ export default function Marketplace() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const ids = snapshot.docs.map(doc => doc.data().listingId);
       setWishlist(ids);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, "wishlists");
     });
 
     return () => unsubscribe();
