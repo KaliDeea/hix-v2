@@ -27,7 +27,8 @@ import {
   Bell, 
   Heart,
   Search,
-  Settings
+  Settings,
+  X
 } from "lucide-react";
 import { onSnapshot, collection, query, where, db, doc, updateDoc, handleFirestoreError, OperationType, writeBatch } from "@/lib/firebase";
 import { Notification, UserProfile } from "@/types";
@@ -260,14 +261,26 @@ export function Navbar() {
         </Link>
 
         <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
-          <form onSubmit={handleSearch} className="relative w-full">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <form onSubmit={handleSearch} className="relative w-full group">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Search marketplace..." 
-              className="pl-10 rounded-full bg-white/5 border-white/10 focus:border-primary/50 transition-all"
+              className="pl-10 pr-10 rounded-full bg-white/5 border-white/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
               value={navbarSearch}
               onChange={(e) => setNavbarSearch(e.target.value)}
             />
+            {navbarSearch && (
+              <button 
+                type="button"
+                onClick={() => {
+                  setNavbarSearch("");
+                  navigate("/marketplace");
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </form>
         </div>
 

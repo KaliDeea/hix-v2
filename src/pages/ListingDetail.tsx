@@ -72,6 +72,7 @@ export default function ListingDetail() {
   const [isStartingChat, setIsStartingChat] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
   const [platformSettings, setPlatformSettings] = useState({
     buyerCommission: 3,
     maintenanceMode: false
@@ -200,10 +201,10 @@ export default function ListingDetail() {
         body: JSON.stringify({
           listingId: listing?.id,
           buyerId: user.uid,
-          quantity: 1,
-          co2Savings: listing?.co2Savings || 0,
+          quantity: quantity,
+          co2Savings: (listing?.co2Savings || 0) * quantity,
           sellerId: listing?.sellerId,
-          amount: listing?.price
+          amount: (listing?.price || 0) * quantity
         })
       });
       
@@ -532,6 +533,43 @@ export default function ListingDetail() {
                       <p className="text-xl font-semibold">{listing.quantity} units</p>
                     </div>
                   </div>
+
+                  <div className="mb-6 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="quantity" className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Quantity</Label>
+                      <span className="text-xs font-medium text-primary">Total: £{(listing.price * quantity).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-xl glass border-white/10"
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        disabled={quantity <= 1}
+                      >
+                        -
+                      </Button>
+                      <Input 
+                        id="quantity"
+                        type="number" 
+                        min="1" 
+                        max={listing.quantity}
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.min(listing.quantity || 1, Math.max(1, parseInt(e.target.value) || 1)))}
+                        className="h-10 text-center font-bold glass border-white/10 rounded-xl"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-xl glass border-white/10"
+                        onClick={() => setQuantity(Math.min(listing.quantity || 1, quantity + 1))}
+                        disabled={quantity >= (listing.quantity || 1)}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+
                   <Button 
                     size="lg" 
                     className="w-full rounded-full h-14 text-lg shadow-lg shadow-primary/20" 
@@ -539,7 +577,7 @@ export default function ListingDetail() {
                     disabled={platformSettings.maintenanceMode}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    {platformSettings.maintenanceMode ? "System Maintenance" : "Buy Now"}
+                    {platformSettings.maintenanceMode ? "System Maintenance" : `Buy ${quantity} Now`}
                   </Button>
                 </>
               )}

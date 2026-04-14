@@ -36,7 +36,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye } from "lucide-react";
+import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -254,14 +254,22 @@ export default function Marketplace() {
             </Button>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative w-full sm:w-64 group">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Search assets..." 
-              className="pl-10 rounded-full"
+              className="pl-10 pr-10 rounded-full bg-white/5 border-white/10 focus:border-primary/50 transition-all"
               value={search}
               onChange={(e) => updateSearch(e.target.value)}
             />
+            {search && (
+              <button 
+                onClick={() => updateSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
           <Select value={sortBy} onValueChange={setSortBy}>

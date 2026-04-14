@@ -151,20 +151,47 @@ export default function Profile() {
                   <ShieldCheck className="mr-2 h-4 w-4" />
                   Super Admin
                 </Badge>
-              ) : profile?.isVetted ? (
+              ) : profile?.isVetted && profile?.isVatVerified ? (
                 <Badge className="bg-primary text-primary-foreground px-4 py-1">
                   <ShieldCheck className="mr-2 h-4 w-4" />
-                  Vetted
+                  Fully Verified
                 </Badge>
               ) : (
                 <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-4 py-1">
                   <AlertCircle className="mr-2 h-4 w-4" />
-                  Pending Vetting
+                  Pending Verification
                 </Badge>
               )}
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className={`p-4 rounded-2xl border transition-all ${profile?.isVatVerified ? 'bg-primary/5 border-primary/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">VAT Status</span>
+                    {profile?.isVatVerified ? (
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                    )}
+                  </div>
+                  <p className="font-bold">{profile?.isVatVerified ? 'Verified' : 'Pending Verification'}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Required for tax compliance and B2B trading.</p>
+                </div>
+
+                <div className={`p-4 rounded-2xl border transition-all ${profile?.isVetted ? 'bg-primary/5 border-primary/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Identity Vetting</span>
+                    {profile?.isVetted ? (
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                    )}
+                  </div>
+                  <p className="font-bold">{profile?.isVetted ? 'Approved' : 'Under Review'}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Manual review of company registration and history.</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-6 italic">
                 All companies must be manually vetted by the HiX admin team before they can list assets or make purchases. Vetting usually takes 24-48 hours.
               </p>
             </CardContent>

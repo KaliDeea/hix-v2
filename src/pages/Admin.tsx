@@ -28,7 +28,16 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { 
   ShieldCheck, 
   Users, 
@@ -60,7 +69,9 @@ import {
   Package,
   Bell,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Menu,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -180,6 +191,8 @@ export default function Admin() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [selectedUserForVetting, setSelectedUserForVetting] = useState<UserProfile | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [resolutionNote, setResolutionNote] = useState("");
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [auditSearch, setAuditSearch] = useState("");
@@ -193,9 +206,16 @@ export default function Admin() {
 
   // Pagination State
   const [userPage, setUserPage] = useState(1);
+  const [vettingPage, setVettingPage] = useState(1);
   const [reportPage, setReportPage] = useState(1);
   const [auditPage, setAuditPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Reset pagination when filters change
+  useEffect(() => { setUserPage(1); }, [userSearch, userFilter]);
+  useEffect(() => { setVettingPage(1); }, [vettingSearch, vettingTypeFilter, vettingStatusFilter]);
+  useEffect(() => { setReportPage(1); }, [reportSearch, reportFilter, reportReasonFilter]);
+  useEffect(() => { setAuditPage(1); }, [auditSearch, auditActionFilter]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "platform_settings", "branding"), (docSnap) => {
@@ -671,7 +691,8 @@ export default function Admin() {
       const matchesFilter = userFilter === 'all' || 
                            (userFilter === 'pending' && (!u.isVetted || !u.isVatVerified)) ||
                            (userFilter === 'vetted' && u.isVetted) ||
-                           (userFilter === 'suspended' && u.isSuspended);
+                           (userFilter === 'suspended' && u.isSuspended) ||
+                           (userFilter === 'admins' && ['admin', 'superadmin'].includes(u.role || ''));
       return matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
@@ -931,12 +952,24 @@ export default function Admin() {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="dashboard" className="w-full space-y-8">
-          <div className="sticky top-16 z-30 bg-background/80 backdrop-blur-md border-b border-white/10 -mx-4 px-4 md:-mx-8 md:px-8 py-4">
-            <TabsList className="flex h-auto bg-transparent border-none p-0 gap-2 overflow-x-auto no-scrollbar justify-start">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
+          <div className="sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-white/10 -mx-4 px-4 py-4 sm:mx-0 sm:px-6 sm:rounded-3xl sm:border sm:mt-4 sm:shadow-xl sm:border-primary/10">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 shrink-0 hidden sm:flex">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Management</h3>
+                  <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest text-nowrap">Admin Control</p>
+                </div>
+              </div>
+
+              <TabsList className="flex h-auto bg-transparent border-none p-0 gap-1 overflow-x-auto no-scrollbar justify-start flex-1 w-full">
                 {[
                   { value: "dashboard", label: "Dashboard", icon: BarChart3 },
                   { value: "users", label: "Users", icon: Users },
+                  { value: "admins", label: "Admins", icon: ShieldCheck },
                   { value: "vetting", label: "Vetting Queue", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, badgeColor: "bg-amber-500" },
                   { value: "reports", label: "Reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, badgeColor: "bg-destructive" },
                   { value: "bulk", label: "Bulk Upload", icon: Upload },
@@ -948,30 +981,29 @@ export default function Admin() {
                   <TabsTrigger 
                     key={`admin-tab-${tab.value}`}
                     value={tab.value} 
-                    className="justify-start px-5 py-2.5 rounded-xl data-active:bg-primary data-active:text-primary-foreground data-active:shadow-lg data-active:shadow-primary/20 hover:bg-white/5 transition-all relative group shrink-0 border-none"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 hover:bg-white/5 transition-all relative group shrink-0 border-none w-auto"
                   >
-                    <tab.icon className="h-4 w-4 mr-2.5 data-active:scale-110 transition-transform" />
-                    <span className="font-bold text-sm tracking-tight">{tab.label}</span>
+                    <tab.icon className="h-4 w-4 shrink-0" />
+                    <span className="font-bold text-xs tracking-tight hidden md:inline-block whitespace-nowrap">{tab.label}</span>
                     {tab.badge !== undefined && tab.badge > 0 && (
-                      <span className={`ml-2 h-5 w-5 rounded-full ${tab.badgeColor} text-white text-[10px] flex items-center justify-center font-bold shadow-sm`}>
+                      <span className={`h-4 w-4 rounded-full ${tab.badgeColor} text-white text-[9px] flex items-center justify-center font-bold shadow-sm shrink-0`}>
                         {tab.badge}
                       </span>
                     )}
                   </TabsTrigger>
                 ))}
               </TabsList>
+            </div>
           </div>
 
-          <div className="w-full">
-            <AnimatePresence>
-              <TabsContent value="dashboard" className="mt-0 outline-none">
-                <motion.div 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-8"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="w-full min-w-0">
+            <TabsContent value="dashboard" className="mt-0 outline-none">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-8"
+              >
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                     {[
                       { label: "Total Users", value: users.length, sub: `${users.filter(u => u.isVetted).length} vetted`, icon: Users, color: "text-blue-500" },
                       { label: "Total Revenue", value: `£${transactions.reduce((acc, t) => acc + (t.status === 'completed' ? t.amount : 0), 0).toLocaleString()}`, sub: `${transactions.filter(t => t.status === 'completed').length} deals`, icon: DollarSign, color: "text-green-500" },
@@ -1001,10 +1033,10 @@ export default function Admin() {
                             </p>
                           </CardContent>
                           <div className={`h-1 w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
-                        </Card>
-                      </motion.div>
-                    ))}
-                  </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="glass border-primary/20">
@@ -1122,14 +1154,13 @@ export default function Admin() {
           </motion.div>
         </TabsContent>
 
-          <TabsContent value="users" className="mt-0 outline-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <Card className="glass border-primary/20 overflow-hidden">
+        <TabsContent value="users" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
@@ -1137,14 +1168,22 @@ export default function Admin() {
                       <CardDescription>Review and verify company details and VAT registration.</CardDescription>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input 
                           placeholder="Search companies..." 
-                          className="pl-9 w-full sm:w-[250px] rounded-xl glass border-primary/20 focus:ring-primary/50"
+                          className="pl-9 pr-9 w-full sm:w-[250px] rounded-xl glass border-primary/20 focus:ring-primary/50"
                           value={userSearch}
                           onChange={(e) => setUserSearch(e.target.value)}
                         />
+                        {userSearch && (
+                          <button 
+                            onClick={() => setUserSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                       <Select value={userFilter} onValueChange={setUserFilter}>
                         <SelectTrigger className="w-full sm:w-[160px] rounded-xl glass border-primary/20">
@@ -1156,6 +1195,7 @@ export default function Admin() {
                           <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="vetted">Vetted</SelectItem>
                           <SelectItem value="suspended">Suspended</SelectItem>
+                          <SelectItem value="admins">Admins</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1310,13 +1350,80 @@ export default function Admin() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="reports" className="mt-0 outline-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
+        <TabsContent value="admins" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+              <Card className="glass border-primary/20 overflow-hidden">
+                <CardHeader className="border-b border-white/5 bg-white/5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-xl">Platform Administrators</CardTitle>
+                      <CardDescription>Manage users with administrative privileges.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent border-white/5">
+                          <TableHead className="w-[250px] font-bold uppercase text-[10px] tracking-widest">Company / Admin</TableHead>
+                          <TableHead className="font-bold uppercase text-[10px] tracking-widest text-center">Role</TableHead>
+                          <TableHead className="font-bold uppercase text-[10px] tracking-widest text-center">Status</TableHead>
+                          <TableHead className="font-bold uppercase text-[10px] tracking-widest text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.filter(u => ['admin', 'superadmin'].includes(u.role || '')).map((admin) => (
+                          <TableRow key={admin.uid} className="border-white/5 hover:bg-white/5 transition-colors">
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10 border border-primary/20">
+                                  <AvatarImage src={admin.logoUrl} />
+                                  <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                                    {admin.companyName?.charAt(0) || admin.email?.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-sm">{admin.companyName}</span>
+                                  <span className="text-xs text-muted-foreground">{admin.email}</span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 uppercase text-[9px] font-black">
+                                {admin.role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge className="bg-green-500/20 text-green-500 border-green-500/20 uppercase text-[9px] font-black">
+                                Active
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" className="rounded-xl hover:bg-primary/10 hover:text-primary">
+                                Manage Permissions
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+        <TabsContent value="reports" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
               <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1325,14 +1432,22 @@ export default function Admin() {
                       <CardDescription>Review disputes and terms violations reported by users.</CardDescription>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <div className="relative w-full sm:w-64 group">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input 
                           placeholder="Search reports..." 
-                          className="pl-10 rounded-xl glass border-primary/20"
+                          className="pl-10 pr-9 rounded-xl glass border-primary/20 focus:ring-primary/50"
                           value={reportSearch}
                           onChange={(e) => setReportSearch(e.target.value)}
                         />
+                        {reportSearch && (
+                          <button 
+                            onClick={() => setReportSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                       <Select value={reportFilter} onValueChange={setReportFilter}>
                         <SelectTrigger className="w-full sm:w-[160px] rounded-xl glass border-primary/20">
@@ -1528,13 +1643,12 @@ export default function Admin() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="vetting" className="mt-0 outline-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
+        <TabsContent value="vetting" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
               <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1543,14 +1657,22 @@ export default function Admin() {
                       <CardDescription>Review companies waiting for VAT and identity verification.</CardDescription>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <div className="relative w-full sm:w-64 group">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input 
                           placeholder="Search companies..." 
-                          className="pl-10 rounded-xl glass border-primary/20"
+                          className="pl-10 pr-9 rounded-xl glass border-primary/20 focus:ring-primary/50"
                           value={vettingSearch}
                           onChange={(e) => setVettingSearch(e.target.value)}
                         />
+                        {vettingSearch && (
+                          <button 
+                            onClick={() => setVettingSearch("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
                       </div>
                       <Select value={vettingTypeFilter} onValueChange={setVettingTypeFilter}>
                         <SelectTrigger className="w-full sm:w-[160px] rounded-xl glass border-primary/20">
@@ -1600,7 +1722,9 @@ export default function Admin() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredVettingUsers.map((u) => (
+                        filteredVettingUsers
+                          .slice((vettingPage - 1) * itemsPerPage, vettingPage * itemsPerPage)
+                          .map((u) => (
                         <TableRow key={`vetting-row-${u.uid}`} className="hover:bg-primary/5 transition-colors group">
                           <TableCell className="pl-6">
                             <div className="font-bold">{u.companyName}</div>
@@ -1621,83 +1745,9 @@ export default function Admin() {
                           </TableCell>
                           <TableCell className="text-right pr-6 space-x-1">
                             <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button size="sm" variant="ghost" className="h-8 rounded-lg text-xs" onClick={() => setSelectedUserForVetting(u)}>
-                                    Details
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="glass border-primary/20 max-w-2xl">
-                                  <DialogHeader>
-                                    <DialogTitle className="text-2xl font-black">Company Vetting: {u.companyName}</DialogTitle>
-                                    <DialogDescription>
-                                      Review company details and documents before approval.
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="grid md:grid-cols-2 gap-8 py-6">
-                                    <div className="space-y-6">
-                                      <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                                        <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Company Name</Label>
-                                        <p className="font-bold text-lg">{u.companyName}</p>
-                                      </div>
-                                      <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                                        <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Email</Label>
-                                        <p className="font-bold text-lg">{u.email}</p>
-                                      </div>
-                                      <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                                        <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">VAT Number</Label>
-                                        <p className="font-bold text-lg">{u.vatNumber || "Not provided"}</p>
-                                      </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                      <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10">
-                                        <h4 className="text-sm font-black mb-4 flex items-center gap-2 uppercase tracking-widest">
-                                          <ShieldCheck className="h-4 w-4 text-primary" />
-                                          Vetting Checklist
-                                        </h4>
-                                        <ul className="space-y-3">
-                                          <li className="flex items-center gap-3 text-sm">
-                                            <div className={`h-2.5 w-2.5 rounded-full ${u.isVatVerified ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
-                                            <span className={u.isVatVerified ? 'text-foreground font-medium' : 'text-muted-foreground'}>VAT Registration Check</span>
-                                          </li>
-                                          <li className="flex items-center gap-3 text-sm">
-                                            <div className={`h-2.5 w-2.5 rounded-full ${u.isVetted ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
-                                            <span className={u.isVetted ? 'text-foreground font-medium' : 'text-muted-foreground'}>Company Identity Verification</span>
-                                          </li>
-                                          <li className="flex items-center gap-3 text-sm text-muted-foreground/50">
-                                            <div className="h-2.5 w-2.5 rounded-full bg-muted" />
-                                            <span>Sanctions List Screening</span>
-                                          </li>
-                                        </ul>
-                                      </div>
-                                      <div className="p-4 rounded-2xl bg-muted/20 border border-white/5">
-                                        <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Registration Date</Label>
-                                        <p className="font-medium mt-1">{u.createdAt ? new Date(u.createdAt.seconds * 1000).toLocaleDateString() : "N/A"}</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <DialogFooter className="gap-2">
-                                    {!u.isVatVerified && (
-                                      <Button variant="outline" className="rounded-xl px-6" onClick={() => handleVerifyVat(u.uid)}>
-                                        Verify VAT
-                                      </Button>
-                                    )}
-                                    {u.vettingStatus !== 'approved' && (
-                                      <>
-                                        <Button variant="outline" className="rounded-xl px-6 border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => handleVetCompany(u.uid, 'rejected')}>
-                                          Reject
-                                        </Button>
-                                        <Button variant="outline" className="rounded-xl px-6" onClick={() => handleVetCompany(u.uid, 'under_review')}>
-                                          Under Review
-                                        </Button>
-                                        <Button className="rounded-xl px-6" onClick={() => handleVetCompany(u.uid, 'approved')}>
-                                          Approve Company
-                                        </Button>
-                                      </>
-                                    )}
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
+                              <Button size="sm" variant="ghost" className="h-8 rounded-lg text-xs" onClick={() => setSelectedUserForVetting(u)}>
+                                Details
+                              </Button>
                               {!u.isVatVerified && (
                                 <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleVerifyVat(u.uid)}>
                                   VAT
@@ -1716,19 +1766,24 @@ export default function Admin() {
                     </TableBody>
                   </Table>
                 </div>
+                <Pagination 
+                  currentPage={vettingPage}
+                  totalItems={filteredVettingUsers.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setVettingPage}
+                />
               </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
 
-          <TabsContent value="bulk" className="mt-0 outline-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <Card className="glass border-primary/20 overflow-hidden">
+        <TabsContent value="bulk" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
                   <CardTitle className="text-xl">Admin Bulk Upload</CardTitle>
                   <CardDescription>Upload listings on behalf of users or for system seeding.</CardDescription>
@@ -1772,13 +1827,12 @@ export default function Admin() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="esg" className="mt-0 outline-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
+        <TabsContent value="esg" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
               <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
                   <CardTitle className="text-xl">ESG Impact Tracking</CardTitle>
@@ -1845,13 +1899,12 @@ export default function Admin() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="audit" className="mt-0 outline-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
+        <TabsContent value="audit" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
               <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1950,13 +2003,12 @@ export default function Admin() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="settings" className="mt-0 outline-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
+        <TabsContent value="settings" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
               <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
                   <CardTitle className="text-xl">Platform Configuration</CardTitle>
@@ -2088,13 +2140,12 @@ export default function Admin() {
             </motion.div>
           </TabsContent>
 
-          <TabsContent value="system" className="mt-0 outline-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
+        <TabsContent value="system" className="mt-0 outline-none">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
               <Card className="glass border-primary/20 overflow-hidden">
                 <CardHeader className="border-b border-white/5 bg-white/5">
                   <CardTitle className="text-xl">System Maintenance & Communication</CardTitle>
@@ -2195,9 +2246,110 @@ export default function Admin() {
               </Card>
             </motion.div>
           </TabsContent>
-        </AnimatePresence>
-      </div>
-    </Tabs>
+        </div>
+      </Tabs>
+
+      <Dialog open={!!selectedUserForVetting} onOpenChange={(open) => !open && setSelectedUserForVetting(null)}>
+        <DialogContent className="glass border-primary/20 sm:max-w-4xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="p-8 space-y-8 overflow-y-auto flex-1">
+            <DialogHeader className="p-0">
+              <DialogTitle className="text-3xl font-black tracking-tight">Company Vetting: {selectedUserForVetting?.companyName}</DialogTitle>
+              <DialogDescription className="text-base">
+                Review company details and documents before approval.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedUserForVetting && (
+              <div className="grid md:grid-cols-2 gap-10">
+                <div className="space-y-5">
+                  <div className="group p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all duration-300">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-black block mb-1.5">Company Name</Label>
+                    <p className="font-bold text-lg leading-none">{selectedUserForVetting.companyName}</p>
+                  </div>
+                  <div className="group p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all duration-300">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-black block mb-1.5">Email Address</Label>
+                    <p className="font-bold text-lg leading-none truncate">{selectedUserForVetting.email}</p>
+                  </div>
+                  <div className="group p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all duration-300">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-black block mb-1.5">VAT Registration</Label>
+                    <p className="font-bold text-lg leading-none font-mono tracking-tight">{selectedUserForVetting.vatNumber || "Not provided"}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-5">
+                  <div className="group p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all duration-300">
+                    <h4 className="text-[10px] font-black mb-5 flex items-center gap-2 uppercase tracking-[0.2em] text-primary/60">
+                      <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
+                      <span className="leading-none">Vetting Checklist</span>
+                    </h4>
+                    <ul className="space-y-5">
+                      <li className="flex items-start gap-4 text-sm">
+                        <div className={`h-2.5 w-2.5 rounded-full mt-1 shrink-0 ${selectedUserForVetting.isVatVerified ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.5)]' : 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]'}`} />
+                        <div className="flex flex-col gap-0.5">
+                          <span className={selectedUserForVetting.isVatVerified ? 'text-foreground font-bold' : 'text-muted-foreground font-medium'}>VAT Verification</span>
+                          <span className="text-[10px] text-muted-foreground/60 leading-tight">Cross-referenced with national VAT databases</span>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-4 text-sm">
+                        <div className={`h-2.5 w-2.5 rounded-full mt-1 shrink-0 ${selectedUserForVetting.isVetted ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.5)]' : 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]'}`} />
+                        <div className="flex flex-col gap-0.5">
+                          <span className={selectedUserForVetting.isVetted ? 'text-foreground font-bold' : 'text-muted-foreground font-medium'}>Identity Vetting</span>
+                          <span className="text-[10px] text-muted-foreground/60 leading-tight">Official company documentation review</span>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-4 text-sm opacity-40">
+                        <div className="h-2.5 w-2.5 rounded-full mt-1 shrink-0 bg-muted" />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium text-muted-foreground">Sanctions Screening</span>
+                          <span className="text-[10px] leading-tight">Global compliance database check</span>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="group p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all duration-300">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-black block mb-1.5">Registration Date</Label>
+                    <p className="font-bold text-lg leading-none">
+                      {(() => {
+                        const date = selectedUserForVetting.createdAt;
+                        if (!date) return "N/A";
+                        try {
+                          if (date.seconds) return new Date(date.seconds * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                          const d = new Date(date);
+                          return isNaN(d.getTime()) ? "N/A" : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                        } catch {
+                          return "N/A";
+                        }
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="bg-white/5 border-t border-white/10 p-6 gap-3 sm:justify-end mx-0 mb-0 rounded-none">
+            {selectedUserForVetting && !selectedUserForVetting.isVatVerified && (
+              <Button variant="outline" className="rounded-xl px-8 h-11 font-bold" onClick={() => handleVerifyVat(selectedUserForVetting.uid)}>
+                Verify VAT
+              </Button>
+            )}
+            {selectedUserForVetting && selectedUserForVetting.vettingStatus !== 'approved' && (
+              <>
+                <Button variant="outline" className="rounded-xl px-8 h-11 font-bold border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => handleVetCompany(selectedUserForVetting.uid, 'rejected')}>
+                  Reject
+                </Button>
+                <Button variant="outline" className="rounded-xl px-8 h-11 font-bold" onClick={() => handleVetCompany(selectedUserForVetting.uid, 'under_review')}>
+                  Under Review
+                </Button>
+                <Button className="rounded-xl px-8 h-11 font-bold shadow-lg shadow-primary/20" onClick={() => handleVetCompany(selectedUserForVetting.uid, 'approved')}>
+                  Approve Company
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isSuspending} onOpenChange={setIsSuspending}>
         <DialogContent className="glass">
           <DialogHeader>
