@@ -112,6 +112,38 @@ async function startServer() {
     }
   });
 
+  // Stripe Subscription Session
+  app.post("/api/stripe/create-subscription-session", async (req, res) => {
+    try {
+      const { priceId, userId, email, planName } = req.body;
+      const stripe = getStripe();
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        mode: "subscription",
+        success_url: `${process.env.APP_URL || "http://localhost:3000"}/dashboard?session_id={CHECKOUT_SESSION_ID}&plan=${planName}`,
+        cancel_url: `${process.env.APP_URL || "http://localhost:3000"}/pricing`,
+        customer_email: email,
+        metadata: {
+          userId,
+          planName,
+          type: "hix_subscription"
+        }
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Stripe Subscription Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Stripe webhook placeholder
   app.post("/api/webhooks/stripe", express.raw({ type: 'application/json' }), (req, res) => {
     res.json({ received: true });

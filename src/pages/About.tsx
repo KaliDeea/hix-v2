@@ -33,7 +33,7 @@ export default function About() {
               <div className="mt-1 h-6 w-6 text-primary"><Globe /></div>
               <div>
                 <h4 className="font-semibold">Global Connectivity</h4>
-                <p className="text-sm text-muted-foreground">Connecting local Hartlepool businesses with industrial buyers across the UK and Europe.</p>
+                <p className="text-sm text-muted-foreground">Connecting local Hartlepool businesses with industrial buyers across the UK.</p>
               </div>
             </div>
             <div className="flex items-start gap-4">

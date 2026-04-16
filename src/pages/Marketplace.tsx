@@ -44,6 +44,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -295,7 +301,7 @@ export default function Marketplace() {
       <div className="mb-12 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold tracking-tight">Industrial Marketplace</h1>
-          <p className="text-muted-foreground">Find and trade industrial assets across the UK and Europe.</p>
+          <p className="text-muted-foreground">Find and trade industrial assets across the UK.</p>
         </div>
         <div className="flex flex-col gap-4 sm:flex-row items-center">
           <div className="flex items-center gap-2 glass p-1 rounded-full border border-white/10">
@@ -579,21 +585,41 @@ export default function Marketplace() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                         <div className="relative">
-                          <ShieldCheck className={`h-3.5 w-3.5 ${listing.isVetted ? 'text-primary' : 'text-muted-foreground/40'}`} />
-                          {listing.isVetted && (
-                            <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-primary rounded-full animate-pulse" />
-                          )}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5 cursor-help">
+                                  <ShieldCheck className={`h-3.5 w-3.5 ${listing.isVetted ? 'text-primary' : 'text-muted-foreground/40'}`} />
+                                  {listing.isVetted && (
+                                    <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-primary rounded-full animate-pulse" />
+                                  )}
+                                  <span className="truncate max-w-[100px]">{listing.sellerName}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className="glass border-primary/20">
+                                <p className="text-xs">{listing.isVetted ? 'Verified Seller: This company has passed our verification process.' : 'Unverified Seller: Exercise caution.'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
-                        <span className="truncate max-w-[100px]">{listing.sellerName}</span>
                         {listing.isVetted && (
                           <Badge variant="outline" className="text-[8px] h-3 px-1 border-primary/30 text-primary bg-primary/5 uppercase font-black">Verified</Badge>
                         )}
                       </div>
                       <div className="flex flex-col items-end">
-                        <div className="flex items-center gap-1 text-xs font-bold text-primary">
-                          <Leaf className="h-3 w-3" />
-                          {listing.co2Savings}kg CO2
-                        </div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1 text-xs font-bold text-primary cursor-help">
+                                <Leaf className="h-3 w-3" />
+                                {listing.co2Savings}kg CO2
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="glass border-primary/20">
+                              <p className="text-xs">Estimated CO2 emissions avoided by reusing this asset.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <div className="text-[10px] text-muted-foreground">
                           ≈ {Math.round(listing.co2Savings / 20)} trees/yr
                         </div>

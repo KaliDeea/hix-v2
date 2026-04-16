@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth, db, onSnapshot, handleFirestoreError, OperationType } from "@/lib/firebase";
 import { UserProfile, Transaction, Report, AuditLog, Listing } from "@/types";
@@ -547,6 +547,14 @@ export default function Admin() {
   const [showESGCertModal, setShowESGCertModal] = useState(false);
   const [selectedUserForCert, setSelectedUserForCert] = useState<UserProfile | null>(null);
 
+  // Transactions Tab State
+  const [transactionSearch, setTransactionSearch] = useState("");
+  const [transactionSort, setTransactionSort] = useState<{ key: keyof Transaction; direction: 'asc' | 'desc' }>({ key: 'createdAt', direction: 'desc' });
+  const [transactionPage, setTransactionPage] = useState(1);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [selectedTransactionListing, setSelectedTransactionListing] = useState<Listing | null>(null);
+  const [loadingTransactionDetails, setLoadingTransactionDetails] = useState(false);
+
   // Pagination State
   const [userPage, setUserPage] = useState(1);
   const [vettingPage, setVettingPage] = useState(1);
@@ -559,6 +567,82 @@ export default function Admin() {
   useEffect(() => { setVettingPage(1); }, [vettingSearch, vettingTypeFilter, vettingStatusFilter]);
   useEffect(() => { setReportPage(1); }, [reportSearch, reportFilter, reportReasonFilter]);
   useEffect(() => { setAuditPage(1); }, [auditSearch, auditActionFilter]);
+  useEffect(() => { setTransactionPage(1); }, [transactionSearch]);
+
+  useEffect(() => {
+    if (!selectedTransaction) {
+      setSelectedTransactionListing(null);
+      return;
+    }
+
+    const fetchListing = async () => {
+      setLoadingTransactionDetails(true);
+      try {
+        if (selectedTransaction.listingId) {
+          const listingDoc = await getDoc(doc(db, "listings", selectedTransaction.listingId));
+          if (listingDoc.exists()) {
+            setSelectedTransactionListing({ id: listingDoc.id, ...listingDoc.data() } as Listing);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching transaction listing:", error);
+      } finally {
+        setLoadingTransactionDetails(false);
+      }
+    };
+
+    fetchListing();
+  }, [selectedTransaction]);
+
+  const filteredTransactions = useMemo(() => {
+    return transactions
+      .filter(t => {
+        const search = transactionSearch.toLowerCase();
+        return (
+          t.id.toLowerCase().includes(search) ||
+          t.buyerId.toLowerCase().includes(search) ||
+          t.sellerId.toLowerCase().includes(search)
+        );
+      })
+      .sort((a, b) => {
+        let aVal = a[transactionSort.key];
+        let bVal = b[transactionSort.key];
+        
+        if (aVal?.seconds !== undefined) aVal = aVal.seconds;
+        if (bVal?.seconds !== undefined) bVal = bVal.seconds;
+        
+        if (aVal === null || aVal === undefined) aVal = 0;
+        if (bVal === null || bVal === undefined) bVal = 0;
+
+        if (aVal < bVal) return transactionSort.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return transactionSort.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }, [transactions, transactionSearch, transactionSort]);
+
+  const exportTransactionsToCSV = () => {
+    const dataToExport = filteredTransactions.map(t => ({
+      ID: t.id,
+      Date: t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleString() : 'N/A',
+      BuyerID: t.buyerId,
+      SellerID: t.sellerId,
+      Amount: t.amount,
+      Quantity: t.quantity,
+      Status: t.status,
+      CO2Savings: t.co2Savings
+    }));
+
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `hix_transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "platform_settings", "branding"), (docSnap) => {
@@ -1360,6 +1444,7 @@ export default function Admin() {
                 {[
                   { value: "dashboard", label: "Dashboard", icon: BarChart3, show: isViewer },
                   { value: "users", label: "Users", icon: Users, show: isViewer },
+                  { value: "transactions", label: "Transactions", icon: DollarSign, show: isViewer },
                   { value: "admins", label: "Admins", icon: ShieldCheck, show: isAdmin },
                   { value: "vetting", label: "Vetting Queue", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, badgeColor: "bg-amber-500", show: isEditor },
                   { value: "reports", label: "Reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, badgeColor: "bg-destructive", show: isEditor },
@@ -1814,6 +1899,118 @@ export default function Admin() {
                     totalItems={filteredUsers.length}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setUserPage}
+                  />
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        )}
+
+        {isViewer && (
+          <TabsContent value="transactions" className="mt-0 outline-none">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <Card className="glass border-primary/20 overflow-hidden">
+                <CardHeader className="border-b border-white/5 bg-white/5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-xl">Platform Transactions</CardTitle>
+                      <CardDescription>Monitor all marketplace activity and financial flows.</CardDescription>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input 
+                          placeholder="Search ID, Buyer, Seller..." 
+                          className="pl-9 pr-9 w-full sm:w-[250px] rounded-xl glass border-primary/20 focus:ring-primary/50"
+                          value={transactionSearch}
+                          onChange={(e) => setTransactionSearch(e.target.value)}
+                        />
+                      </div>
+                      <Button variant="outline" className="rounded-xl glass border-primary/20" onClick={exportTransactionsToCSV}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Export CSV
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
+                        <TableRow>
+                          <TableHead className="pl-6">Transaction ID</TableHead>
+                          <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => setTransactionSort(prev => ({ key: 'createdAt', direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                            <div className="flex items-center gap-1">
+                              Date
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead>Buyer ID</TableHead>
+                          <TableHead>Seller ID</TableHead>
+                          <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => setTransactionSort(prev => ({ key: 'amount', direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                            <div className="flex items-center gap-1">
+                              Amount
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead>Qty</TableHead>
+                          <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => setTransactionSort(prev => ({ key: 'status', direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                            <div className="flex items-center gap-1">
+                              Status
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTransactions.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                              <div className="flex flex-col items-center gap-2">
+                                <DollarSign className="h-8 w-8 opacity-20" />
+                                <p>No transactions found.</p>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredTransactions.slice((transactionPage - 1) * itemsPerPage, transactionPage * itemsPerPage).map((t) => (
+                            <TableRow 
+                              key={`trans-row-${t.id}`} 
+                              className="hover:bg-primary/5 transition-colors cursor-pointer"
+                              onClick={() => setSelectedTransaction(t)}
+                            >
+                              <TableCell className="pl-6 font-mono text-[10px]">{t.id}</TableCell>
+                              <TableCell className="text-xs">
+                                {t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                              </TableCell>
+                              <TableCell className="text-[10px] font-mono">{t.buyerId.substring(0, 8)}...</TableCell>
+                              <TableCell className="text-[10px] font-mono">{t.sellerId.substring(0, 8)}...</TableCell>
+                              <TableCell className="font-bold">£{t.amount?.toLocaleString()}</TableCell>
+                              <TableCell>{t.quantity}</TableCell>
+                              <TableCell>
+                                <Badge className={`rounded-md ${
+                                  t.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                  t.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                  'bg-destructive/10 text-destructive border-destructive/20'
+                                }`}>
+                                  {t.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <Pagination 
+                    currentPage={transactionPage}
+                    totalItems={filteredTransactions.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setTransactionPage}
                   />
                 </CardContent>
               </Card>
@@ -3059,6 +3256,98 @@ export default function Admin() {
         user={selectedUserForCert}
         platformLogo={platformSettings.hixLogoUrl}
       />
+
+      <Dialog open={!!selectedTransaction} onOpenChange={(open) => !open && setSelectedTransaction(null)}>
+        <DialogContent className="glass max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Transaction Details</DialogTitle>
+            <DialogDescription className="font-mono text-[10px]">ID: {selectedTransaction?.id}</DialogDescription>
+          </DialogHeader>
+          
+          {selectedTransaction && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Buyer ID</Label>
+                  <p className="font-mono text-xs bg-white/5 p-2 rounded-lg border border-white/10">{selectedTransaction.buyerId}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Seller ID</Label>
+                  <p className="font-mono text-xs bg-white/5 p-2 rounded-lg border border-white/10">{selectedTransaction.sellerId}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="glass p-4 rounded-2xl border-primary/10">
+                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Amount</Label>
+                  <p className="text-2xl font-black tracking-tighter text-primary">£{selectedTransaction.amount?.toLocaleString()}</p>
+                </div>
+                <div className="glass p-4 rounded-2xl border-primary/10">
+                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Quantity</Label>
+                  <p className="text-2xl font-black tracking-tighter">{selectedTransaction.quantity}</p>
+                </div>
+                <div className="glass p-4 rounded-2xl border-primary/10">
+                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">CO2 Saved</Label>
+                  <p className="text-2xl font-black tracking-tighter text-green-500">{selectedTransaction.co2Savings?.toLocaleString()} kg</p>
+                </div>
+              </div>
+
+              <Card className="glass border-primary/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
+                    Associated Listing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loadingTransactionDetails ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : selectedTransactionListing ? (
+                    <div className="flex gap-4">
+                      {selectedTransactionListing.images?.[0] && (
+                        <img 
+                          src={selectedTransactionListing.images[0]} 
+                          alt={selectedTransactionListing.title}
+                          className="h-20 w-20 rounded-xl object-cover border border-white/10"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <div>
+                        <h4 className="font-bold text-lg leading-tight mb-1">{selectedTransactionListing.title}</h4>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{selectedTransactionListing.description}</p>
+                        <div className="flex gap-2 mt-2">
+                          <Badge variant="outline" className="text-[9px] uppercase font-black">{selectedTransactionListing.category}</Badge>
+                          <Badge variant="outline" className="text-[9px] uppercase font-black">{selectedTransactionListing.condition}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Listing information unavailable (may have been deleted).</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${selectedTransaction.status === 'completed' ? 'bg-green-500' : 'bg-amber-500'}`} />
+                  <span className="text-sm font-bold uppercase tracking-widest">Status: {selectedTransaction.status}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Processed on {selectedTransaction.createdAt ? new Date(selectedTransaction.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl w-full" onClick={() => setSelectedTransaction(null)}>
+              Close Details
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   </div>
   );

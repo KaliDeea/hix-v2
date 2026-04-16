@@ -54,6 +54,12 @@ import {
   FileText,
   Heart
 } from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -390,13 +396,14 @@ export default function ListingDetail() {
                 alt={listing.title} 
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 referrerPolicy="no-referrer"
+                loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
             <div className="mt-6 grid grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <div key={`listing-thumb-${i}`} className="aspect-square rounded-2xl glass overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
-                  <img src={`https://picsum.photos/seed/steel-${i}/200/200`} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  <img src={`https://picsum.photos/seed/steel-${i}/200/200`} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
                 </div>
               ))}
             </div>
@@ -425,10 +432,19 @@ export default function ListingDetail() {
                 </div>
 
                 <div className="flex flex-col items-end ml-auto">
-                  <div className="flex items-center gap-2 text-primary font-bold">
-                    <Leaf className="h-5 w-5" />
-                    {listing.co2Savings}kg CO2
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 text-primary font-bold cursor-help">
+                          <Leaf className="h-5 w-5" />
+                          {listing.co2Savings}kg CO2
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="glass border-primary/20">
+                        <p className="text-xs">Estimated CO2 emissions avoided by reusing this asset.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <div className="text-[10px] text-muted-foreground">
                     ≈ {Math.round(listing.co2Savings / 20)} trees/yr
                   </div>
@@ -438,11 +454,20 @@ export default function ListingDetail() {
               <h1 className="text-3xl lg:text-4xl font-bold mb-4 tracking-tight leading-tight">{listing.title}</h1>
               
               <div className="flex items-center gap-4 mb-8">
-                <div className="flex items-center gap-2 p-3 rounded-2xl glass-dark inline-flex">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium">{listing.sellerName}</span>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 ml-2">Verified</Badge>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 p-3 rounded-2xl glass-dark inline-flex cursor-help">
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-medium">{listing.sellerName}</span>
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 ml-2">Verified</Badge>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="glass border-primary/20">
+                      <p className="text-xs">Verified Seller: This company has passed our vetting process.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
                 <Button
                   variant="outline"

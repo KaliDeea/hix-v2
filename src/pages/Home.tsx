@@ -25,7 +25,7 @@ export default function Home() {
                 Trade Industrial Assets, <span className="text-primary">Save the Planet.</span>
               </h1>
               <p className="mb-10 text-lg text-muted-foreground md:text-xl">
-                Hartlepool Industrial Exchange (HiX) connects businesses across the UK and Europe for secure, efficient, and sustainable industrial transactions.
+                Hartlepool Industrial Exchange (HiX) connects businesses across the UK for secure, efficient, and sustainable industrial transactions.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button size="lg" className="rounded-full px-8 text-lg shadow-md shadow-primary/10" asChild>
@@ -75,7 +75,7 @@ export default function Home() {
               {
                 icon: <Globe className="h-8 w-8 text-blue-500" />,
                 title: "Global Reach",
-                desc: "Connect Hartlepool businesses with buyers across the UK and Europe."
+                desc: "Connect Hartlepool businesses with buyers across the UK."
               }
             ].map((feature, i) => (
               <motion.div
