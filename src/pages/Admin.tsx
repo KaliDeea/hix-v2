@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth, db, onSnapshot, handleFirestoreError, OperationType } from "@/lib/firebase";
-import { UserProfile, Transaction, Report, AuditLog } from "@/types";
+import { UserProfile, Transaction, Report, AuditLog, Listing } from "@/types";
 import { 
   collection, 
   query, 
@@ -9,7 +10,9 @@ import {
   where,
   deleteDoc,
   orderBy,
-  limit
+  limit,
+  onSnapshot as firestoreOnSnapshot,
+  getDoc
 } from "firebase/firestore";
 import { 
   Card, 
@@ -18,6 +21,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { 
   Table, 
   TableBody, 
@@ -71,7 +75,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  X
+  X,
+  ShoppingCart
 } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -108,8 +113,305 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-import { Switch } from "@/components/ui/switch";
+import { jsPDF } from "jspdf";
 
+const ESGCertificateModal = ({ 
+  isOpen, 
+  onClose, 
+  user, 
+  platformLogo 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  user: UserProfile | null;
+  platformLogo: string | null;
+}) => {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const generatePDF = async () => {
+    if (!user) return;
+    setIsGenerating(true);
+    
+    try {
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Helper to load image
+      const loadImage = (url: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = url;
+        });
+      };
+
+      // Background
+      doc.setFillColor(252, 255, 252);
+      doc.rect(0, 0, 297, 210, 'F');
+
+      // Decorative Corners
+      doc.setDrawColor(34, 197, 94); // Primary color
+      doc.setLineWidth(2);
+      // Top Left
+      doc.line(15, 15, 45, 15);
+      doc.line(15, 15, 15, 45);
+      // Top Right
+      doc.line(252, 15, 282, 15);
+      doc.line(282, 15, 282, 45);
+      // Bottom Left
+      doc.line(15, 165, 15, 195);
+      doc.line(15, 195, 45, 195);
+      // Bottom Right
+      doc.line(282, 165, 282, 195);
+      doc.line(282, 195, 252, 195);
+
+      // Main Border
+      doc.setDrawColor(34, 197, 94, 0.3);
+      doc.setLineWidth(0.5);
+      doc.rect(12, 12, 273, 186);
+
+      // Logo
+      if (platformLogo) {
+        try {
+          const img = await loadImage(platformLogo);
+          doc.addImage(img, 'PNG', 20, 20, 25, 25);
+        } catch (e) {
+          console.error("Logo loading failed, skipping from PDF", e);
+          // Fallback: Text logo
+          doc.setFillColor(34, 197, 94);
+          doc.roundedRect(20, 20, 15, 15, 2, 2, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(10);
+          doc.text('H', 27.5, 30, { align: 'center' });
+        }
+      }
+
+      // Header Section
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(42);
+      doc.text('CERTIFICATE OF IMPACT', 148.5, 55, { align: 'center' });
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text('This official document verifies the sustainable contributions of', 148.5, 75, { align: 'center' });
+
+      // Recipient
+      doc.setTextColor(34, 197, 94);
+      doc.setFontSize(36);
+      doc.setFont('helvetica', 'bold');
+      doc.text(user.companyName || user.email || 'Valued Partner', 148.5, 95, { align: 'center' });
+
+      // Body
+      doc.setTextColor(30, 41, 59);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'normal');
+      const bodyText = `In recognition of their outstanding commitment to circular economy principles and sustainable industrial practices on the HiX Platform. Through strategic resource recovery and circular transactions, they have achieved the following environmental impact:`;
+      const splitText = doc.splitTextToSize(bodyText, 220);
+      doc.text(splitText, 148.5, 115, { align: 'center' });
+
+      // Impact Stats Grid
+      const gridY = 145;
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(50, gridY, 197, 30, 3, 3, 'F');
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CARBON OFFSET', 85, gridY + 10, { align: 'center' });
+      doc.text('CIRCULARITY RATE', 148.5, gridY + 10, { align: 'center' });
+      doc.text('RESOURCES SAVED', 212, gridY + 10, { align: 'center' });
+
+      doc.setFontSize(22);
+      doc.setTextColor(21, 128, 61);
+      const co2Val = user.totalCo2Saved ? `${user.totalCo2Saved.toLocaleString()} kg CO2` : '1,250 kg CO2';
+      doc.text(co2Val, 85, gridY + 22, { align: 'center' });
+      doc.text('85%', 148.5, gridY + 22, { align: 'center' });
+      doc.text('4.2 Tons', 212, gridY + 22, { align: 'center' });
+
+      // Stamp / Seal
+      const sealX = 240;
+      const sealY = 40;
+      doc.setDrawColor(34, 197, 94);
+      doc.setLineWidth(1.5);
+      doc.circle(sealX, sealY, 20, 'D');
+      doc.setLineWidth(0.5);
+      doc.circle(sealX, sealY, 18, 'D');
+      
+      // Inner text for seal
+      doc.setFontSize(8);
+      doc.setTextColor(34, 197, 94);
+      doc.text('VERIFIED', sealX, sealY - 5, { align: 'center' });
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ESG', sealX, sealY + 2, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('IMPACT', sealX, sealY + 8, { align: 'center' });
+
+      // Footer
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184);
+      doc.setFont('helvetica', 'normal');
+      const date = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      doc.text(`Issued on: ${date}`, 30, 190);
+      doc.text(`Verification ID: HIX-ESG-${Math.random().toString(36).substring(2, 10).toUpperCase()}`, 267, 190, { align: 'right' });
+
+      // Signature
+      doc.setDrawColor(30, 41, 59);
+      doc.line(120, 185, 177, 185);
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+      doc.text('HiX Sustainability Board', 148.5, 192, { align: 'center' });
+
+      doc.save(`HiX-ESG-Certificate-${user.companyName || 'User'}.pdf`);
+      toast.success("Certificate generated successfully!");
+    } catch (error) {
+      console.error("PDF Generation error:", error);
+      toast.error("Failed to generate certificate");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent className="max-w-[95vw] w-full lg:max-w-6xl h-[92vh] glass border-white/20 p-0 overflow-hidden flex flex-col shadow-2xl backdrop-blur-xl bg-white/5">
+        {/* Header Section */}
+        <div className="p-8 pb-10 border-b border-white/10 bg-white/5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-inner">
+              <Leaf className="h-8 w-8" />
+            </div>
+            <div>
+              <AlertDialogTitle className="text-3xl font-black tracking-tight text-white">ESG Certificate Generator</AlertDialogTitle>
+              <AlertDialogDescription className="text-base text-white/60 font-medium">
+                HIX ADMIN &bull; Official impact documentation for <strong>{user?.companyName || user?.email}</strong>
+              </AlertDialogDescription>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all">
+            <X className="h-7 w-7" />
+          </Button>
+        </div>
+
+        {/* Certificate Preview (The Core) */}
+        <div className="flex-1 bg-black/20 flex flex-col items-center p-8 sm:p-12 overflow-y-auto custom-scrollbar">
+          <div className="w-full max-w-4xl mx-auto shadow-[0_0_80px_rgba(0,0,0,0.4)] transition-transform hover:scale-[1.01] duration-500">
+            <div className="aspect-[1/1.414] sm:aspect-[1.414/1] w-full bg-[#fcfdfc] rounded-xl border-[12px] border-double border-primary/20 p-10 sm:p-16 flex flex-col items-center text-slate-900 relative overflow-hidden">
+              
+              {/* Subtle Background Layer */}
+              <div className="absolute inset-0 opacity-[0.03] pointer-events-none flex flex-wrap justify-center items-center gap-10 p-10 select-none">
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <span key={i} className="text-4xl font-black uppercase tracking-tighter rotate-[-25deg]">
+                    Sustainable Industrial Circular Impact Verified
+                  </span>
+                ))}
+              </div>
+
+              {/* Vertical Flow Content */}
+              <div className="relative z-10 flex flex-col items-center w-full h-full">
+                
+                {/* 1. HiX Logo */}
+                <div className="mb-6">
+                  {platformLogo ? (
+                    <img src={platformLogo} alt="Logo" className="h-16 sm:h-24 w-auto object-contain" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="h-20 w-20 rounded-2xl bg-primary flex items-center justify-center text-white font-bold text-4xl shadow-lg">H</div>
+                  )}
+                </div>
+
+                {/* 2. ISSUED DATE */}
+                <div className="mb-8 flex flex-col items-center">
+                  <span className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 mb-1">Issued Date</span>
+                  <span className="text-lg sm:text-xl font-bold text-slate-800">15 April 2026</span>
+                </div>
+
+                {/* 3. Verified ESG Impact Seal */}
+                <div className="mb-10 relative h-24 w-24 sm:h-32 sm:w-32 flex items-center justify-center">
+                  <div className="absolute inset-0 border-4 border-primary/20 rounded-full animate-pulse" />
+                  <div className="absolute inset-2 border-2 border-primary rounded-full flex flex-col items-center justify-center bg-white shadow-xl">
+                    <span className="text-[8px] sm:text-[10px] font-black text-primary uppercase tracking-widest">Verified</span>
+                    <span className="text-xl sm:text-3xl font-black text-primary tracking-tighter leading-none my-1">ESG</span>
+                    <span className="text-[8px] sm:text-[10px] font-black text-primary uppercase tracking-widest">Impact</span>
+                  </div>
+                </div>
+
+                {/* Certificate Details */}
+                <div className="flex flex-col items-center text-center flex-1">
+                  <h1 className="text-3xl sm:text-5xl font-black tracking-tighter text-slate-900 uppercase mb-6">Certificate of Impact</h1>
+                  
+                  <p className="text-slate-500 font-semibold text-sm sm:text-lg mb-2 uppercase tracking-widest">This document verifies the contributions of</p>
+                  <h2 className="text-2xl sm:text-4xl font-black text-primary mb-8 tracking-tight leading-tight">{user?.companyName || user?.email || 'Valued Partner'}</h2>
+                  
+                  <p className="text-slate-600 max-w-2xl mb-10 leading-relaxed italic text-sm sm:text-lg font-medium">
+                    "In recognition of their outstanding commitment to circular economy principles and sustainable industrial practices on the HiX Platform. Through strategic resource recovery and circular transactions, they have achieved significant environmental impact reduction."
+                  </p>
+
+                  <div className="grid grid-cols-3 w-full max-w-3xl gap-4 sm:gap-8 bg-primary/5 rounded-2xl p-6 sm:p-10 border border-primary/10 shadow-inner mb-10">
+                    <div className="text-center">
+                      <p className="text-xl sm:text-3xl font-black text-primary">
+                        {user?.totalCo2Saved ? `${user.totalCo2Saved.toLocaleString()} kg` : '1,250 kg'}
+                      </p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">CO2 Offset</p>
+                    </div>
+                    <div className="text-center border-x border-primary/10">
+                      <p className="text-xl sm:text-3xl font-black text-primary">85%</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">Circularity Rate</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xl sm:text-3xl font-black text-primary">4.2 Tons</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-2">Resources Saved</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Info */}
+                <div className="w-full flex justify-between items-end pt-6 border-t border-slate-200">
+                  <div className="text-left">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verification ID</p>
+                    <p className="text-xs sm:text-sm font-mono font-black text-slate-700">HIX-ESG-{Math.random().toString(36).substring(2, 10).toUpperCase()}</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="h-px w-32 bg-slate-300 mb-2 mx-auto" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">HiX Sustainability Board</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Area */}
+          <div className="mt-12 mb-8 shrink-0">
+            <Button 
+              onClick={generatePDF} 
+              disabled={isGenerating}
+              className="rounded-2xl px-12 h-16 bg-primary hover:bg-primary/90 shadow-[0_20px_40px_rgba(34,197,94,0.3)] font-black text-xl tracking-tight transition-all hover:scale-105 active:scale-95"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <FileText className="mr-3 h-6 w-6" />
+                  Download Certified PDF
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
 const Pagination = ({ 
   currentPage, 
   totalItems, 
@@ -158,9 +460,11 @@ const Pagination = ({
 
 export default function Admin() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
@@ -189,6 +493,43 @@ export default function Admin() {
   const [announcement, setAnnouncement] = useState({ title: "", message: "" });
   const [isSendingAnnouncement, setIsSendingAnnouncement] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedReportTransaction, setSelectedReportTransaction] = useState<Transaction | null>(null);
+  const [selectedReportUser, setSelectedReportUser] = useState<UserProfile | null>(null);
+  const [loadingReportDetails, setLoadingReportDetails] = useState(false);
+
+  useEffect(() => {
+    if (!selectedReport) {
+      setSelectedReportTransaction(null);
+      setSelectedReportUser(null);
+      return;
+    }
+
+    const fetchDetails = async () => {
+      setLoadingReportDetails(true);
+      try {
+        // Fetch reported user
+        const userDoc = await getDoc(doc(db, "users", selectedReport.reportedUserId));
+        if (userDoc.exists()) {
+          setSelectedReportUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
+        }
+
+        // Fetch transaction if applicable
+        if (selectedReport.transactionId) {
+          const transDoc = await getDoc(doc(db, "transactions", selectedReport.transactionId));
+          if (transDoc.exists()) {
+            setSelectedReportTransaction({ id: transDoc.id, ...transDoc.data() } as Transaction);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching report details:", error);
+      } finally {
+        setLoadingReportDetails(false);
+      }
+    };
+
+    fetchDetails();
+  }, [selectedReport]);
+
   const [selectedUserForVetting, setSelectedUserForVetting] = useState<UserProfile | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -203,6 +544,8 @@ export default function Admin() {
   const [isUserDeleteDialogOpen, setIsUserDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const [reportReasonFilter, setReportReasonFilter] = useState("all");
+  const [showESGCertModal, setShowESGCertModal] = useState(false);
+  const [selectedUserForCert, setSelectedUserForCert] = useState<UserProfile | null>(null);
 
   // Pagination State
   const [userPage, setUserPage] = useState(1);
@@ -324,9 +667,20 @@ export default function Admin() {
         ...doc.data()
       })) as Transaction[];
       setTransactions(data);
-      setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, transPath);
+    });
+
+    const listingsPath = "listings";
+    const unsubscribeListings = onSnapshot(collection(db, listingsPath), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Listing[];
+      setListings(data);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, listingsPath);
       setLoading(false);
     });
 
@@ -346,6 +700,7 @@ export default function Admin() {
       unsubscribeUsers();
       unsubscribeReports();
       unsubscribeTrans();
+      unsubscribeListings();
       unsubscribeAudit();
     };
   }, [profile]);
@@ -458,7 +813,7 @@ export default function Admin() {
     }
   };
 
-  const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'admin' | 'superadmin') => {
+  const handleUpdateUserRole = async (userId: string, newRole: UserProfile['role']) => {
     if (profile?.role !== 'superadmin') {
       toast.error("Only superadmins can change user roles.");
       return;
@@ -592,6 +947,20 @@ export default function Admin() {
     }
   };
 
+  // RBAC Helpers
+  const isSuperAdmin = profile?.role === 'superadmin';
+  const isAdmin = ['admin', 'superadmin'].includes(profile?.role);
+  const isEditor = ['editor', 'admin', 'superadmin'].includes(profile?.role);
+  const isViewer = ['viewer', 'editor', 'admin', 'superadmin'].includes(profile?.role);
+
+  const canManageUsers = isSuperAdmin;
+  const canManageRoles = isSuperAdmin;
+  const canManageVetting = isEditor;
+  const canManageReports = isEditor;
+  const canManageSettings = isAdmin;
+  const canDelete = isSuperAdmin;
+  const canBulkUpload = isEditor;
+
   // Sorting Logic
   const handleBulkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -686,18 +1055,34 @@ export default function Admin() {
 
   const filteredUsers = users
     .filter(u => {
-      const matchesSearch = u.companyName?.toLowerCase().includes(userSearch.toLowerCase()) || 
-                           u.email?.toLowerCase().includes(userSearch.toLowerCase());
+      const searchLower = userSearch.toLowerCase();
+      const matchesSearch = 
+        u.companyName?.toLowerCase().includes(searchLower) || 
+        u.email?.toLowerCase().includes(searchLower) ||
+        u.vatNumber?.toLowerCase().includes(searchLower) ||
+        u.uid?.toLowerCase().includes(searchLower) ||
+        u.role?.toLowerCase().includes(searchLower);
+      
       const matchesFilter = userFilter === 'all' || 
                            (userFilter === 'pending' && (!u.isVetted || !u.isVatVerified)) ||
                            (userFilter === 'vetted' && u.isVetted) ||
+                           (userFilter === 'unverified' && !u.isVatVerified) ||
                            (userFilter === 'suspended' && u.isSuspended) ||
-                           (userFilter === 'admins' && ['admin', 'superadmin'].includes(u.role || ''));
+                           (userFilter === 'admins' && ['admin', 'superadmin', 'editor', 'viewer'].includes(u.role || ''));
       return matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
-      const aVal = a[userSort.key];
-      const bVal = b[userSort.key];
+      let aVal = a[userSort.key];
+      let bVal = b[userSort.key];
+      
+      // Handle timestamps
+      if (aVal?.seconds !== undefined) aVal = aVal.seconds;
+      if (bVal?.seconds !== undefined) bVal = bVal.seconds;
+      
+      // Handle nulls
+      if (aVal === null || aVal === undefined) aVal = 0;
+      if (bVal === null || bVal === undefined) bVal = 0;
+
       if (aVal < bVal) return userSort.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return userSort.direction === 'asc' ? 1 : -1;
       return 0;
@@ -707,11 +1092,13 @@ export default function Admin() {
     .filter(r => {
       const matchesStatus = reportFilter === 'all' || r.status === reportFilter;
       const matchesReason = reportReasonFilter === 'all' || r.reason === reportReasonFilter;
+      const searchLower = reportSearch.toLowerCase();
       const matchesSearch = 
-        r.reporterName?.toLowerCase().includes(reportSearch.toLowerCase()) ||
-        r.reportedUserName?.toLowerCase().includes(reportSearch.toLowerCase()) ||
-        r.reason?.toLowerCase().includes(reportSearch.toLowerCase()) ||
-        r.description?.toLowerCase().includes(reportSearch.toLowerCase());
+        r.reporterName?.toLowerCase().includes(searchLower) ||
+        r.reportedUserName?.toLowerCase().includes(searchLower) ||
+        r.reason?.toLowerCase().includes(searchLower) ||
+        r.description?.toLowerCase().includes(searchLower) ||
+        r.id?.toLowerCase().includes(searchLower);
       return matchesStatus && matchesReason && matchesSearch;
     })
     .sort((a, b) => {
@@ -723,7 +1110,6 @@ export default function Admin() {
     });
 
   const filteredVettingUsers = users
-    .filter(u => u.vettingStatus !== 'approved' || !u.isVatVerified)
     .filter(u => {
       const matchesSearch = 
         u.companyName?.toLowerCase().includes(vettingSearch.toLowerCase()) ||
@@ -736,7 +1122,12 @@ export default function Admin() {
       
       const matchesStatus = vettingStatusFilter === 'all' || u.vettingStatus === vettingStatusFilter;
       
-      return matchesSearch && matchesType && matchesStatus;
+      // If status filter is 'all', we still default to showing only those needing attention
+      // unless a specific status is selected
+      const needsAttention = u.vettingStatus !== 'approved' || !u.isVatVerified;
+      const showAll = vettingStatusFilter !== 'all' || vettingTypeFilter !== 'all';
+      
+      return matchesSearch && matchesType && matchesStatus && (showAll || needsAttention);
     });
 
   const filteredAuditLogs = auditLogs.filter(log => {
@@ -941,7 +1332,7 @@ export default function Admin() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md p-2 pl-4 rounded-2xl border border-white/10 shadow-xl">
+          <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md p-2 pl-4 rounded-2xl border border-white/10 shadow-lg">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-semibold">{profile?.companyName || "Administrator"}</p>
               <p className="text-[10px] text-muted-foreground capitalize">{profile?.role || "Admin"}</p>
@@ -953,7 +1344,7 @@ export default function Admin() {
         </motion.div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
-          <div className="sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-white/10 -mx-4 px-4 py-4 sm:mx-0 sm:px-6 sm:rounded-3xl sm:border sm:mt-4 sm:shadow-xl sm:border-primary/10">
+          <div className="sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-white/10 -mx-4 px-4 py-4 sm:mx-0 sm:px-6 sm:rounded-3xl sm:border sm:mt-4 sm:shadow-lg sm:border-primary/10">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 shrink-0 hidden sm:flex">
                 <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
@@ -967,21 +1358,21 @@ export default function Admin() {
 
               <TabsList className="flex h-auto bg-transparent border-none p-0 gap-1 overflow-x-auto no-scrollbar justify-start flex-1 w-full">
                 {[
-                  { value: "dashboard", label: "Dashboard", icon: BarChart3 },
-                  { value: "users", label: "Users", icon: Users },
-                  { value: "admins", label: "Admins", icon: ShieldCheck },
-                  { value: "vetting", label: "Vetting Queue", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, badgeColor: "bg-amber-500" },
-                  { value: "reports", label: "Reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, badgeColor: "bg-destructive" },
-                  { value: "bulk", label: "Bulk Upload", icon: Upload },
-                  { value: "esg", label: "ESG Impact", icon: Leaf },
-                  { value: "audit", label: "Audit Logs", icon: History },
-                  { value: "settings", label: "Platform Settings", icon: Database },
-                  { value: "system", label: "System Tools", icon: RefreshCw },
-                ].map((tab) => (
+                  { value: "dashboard", label: "Dashboard", icon: BarChart3, show: isViewer },
+                  { value: "users", label: "Users", icon: Users, show: isViewer },
+                  { value: "admins", label: "Admins", icon: ShieldCheck, show: isAdmin },
+                  { value: "vetting", label: "Vetting Queue", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, badgeColor: "bg-amber-500", show: isEditor },
+                  { value: "reports", label: "Reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, badgeColor: "bg-destructive", show: isEditor },
+                  { value: "bulk", label: "Bulk Upload", icon: Upload, show: isEditor },
+                  { value: "esg", label: "ESG Impact", icon: Leaf, show: isViewer },
+                  { value: "audit", label: "Audit Logs", icon: History, show: isViewer },
+                  { value: "settings", label: "Platform Settings", icon: Database, show: isAdmin },
+                  { value: "system", label: "System Tools", icon: RefreshCw, show: isSuperAdmin },
+                ].filter(tab => tab.show).map((tab) => (
                   <TabsTrigger 
                     key={`admin-tab-${tab.value}`}
                     value={tab.value} 
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 hover:bg-white/5 transition-all relative group shrink-0 border-none w-auto"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/10 hover:bg-white/5 transition-all relative group shrink-0 border-none w-auto"
                   >
                     <tab.icon className="h-4 w-4 shrink-0" />
                     <span className="font-bold text-xs tracking-tight hidden md:inline-block whitespace-nowrap">{tab.label}</span>
@@ -997,7 +1388,8 @@ export default function Admin() {
           </div>
 
           <div className="w-full min-w-0">
-            <TabsContent value="dashboard" className="mt-0 outline-none">
+            {isViewer && (
+              <TabsContent value="dashboard" className="mt-0 outline-none">
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1007,8 +1399,12 @@ export default function Admin() {
                     {[
                       { label: "Total Users", value: users.length, sub: `${users.filter(u => u.isVetted).length} vetted`, icon: Users, color: "text-blue-500" },
                       { label: "Total Revenue", value: `£${transactions.reduce((acc, t) => acc + (t.status === 'completed' ? t.amount : 0), 0).toLocaleString()}`, sub: `${transactions.filter(t => t.status === 'completed').length} deals`, icon: DollarSign, color: "text-green-500" },
-                      { label: "Commission", value: `£${transactions.reduce((acc, t) => acc + (t.status === 'completed' ? (t.buyerCommission + t.sellerCommission) : 0), 0).toLocaleString()}`, sub: `${platformSettings.sellerCommission}% S / ${platformSettings.buyerCommission}% B`, icon: TrendingUp, color: "text-primary" },
-                      { label: "Active Listings", value: Math.round(users.length * 2.5), sub: "Across all categories", icon: Package, color: "text-purple-500" },
+                      { label: "Active Listings", value: listings.filter(l => l.status === 'available').length, sub: "Across all categories", icon: Package, color: "text-purple-500" },
+                      { label: "Recent Trans", value: transactions.filter(t => {
+                        const now = new Date();
+                        const created = t.createdAt?.toDate ? t.createdAt.toDate() : new Date(t.createdAt);
+                        return (now.getTime() - created.getTime()) < (24 * 60 * 60 * 1000);
+                      }).length, sub: "Last 24 hours", icon: History, color: "text-amber-500" },
                     ].map((stat, i) => (
                       <motion.div
                         key={`admin-stat-${stat.label}`}
@@ -1039,122 +1435,148 @@ export default function Admin() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="glass border-primary/20">
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Activity className="h-4 w-4 text-blue-500" />
-                    <CardTitle className="text-sm font-bold uppercase tracking-widest">Platform Oversight</CardTitle>
+              <Card className="glass border-primary/20 lg:col-span-2">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Activity className="h-4 w-4 text-blue-500" />
+                      <CardTitle className="text-sm font-bold uppercase tracking-widest">Real-Time Activity Feed</CardTitle>
+                    </div>
+                    <CardDescription>Live stream of significant platform events.</CardDescription>
                   </div>
-                  <CardDescription>Recent administrative actions.</CardDescription>
+                  <Button variant="ghost" size="sm" className="text-[10px] font-bold uppercase tracking-widest" onClick={() => setActiveTab("audit")}>
+                    View All Logs
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {auditLogs.slice(0, 4).map((log) => (
-                      <div key={`overview-log-${log.id}`} className="flex items-start gap-3 pb-3 border-b border-white/5 last:border-0">
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    {auditLogs.slice(0, 15).map((log) => (
+                      <div key={`overview-log-${log.id}`} className="flex items-start gap-4 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group">
+                        <div className={`mt-1 h-8 w-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${
+                          log.action.includes('REGISTRATION') ? 'bg-blue-500/20 text-blue-500' :
+                          log.action.includes('TRANSACTION') ? 'bg-green-500/20 text-green-500' :
+                          log.action.includes('REPORT') ? 'bg-destructive/20 text-destructive' :
+                          log.action.includes('SUSPEND') ? 'bg-amber-500/20 text-amber-500' :
+                          'bg-primary/20 text-primary'
+                        }`}>
+                          {log.action.includes('REGISTRATION') ? <Users className="h-4 w-4" /> :
+                           log.action.includes('TRANSACTION') ? <DollarSign className="h-4 w-4" /> :
+                           log.action.includes('REPORT') ? <AlertTriangle className="h-4 w-4" /> :
+                           log.action.includes('SUSPEND') ? <Ban className="h-4 w-4" /> :
+                           <Activity className="h-4 w-4" />}
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">
-                            {log.adminName} <span className="font-normal text-muted-foreground">{log.details}</span>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-xs font-black uppercase tracking-tight">
+                              {log.action.replace(/_/g, ' ')}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground font-medium">
+                              {log.createdAt ? new Date(log.createdAt.seconds * 1000).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : "Just now"}
+                            </p>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            <span className="font-bold text-foreground">{log.adminName}</span>: {log.details}
                           </p>
                           {log.targetName && (
-                            <p className="text-[10px] text-primary font-medium mt-0.5">
-                              Target: {log.targetName} ({log.targetType})
-                            </p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-white/5 border-white/10 text-muted-foreground">
+                                {log.targetType}: {log.targetName}
+                              </Badge>
+                            </div>
                           )}
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
-                            {log.createdAt ? new Date(log.createdAt.seconds * 1000).toLocaleTimeString() : "Just now"}
-                          </p>
                         </div>
                       </div>
                     ))}
                     {auditLogs.length === 0 && (
-                      <p className="text-xs text-center py-4 text-muted-foreground italic">No recent activity.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass border-primary/20">
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-1">
-                    <ShieldCheck className="h-4 w-4 text-amber-500" />
-                    <CardTitle className="text-sm font-bold uppercase tracking-widest">User Vetting</CardTitle>
-                  </div>
-                  <CardDescription>Pending verifications.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
-                      <span className="text-xs font-medium">Pending VAT</span>
-                      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px]">
-                        {users.filter(u => !u.isVatVerified).length}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
-                      <span className="text-xs font-medium">Pending Identity</span>
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-[10px]">
-                        {users.filter(u => !u.isVetted).length}
-                      </Badge>
-                    </div>
-                    <div className="pt-2">
-                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-1000" 
-                          style={{ width: `${(users.filter(u => u.isVetted).length / (users.length || 1)) * 100}%` }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-2 text-center font-medium">
-                        {Math.round((users.filter(u => u.isVetted).length / (users.length || 1)) * 100)}% of users fully vetted
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass border-primary/20">
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-1">
-                    <RefreshCw className="h-4 w-4 text-green-500" />
-                    <CardTitle className="text-sm font-bold uppercase tracking-widest">System Config</CardTitle>
-                  </div>
-                  <CardDescription>Platform health status.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/5 border border-green-500/10">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Database</span>
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-[10px] font-bold text-green-500">Stable</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/5 border border-green-500/10">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Auth</span>
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-[10px] font-bold text-green-500">Active</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Security</span>
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        <span className="text-[10px] font-bold text-primary">Enforced</span>
-                      </div>
-                    </div>
-                    {platformSettings.maintenanceMode && (
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Maintenance</span>
-                        <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/20 text-[8px] h-4">ON</Badge>
+                      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-3">
+                        <History className="h-10 w-10 opacity-10" />
+                        <p className="text-sm italic">No recent activity recorded.</p>
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
+
+              <div className="space-y-6">
+                <Card className="glass border-primary/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-2 mb-1">
+                      <ShieldCheck className="h-4 w-4 text-amber-500" />
+                      <CardTitle className="text-sm font-bold uppercase tracking-widest">User Vetting</CardTitle>
+                    </div>
+                    <CardDescription>Pending verifications.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                        <span className="text-xs font-medium">Pending VAT</span>
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px]">
+                          {users.filter(u => !u.isVatVerified).length}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                        <span className="text-xs font-medium">Pending Identity</span>
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-[10px]">
+                          {users.filter(u => !u.isVetted).length}
+                        </Badge>
+                      </div>
+                      <div className="pt-2">
+                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all duration-1000" 
+                            style={{ width: `${(users.filter(u => u.isVetted).length / (users.length || 1)) * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-2 text-center font-medium">
+                          {Math.round((users.filter(u => u.isVetted).length / (users.length || 1)) * 100)}% of users fully vetted
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass border-primary/20">
+                  <CardHeader>
+                    <div className="flex items-center gap-2 mb-1">
+                      <RefreshCw className="h-4 w-4 text-green-500" />
+                      <CardTitle className="text-sm font-bold uppercase tracking-widest">System Config</CardTitle>
+                    </div>
+                    <CardDescription>Platform health status.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/5 border border-green-500/10">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Database</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-[10px] font-bold text-green-500">Stable</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/5 border border-green-500/10">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Auth</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-[10px] font-bold text-green-500">Active</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Security</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          <span className="text-[10px] font-bold text-primary">Enforced</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </motion.div>
         </TabsContent>
+        )}
 
-        <TabsContent value="users" className="mt-0 outline-none">
+        {isViewer && (
+          <TabsContent value="users" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1194,6 +1616,7 @@ export default function Admin() {
                           <SelectItem value="all">All Users</SelectItem>
                           <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="vetted">Vetted</SelectItem>
+                          <SelectItem value="unverified">Unverified</SelectItem>
                           <SelectItem value="suspended">Suspended</SelectItem>
                           <SelectItem value="admins">Admins</SelectItem>
                         </SelectContent>
@@ -1214,13 +1637,13 @@ export default function Admin() {
                           </TableHead>
                           <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('isVatVerified')}>
                             <div className="flex items-center gap-1">
-                              VAT Status
+                              VAT Verification Status
                               <ArrowUpDown className="h-3 w-3" />
                             </div>
                           </TableHead>
-                          <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('isVetted')}>
+                          <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('vettingStatus')}>
                             <div className="flex items-center gap-1">
-                              Vetting
+                              Vetting Status
                               <ArrowUpDown className="h-3 w-3" />
                             </div>
                           </TableHead>
@@ -1236,7 +1659,19 @@ export default function Admin() {
                               <ArrowUpDown className="h-3 w-3" />
                             </div>
                           </TableHead>
-                          <TableHead className="text-right pr-6">Actions</TableHead>
+                          <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('lastLogin')}>
+                            <div className="flex items-center gap-1">
+                              Last Login
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => sortUsers('totalCo2Saved')}>
+                            <div className="flex items-center gap-1">
+                              CO2 Savings
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="text-right pr-6 w-[200px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1265,7 +1700,7 @@ export default function Admin() {
                               </TableCell>
                               <TableCell>
                                 {u.vettingStatus === 'approved' ? (
-                                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 rounded-md">Vetted</Badge>
+                                  <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 rounded-md">Approved</Badge>
                                 ) : (
                                   <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 rounded-md capitalize">
                                     {u.vettingStatus?.replace('_', ' ') || 'Pending'}
@@ -1293,6 +1728,8 @@ export default function Admin() {
                                     </SelectTrigger>
                                     <SelectContent className="glass">
                                       <SelectItem value="user">User</SelectItem>
+                                      <SelectItem value="viewer">Viewer</SelectItem>
+                                      <SelectItem value="editor">Editor</SelectItem>
                                       <SelectItem value="admin">Admin</SelectItem>
                                       <SelectItem value="superadmin">Super Admin</SelectItem>
                                     </SelectContent>
@@ -1301,36 +1738,69 @@ export default function Admin() {
                                   <Badge variant="outline" className="capitalize rounded-md">{u.role || 'user'}</Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right pr-6 space-x-1">
-                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {!u.isVatVerified && (
+                              <TableCell className="text-xs text-muted-foreground">
+                                {u.lastLogin ? (
+                                  new Date(u.lastLogin.seconds * 1000).toLocaleString()
+                                ) : (
+                                  "Never"
+                                )}
+                              </TableCell>
+                              <TableCell className="font-bold text-primary">
+                                {u.totalCo2Saved?.toLocaleString() || 0} kg
+                              </TableCell>
+                              <TableCell className="text-right pr-6 space-x-1">                                  <div className="flex items-center justify-end gap-3">
+                                  {canManageVetting && !u.isVatVerified && (
                                     <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleVerifyVat(u.uid)}>
                                       VAT
                                     </Button>
                                   )}
-                                  {u.vettingStatus !== 'approved' && (
+                                  {canManageVetting && u.vettingStatus !== 'approved' && (
                                     <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => setSelectedUserForVetting(u)}>
                                       Vet
                                     </Button>
                                   )}
-                                  {u.isSuspended ? (
-                                    <Button size="sm" variant="outline" className="h-8 rounded-lg border-orange-500/50 text-orange-500 hover:bg-orange-500/10" onClick={() => handleUnsuspendUser(u.uid)}>
-                                      <Unlock className="h-3.5 w-3.5" />
-                                    </Button>
-                                  ) : (
-                                    <Button size="sm" variant="outline" className="h-8 rounded-lg border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => {
-                                      setSelectedUserForSuspension(u);
-                                      setIsSuspending(true);
+                                  
+                                  {canManageUsers && (
+                                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
+                                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Suspended</span>
+                                      <Switch 
+                                        checked={u.isSuspended} 
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            setSelectedUserForSuspension(u);
+                                            setIsSuspending(true);
+                                          } else {
+                                            handleUnsuspendUser(u.uid);
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-8 rounded-lg border-primary/30 text-primary hover:bg-primary/10" 
+                                    onClick={() => navigate(`/admin/transactions?uid=${u.uid}&type=buy`)}
+                                  >
+                                    <ShoppingCart className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-8 rounded-lg border-primary/30 text-primary hover:bg-primary/10" 
+                                    onClick={() => navigate(`/admin/transactions?uid=${u.uid}&type=sell`)}
+                                  >
+                                    <DollarSign className="h-3.5 w-3.5" />
+                                  </Button>
+                                  {canDelete && (
+                                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-destructive hover:bg-destructive/10" onClick={() => {
+                                      setUserToDelete(u);
+                                      setIsUserDeleteDialogOpen(true);
                                     }}>
-                                      <Ban className="h-3.5 w-3.5" />
+                                      <Trash2 className="h-3.5 w-3.5" />
                                     </Button>
                                   )}
-                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-destructive hover:bg-destructive/10" onClick={() => {
-                                    setUserToDelete(u);
-                                    setIsUserDeleteDialogOpen(true);
-                                  }}>
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -1349,8 +1819,10 @@ export default function Admin() {
               </Card>
             </motion.div>
           </TabsContent>
+        )}
 
-        <TabsContent value="admins" className="mt-0 outline-none">
+        {isAdmin && (
+          <TabsContent value="admins" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1417,8 +1889,10 @@ export default function Admin() {
               </Card>
             </motion.div>
           </TabsContent>
+        )}
 
-        <TabsContent value="reports" className="mt-0 outline-none">
+        {isEditor && (
+          <TabsContent value="reports" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1551,63 +2025,129 @@ export default function Admin() {
                                         <Eye className="h-4 w-4" />
                                       </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="glass border-primary/20 max-w-lg">
+                                    <DialogContent className="glass border-primary/20 max-w-2xl max-h-[90vh] overflow-y-auto">
                                       <DialogHeader>
                                         <DialogTitle className="text-2xl font-black">Report Details</DialogTitle>
                                         <DialogDescription>
                                           Case investigation for report against {r.reportedUserName}.
                                         </DialogDescription>
                                       </DialogHeader>
-                                      <div className="space-y-6 py-6">
-                                        <div className="grid grid-cols-2 gap-6">
-                                          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                                            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Reporter</Label>
-                                            <p className="font-bold text-lg">{r.reporterName}</p>
-                                          </div>
-                                          <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                                            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Reported User</Label>
-                                            <p className="font-bold text-lg">{r.reportedUserName}</p>
-                                          </div>
+                                      
+                                      {loadingReportDetails ? (
+                                        <div className="py-12 text-center">
+                                          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                                          <p className="text-muted-foreground">Loading investigation details...</p>
                                         </div>
-                                        <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-                                          <Label className="text-[10px] uppercase tracking-widest text-primary font-bold">Reason for Report</Label>
-                                          <p className="font-bold text-xl mt-1">{r.reason}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Incident Description</Label>
-                                          <p className="text-sm bg-muted/30 p-4 rounded-xl border border-white/5 mt-2 leading-relaxed">{r.description}</p>
-                                        </div>
-                                        {r.status === 'pending' && (
-                                          <div className="space-y-2">
-                                            <Label htmlFor="res-note" className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Resolution Note (Internal)</Label>
-                                            <Textarea 
-                                              id="res-note"
-                                              placeholder="Document the outcome of this investigation..."
-                                              className="glass border-primary/20 min-h-[100px] rounded-xl"
-                                              value={resolutionNote}
-                                              onChange={(e) => setResolutionNote(e.target.value)}
-                                            />
+                                      ) : (
+                                        <div className="space-y-6 py-6">
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Reporter</Label>
+                                              <p className="font-bold text-lg">{r.reporterName}</p>
+                                              <p className="text-xs text-muted-foreground font-mono mt-1">{r.reporterId}</p>
+                                            </div>
+                                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Reported User</Label>
+                                              <p className="font-bold text-lg">{r.reportedUserName}</p>
+                                              <p className="text-xs text-muted-foreground font-mono mt-1">{r.reportedUserId}</p>
+                                            </div>
                                           </div>
-                                        )}
-                                        {r.resolutionNote && (
-                                          <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
-                                            <Label className="text-[10px] uppercase tracking-widest text-green-500 font-bold">Resolution Outcome</Label>
-                                            <p className="text-sm italic mt-2">"{r.resolutionNote}"</p>
+
+                                          {selectedReportUser && (
+                                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                              <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-2 block">Reported User Summary</Label>
+                                              <div className="grid grid-cols-2 gap-4 mt-2">
+                                                <div>
+                                                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Company</p>
+                                                  <p className="text-sm font-medium">{selectedReportUser.companyName}</p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Email</p>
+                                                  <p className="text-sm font-medium">{selectedReportUser.email}</p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Vat Status</p>
+                                                  <Badge variant="outline" className="mt-1">
+                                                    {selectedReportUser.isVatVerified ? "Verified" : "Unverified"}
+                                                  </Badge>
+                                                </div>
+                                                <div>
+                                                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Total CO2 Saved</p>
+                                                  <p className="text-sm font-medium text-primary">{selectedReportUser.totalCo2Saved?.toLocaleString()} kg</p>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {selectedReportTransaction && (
+                                            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                                              <Label className="text-[10px] uppercase tracking-widest text-primary font-bold mb-2 block">Related Transaction</Label>
+                                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+                                                <div>
+                                                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Transaction ID</p>
+                                                  <p className="text-xs font-mono">{selectedReportTransaction.id}</p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Amount</p>
+                                                  <p className="text-sm font-bold">£{selectedReportTransaction.amount?.toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Status</p>
+                                                  <Badge className="mt-1 capitalize">{selectedReportTransaction.status}</Badge>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                                            <Label className="text-[10px] uppercase tracking-widest text-amber-500 font-bold">Reason for Report</Label>
+                                            <p className="font-bold text-xl mt-1">{r.reason}</p>
                                           </div>
-                                        )}
-                                      </div>
+
+                                          <div>
+                                            <Label className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Incident Description</Label>
+                                            <p className="text-sm bg-muted/30 p-4 rounded-xl border border-white/5 mt-2 leading-relaxed whitespace-pre-wrap">{r.description}</p>
+                                          </div>
+
+                                          {r.status === 'pending' && (
+                                            <div className="space-y-2">
+                                              <Label htmlFor="res-note" className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Resolution Note (Internal)</Label>
+                                              <Textarea 
+                                                id="res-note"
+                                                placeholder="Document the outcome of this investigation..."
+                                                className="glass border-primary/20 min-h-[100px] rounded-xl"
+                                                value={resolutionNote}
+                                                onChange={(e) => setResolutionNote(e.target.value)}
+                                              />
+                                            </div>
+                                          )}
+                                          
+                                          {r.resolutionNote && (
+                                            <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                                              <Label className="text-[10px] uppercase tracking-widest text-green-500 font-bold">Resolution Outcome</Label>
+                                              <p className="text-sm italic mt-2">"{r.resolutionNote}"</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                       <DialogFooter className="gap-2 sm:gap-2">
                                         {r.status === 'pending' ? (
                                           <>
-                                            <Button variant="outline" className="rounded-xl px-6" onClick={() => handleDismissReport(r.id)}>
-                                              Dismiss Case
-                                            </Button>
-                                            <Button className="rounded-xl px-6" onClick={() => handleResolveReport(r.id)}>
-                                              Mark Resolved
-                                            </Button>
-                                            <Button variant="destructive" className="rounded-xl px-6" onClick={() => handleSuspendUser(r.reportedUserId)}>
-                                              Suspend User
-                                            </Button>
+                                            {canManageReports && (
+                                              <>
+                                                <Button variant="outline" className="rounded-xl px-6" onClick={() => handleDismissReport(r.id)}>
+                                                  Dismiss Case
+                                                </Button>
+                                                <Button className="rounded-xl px-6" onClick={() => handleResolveReport(r.id)}>
+                                                  Mark Resolved
+                                                </Button>
+                                              </>
+                                            )}
+                                            {canManageUsers && (
+                                              <Button variant="destructive" className="rounded-xl px-6" onClick={() => handleSuspendUser(r.reportedUserId)}>
+                                                Suspend User
+                                              </Button>
+                                            )}
                                           </>
                                         ) : (
                                           <Button variant="outline" className="rounded-xl w-full" onClick={() => setSelectedReport(null)}>
@@ -1617,7 +2157,7 @@ export default function Admin() {
                                       </DialogFooter>
                                     </DialogContent>
                                   </Dialog>
-                                  {r.status === 'pending' && (
+                                  {canManageReports && r.status === 'pending' && (
                                     <>
                                       <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleResolveReport(r.id)}>
                                         Resolve
@@ -1642,8 +2182,10 @@ export default function Admin() {
               </Card>
             </motion.div>
           </TabsContent>
+        )}
 
-        <TabsContent value="vetting" className="mt-0 outline-none">
+        {canManageVetting && (
+          <TabsContent value="vetting" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1694,6 +2236,7 @@ export default function Admin() {
                           <SelectItem value="all">All Statuses</SelectItem>
                           <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="under_review">Under Review</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
                           <SelectItem value="rejected">Rejected</SelectItem>
                         </SelectContent>
                       </Select>
@@ -1708,7 +2251,7 @@ export default function Admin() {
                         <TableHead className="pl-6">Company</TableHead>
                         <TableHead>VAT Number</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="text-right pr-6">Actions</TableHead>
+                        <TableHead className="text-right pr-6 w-[240px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1744,8 +2287,8 @@ export default function Admin() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right pr-6 space-x-1">
-                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button size="sm" variant="ghost" className="h-8 rounded-lg text-xs" onClick={() => setSelectedUserForVetting(u)}>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button size="sm" variant="ghost" className="h-8 rounded-lg text-xs font-bold uppercase tracking-wider" onClick={() => setSelectedUserForVetting(u)}>
                                 Details
                               </Button>
                               {!u.isVatVerified && (
@@ -1776,8 +2319,10 @@ export default function Admin() {
             </Card>
           </motion.div>
         </TabsContent>
+      )}
 
-        <TabsContent value="bulk" className="mt-0 outline-none">
+        {canBulkUpload && (
+          <TabsContent value="bulk" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1811,7 +2356,7 @@ export default function Admin() {
                             <FileText className="h-4 w-4 mr-2" />
                             Template
                           </Button>
-                          <Button className="rounded-xl px-8 h-12 font-bold uppercase tracking-widest text-xs shadow-lg shadow-primary/20" asChild>
+                          <Button className="rounded-xl px-8 h-12 font-bold uppercase tracking-widest text-xs shadow-md shadow-primary/10" asChild>
                             <label className="cursor-pointer">
                               <Upload className="h-4 w-4 mr-2" />
                               Select File
@@ -1826,8 +2371,10 @@ export default function Admin() {
               </Card>
             </motion.div>
           </TabsContent>
+        )}
 
-        <TabsContent value="esg" className="mt-0 outline-none">
+        {isViewer && (
+          <TabsContent value="esg" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1841,18 +2388,18 @@ export default function Admin() {
                 <CardContent className="p-6 space-y-8">
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     {[
-                      { label: 'CO2 Saved', value: `${transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0).toLocaleString()} kg`, icon: Leaf, color: 'orange', sub: 'Impact' },
-                      { label: 'Tree Equivalent', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 21.7).toLocaleString(), icon: CheckCircle2, color: 'primary', sub: 'Offset' },
-                      { label: 'Miles Saved', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 0.4).toLocaleString(), icon: Car, color: 'blue', sub: 'Travel' },
-                      { label: 'Homes Powered', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 30).toLocaleString(), icon: Home, color: 'amber', sub: 'Energy' }
+                      { label: 'CO2 Saved', value: `${transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0).toLocaleString()} kg`, icon: Leaf, color: 'orange', sub: 'Impact', bg: 'bg-orange-500/5', border: 'border-orange-500/10', text: 'text-orange-500' },
+                      { label: 'Tree Equivalent', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 21.7).toLocaleString(), icon: CheckCircle2, color: 'primary', sub: 'Offset', bg: 'bg-primary/5', border: 'border-primary/10', text: 'text-primary' },
+                      { label: 'Miles Saved', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 0.4).toLocaleString(), icon: Car, color: 'blue', sub: 'Travel', bg: 'bg-blue-500/5', border: 'border-blue-500/10', text: 'text-blue-500' },
+                      { label: 'Homes Powered', value: Math.round(transactions.reduce((acc, t) => acc + (t.co2Saved || 0), 0) / 30).toLocaleString(), icon: Home, color: 'amber', sub: 'Energy', bg: 'bg-amber-500/5', border: 'border-amber-500/10', text: 'text-amber-500' }
                     ].map((stat) => (
-                      <Card key={`esg-stat-${stat.label}`} className={`bg-${stat.color === 'primary' ? 'primary' : stat.color}-500/5 border-${stat.color === 'primary' ? 'primary' : stat.color}-500/10 overflow-hidden relative group`}>
+                      <Card key={`esg-stat-${stat.label}`} className={`${stat.bg} ${stat.border} overflow-hidden relative group`}>
                         <div className={`absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity`}>
                           <stat.icon className="h-16 w-16" />
                         </div>
                         <CardContent className="p-6 relative z-10">
                           <div className="flex items-center justify-between mb-4">
-                            <div className={`p-2 rounded-lg bg-${stat.color === 'primary' ? 'primary' : stat.color}-500/10 text-${stat.color === 'primary' ? 'primary' : stat.color}-500`}>
+                            <div className={`p-2 rounded-lg ${stat.bg} ${stat.text}`}>
                               <stat.icon className="h-5 w-5" />
                             </div>
                             <Badge variant="outline" className="text-[10px] uppercase tracking-widest font-bold opacity-50">{stat.sub}</Badge>
@@ -1872,7 +2419,7 @@ export default function Admin() {
                     </div>
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
                       <div className="flex items-start gap-6">
-                        <div className="p-4 rounded-2xl bg-primary/10 text-primary shadow-lg shadow-primary/10">
+                        <div className="p-4 rounded-2xl bg-primary/10 text-primary shadow-md shadow-primary/5">
                           <FileText className="h-8 w-8" />
                         </div>
                         <div>
@@ -1894,12 +2441,92 @@ export default function Admin() {
                       </div>
                     </div>
                   </div>
+
+                  <Card className="glass border-primary/10 overflow-hidden">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg font-black uppercase tracking-tight">Manual Certificate Issuance</CardTitle>
+                          <CardDescription>Generate sample ESG certificates for vetted companies.</CardDescription>
+                        </div>
+                        <div className="relative w-64">
+                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input 
+                            placeholder="Search companies..." 
+                            className="pl-9 rounded-xl bg-white/5 border-white/10"
+                          />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="rounded-2xl border border-white/5 overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-white/5">
+                            <TableRow className="hover:bg-transparent border-white/10">
+                              <TableHead className="font-bold text-xs uppercase tracking-widest">Company</TableHead>
+                              <TableHead className="font-bold text-xs uppercase tracking-widest">Status</TableHead>
+                              <TableHead className="font-bold text-xs uppercase tracking-widest">Impact Score</TableHead>
+                              <TableHead className="text-right font-bold text-xs uppercase tracking-widest">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {users.filter(u => u.isVetted).slice(0, 5).map((user) => (
+                              <TableRow key={`esg-user-${user.uid}`} className="hover:bg-white/5 border-white/5 transition-colors">
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-8 w-8 rounded-lg border border-primary/20">
+                                      <AvatarImage src={user.logoUrl} />
+                                      <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                                        {user.companyName?.substring(0, 2).toUpperCase() || "CP"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <p className="font-bold text-sm">{user.companyName || user.displayName}</p>
+                                      <p className="text-[10px] text-muted-foreground">{user.email}</p>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className="bg-green-500/10 text-green-500 border-green-500/20 rounded-full px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest">
+                                    Vetted
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
+                                      <div className="h-full bg-primary rounded-full" style={{ width: '85%' }} />
+                                    </div>
+                                    <span className="text-xs font-bold">85/100</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="rounded-lg h-8 px-4 text-[10px] font-bold uppercase tracking-widest border-primary/20 hover:bg-primary hover:text-white transition-all"
+                                    onClick={() => {
+                                      setSelectedUserForCert(user);
+                                      setShowESGCertModal(true);
+                                    }}
+                                  >
+                                    Generate Sample
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </Card>
             </motion.div>
           </TabsContent>
+        )}
 
-        <TabsContent value="audit" className="mt-0 outline-none">
+        {isViewer && (
+          <TabsContent value="audit" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2002,8 +2629,10 @@ export default function Admin() {
               </Card>
             </motion.div>
           </TabsContent>
+        )}
 
-        <TabsContent value="settings" className="mt-0 outline-none">
+        {canManageSettings && (
+          <TabsContent value="settings" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2102,7 +2731,15 @@ export default function Admin() {
                           </span>
                           <Switch 
                             checked={platformSettings.maintenanceMode}
-                            onCheckedChange={(checked) => setPlatformSettings({...platformSettings, maintenanceMode: checked})}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                if (window.confirm("Are you sure you want to enable Maintenance Mode? This will disable all new transactions and registrations across the platform.")) {
+                                  setPlatformSettings({...platformSettings, maintenanceMode: true});
+                                }
+                              } else {
+                                setPlatformSettings({...platformSettings, maintenanceMode: false});
+                              }
+                            }}
                           />
                         </div>
                       </div>
@@ -2130,7 +2767,7 @@ export default function Admin() {
                   </div>
 
                   <div className="pt-8 border-t border-white/5 flex justify-end">
-                    <Button onClick={savePlatformSettings} disabled={isSavingSettings} className="rounded-xl px-10 h-14 font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
+                    <Button onClick={savePlatformSettings} disabled={isSavingSettings} className="rounded-xl px-10 h-14 font-black uppercase tracking-[0.2em] text-xs shadow-lg shadow-primary/10 hover:scale-105 transition-transform">
                       {isSavingSettings ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <ShieldCheck className="mr-3 h-5 w-5" />}
                       Commit Changes
                     </Button>
@@ -2139,8 +2776,10 @@ export default function Admin() {
               </Card>
             </motion.div>
           </TabsContent>
+        )}
 
-        <TabsContent value="system" className="mt-0 outline-none">
+        {isSuperAdmin && (
+          <TabsContent value="system" className="mt-0 outline-none">
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2186,7 +2825,7 @@ export default function Admin() {
                       <Button 
                         onClick={handleSendAnnouncement} 
                         disabled={isSendingAnnouncement}
-                        className="rounded-xl px-8 h-12 font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20"
+                        className="rounded-xl px-8 h-12 font-black uppercase tracking-widest text-xs shadow-md shadow-primary/10"
                       >
                         {isSendingAnnouncement ? (
                           <>
@@ -2246,8 +2885,9 @@ export default function Admin() {
               </Card>
             </motion.div>
           </TabsContent>
-        </div>
-      </Tabs>
+        )}
+      </div>
+    </Tabs>
 
       <Dialog open={!!selectedUserForVetting} onOpenChange={(open) => !open && setSelectedUserForVetting(null)}>
         <DialogContent className="glass border-primary/20 sm:max-w-4xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
@@ -2327,7 +2967,7 @@ export default function Admin() {
             )}
           </div>
 
-          <DialogFooter className="bg-white/5 border-t border-white/10 p-6 gap-3 sm:justify-end mx-0 mb-0 rounded-none">
+          <DialogFooter className="bg-white/5 border-t border-white/10 p-6 gap-3 flex-row justify-end items-center mt-auto">
             {selectedUserForVetting && !selectedUserForVetting.isVatVerified && (
               <Button variant="outline" className="rounded-xl px-8 h-11 font-bold" onClick={() => handleVerifyVat(selectedUserForVetting.uid)}>
                 Verify VAT
@@ -2341,7 +2981,7 @@ export default function Admin() {
                 <Button variant="outline" className="rounded-xl px-8 h-11 font-bold" onClick={() => handleVetCompany(selectedUserForVetting.uid, 'under_review')}>
                   Under Review
                 </Button>
-                <Button className="rounded-xl px-8 h-11 font-bold shadow-lg shadow-primary/20" onClick={() => handleVetCompany(selectedUserForVetting.uid, 'approved')}>
+                <Button className="rounded-xl px-8 h-11 font-bold shadow-md shadow-primary/10" onClick={() => handleVetCompany(selectedUserForVetting.uid, 'approved')}>
                   Approve Company
                 </Button>
               </>
@@ -2412,6 +3052,13 @@ export default function Admin() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ESGCertificateModal 
+        isOpen={showESGCertModal}
+        onClose={() => setShowESGCertModal(false)}
+        user={selectedUserForCert}
+        platformLogo={platformSettings.hixLogoUrl}
+      />
     </div>
   </div>
   );

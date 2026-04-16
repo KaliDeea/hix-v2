@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth, db, handleFirestoreError, OperationType } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,23 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ShieldCheck, AlertCircle, Upload, Building2, Loader2 } from "lucide-react";
+import { ShieldCheck, AlertCircle, Upload, Building2, Loader2, ShoppingCart, ArrowRight, Leaf } from "lucide-react";
 import { compressImage } from "@/lib/image-utils";
+import { 
+  collection, 
+  query, 
+  where, 
+  onSnapshot,
+  orderBy
+} from "firebase/firestore";
+import { Transaction } from "@/types";
+import { format } from "date-fns";
 
 export default function Profile() {
   const { user, profile, isAuthReady } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [formData, setFormData] = useState({
     companyName: profile?.companyName || "",
     vatNumber: profile?.vatNumber || "",
@@ -90,6 +101,53 @@ export default function Profile() {
     };
     reader.readAsDataURL(file);
   };
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, "transactions"),
+      where("buyerId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const q2 = query(
+      collection(db, "transactions"),
+      where("sellerId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsub1 = onSnapshot(q, (snapshot) => {
+      const buyerTx = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      setTransactions(prev => {
+        const combined = [...prev.filter(t => t.sellerId === user.uid), ...buyerTx];
+        return combined.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+      });
+      setLoadingTransactions(false);
+    });
+
+    const unsub2 = onSnapshot(q2, (snapshot) => {
+      const sellerTx = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      setTransactions(prev => {
+        const combined = [...prev.filter(t => t.buyerId === user.uid), ...sellerTx];
+        return combined.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+      });
+      setLoadingTransactions(false);
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [user]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -197,6 +255,72 @@ export default function Profile() {
             </CardContent>
           </Card>
 
+          {/* Transaction History */}
+          <Card className="glass border-primary/20 overflow-hidden">
+            <CardHeader className="border-b border-white/5 bg-white/5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Transaction History</CardTitle>
+                  <CardDescription>View your recent buys and sells on the platform.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loadingTransactions ? (
+                <div className="p-12 flex justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+                </div>
+              ) : transactions.length === 0 ? (
+                <div className="p-12 text-center">
+                  <p className="text-muted-foreground">No transactions found.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {transactions.map((tx) => (
+                    <div key={tx.id} className="p-6 hover:bg-white/5 transition-colors group">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-2xl ${tx.buyerId === user?.uid ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
+                            {tx.buyerId === user?.uid ? <ShoppingCart className="h-5 w-5" /> : <ArrowRight className="h-5 w-5" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-lg">{tx.listingTitle}</h4>
+                              <Badge variant="outline" className="text-[10px] uppercase font-black tracking-widest">
+                                {tx.buyerId === user?.uid ? 'Purchase' : 'Sale'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                              <span>{tx.createdAt?.toDate ? format(tx.createdAt.toDate(), "dd MMM yyyy, HH:mm") : "Recent"}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1 text-primary font-medium">
+                                <Leaf className="h-3 w-3" />
+                                {tx.co2Saved}kg CO2 Saved
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="text-xl font-black text-primary">£{tx.amount?.toLocaleString()}</div>
+                          <Badge className={`${
+                            tx.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                            tx.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                            'bg-red-500/10 text-red-500 border-red-500/20'
+                          } rounded-md capitalize`}>
+                            {tx.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Company Details */}
           <Card className="glass">
             <CardHeader>
@@ -205,7 +329,7 @@ export default function Profile() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center gap-6 mb-6">
-                <div className="relative h-24 w-24 rounded-2xl bg-muted flex items-center justify-center overflow-hidden border-2 border-primary/20 hover:border-primary/50 transition-all group shadow-lg">
+                <div className="relative h-24 w-24 rounded-2xl bg-muted flex items-center justify-center overflow-hidden border-2 border-primary/20 hover:border-primary/50 transition-all group shadow-md">
                   {formData.logoUrl ? (
                     <img src={formData.logoUrl} alt="Logo" className="h-full w-full object-cover transition-transform group-hover:scale-110" />
                   ) : (

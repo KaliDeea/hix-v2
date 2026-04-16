@@ -190,7 +190,7 @@ export default function Messages() {
                         </p>
                       </div>
                       {isUnread && (
-                        <div className="absolute top-1/2 -translate-y-1/2 right-2 h-2 w-2 rounded-full bg-primary shadow-lg shadow-primary/50" />
+                        <div className="absolute top-1/2 -translate-y-1/2 right-2 h-2 w-2 rounded-full bg-primary shadow-md shadow-primary/30" />
                       )}
                     </button>
                   );

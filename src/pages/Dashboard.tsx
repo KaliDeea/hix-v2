@@ -131,17 +131,30 @@ export default function Dashboard() {
               status: "sold"
             });
 
-            // Update user's total CO2 saved
+            // Update user's total CO2 saved (Buyer)
             await updateDoc(doc(db, "users", user.uid), {
               totalCo2Saved: increment(co2Saved)
             });
 
-            // Update seller's revenue
+            // Update seller's total CO2 saved and revenue
             if (sellerId) {
               await updateDoc(doc(db, "users", sellerId), {
-                revenue: increment(amount)
+                revenue: increment(amount),
+                totalCo2Saved: increment(co2Saved)
               });
             }
+
+            // Log transaction to audit_logs
+            await addDoc(collection(db, "audit_logs"), {
+              adminId: "system",
+              adminName: "System",
+              action: "TRANSACTION_COMPLETED",
+              details: `Successful transaction for listing ${listingId}. Amount: £${amount}. CO2 Saved: ${co2Saved}kg`,
+              targetId: listingId,
+              targetType: 'listing',
+              targetName: `Listing ${listingId}`,
+              createdAt: serverTimestamp()
+            }).catch(e => console.error("Error logging transaction:", e));
 
             toast.success("Payment successful! Your trade has been recorded and CO2 savings added.", {
               duration: 5000,
@@ -167,9 +180,10 @@ export default function Dashboard() {
     }, (error) => handleFirestoreError(error, OperationType.LIST, listingsPath));
 
     const transPath = "transactions";
-    const transQuery = query(collection(db, transPath), where("buyerId", "==", user.uid));
-    const unsubTrans = onSnapshot(transQuery, (snapshot) => {
-      setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[]);
+    const unsubTrans = onSnapshot(collection(db, transPath), (snapshot) => {
+      const allTrans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[];
+      const myTrans = allTrans.filter(t => t.buyerId === user.uid || t.sellerId === user.uid);
+      setTransactions(myTrans);
       setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.LIST, transPath));
 
@@ -203,6 +217,19 @@ export default function Dashboard() {
         status: "pending",
         createdAt: serverTimestamp()
       });
+
+      // Log report to audit_logs
+      await addDoc(collection(db, "audit_logs"), {
+        adminId: "system",
+        adminName: "System",
+        action: "REPORT_CREATED",
+        details: `New report created by ${profile?.companyName || user.email}. Reason: ${reportData.reason}`,
+        targetId: selectedTransaction.id,
+        targetType: 'report',
+        targetName: `Report on Transaction ${selectedTransaction.id}`,
+        createdAt: serverTimestamp()
+      }).catch(e => console.error("Error logging report:", e));
+
       toast.success("Report submitted to administration.");
       setIsReportModalOpen(false);
       setReportData({ reason: "", description: "" });
@@ -368,6 +395,22 @@ export default function Dashboard() {
     return acc;
   }, {});
 
+  const groupedByDate = transactions.reduce((acc: any, t) => {
+    const date = format(new Date(t.createdAt), 'yyyy-MM-dd');
+    acc[date] = (acc[date] || 0) + (t.co2Saved || 0);
+    return acc;
+  }, {});
+
+  const sortedDates = Object.keys(groupedByDate).sort();
+  let runningTotal = 0;
+  const cumulativeCo2Data = sortedDates.map(date => {
+    runningTotal += groupedByDate[date];
+    return {
+      date: format(new Date(date), 'MMM d'),
+      total: runningTotal
+    };
+  });
+
   const esgChartData = Object.entries(co2ByCategory).map(([name, value]) => ({
     name,
     value
@@ -428,7 +471,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
-          <Card className="glass border-primary/20 shadow-[0_0_15px_var(--primary)]">
+          <Card className="glass border-primary/20 shadow-[0_0_8px_var(--primary)]">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">CO2 Saved</CardTitle>
               <Leaf className="h-4 w-4 text-primary" />
@@ -452,68 +495,66 @@ export default function Dashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="glass p-1 rounded-full">
-          <TabsTrigger value="overview" className="rounded-full px-6">Overview</TabsTrigger>
-          <TabsTrigger value="listings" className="rounded-full px-6">My Listings</TabsTrigger>
-          <TabsTrigger value="history" className="rounded-full px-6">Trade History</TabsTrigger>
-          <TabsTrigger value="bulk" className="rounded-full px-6">Bulk Upload</TabsTrigger>
+        <TabsList className="glass p-1 rounded-xl sm:rounded-full w-full flex overflow-x-auto no-scrollbar justify-start sm:justify-center">
+          <TabsTrigger value="overview" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Overview</TabsTrigger>
+          <TabsTrigger value="listings" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">My Listings</TabsTrigger>
+          <TabsTrigger value="history" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Trade History</TabsTrigger>
+          <TabsTrigger value="bulk" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Bulk Upload</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Card className="glass lg:col-span-2">
               <CardHeader>
-                <CardTitle>7-Day Chat Activity</CardTitle>
-                <CardDescription>Messages sent and received over the last week.</CardDescription>
+                <CardTitle>Cumulative CO2 Savings</CardTitle>
+                <CardDescription>Your total environmental impact over time.</CardDescription>
               </CardHeader>
               <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={[
-                      { name: format(subDays(new Date(), 6), 'EEE'), messages: 12 },
-                      { name: format(subDays(new Date(), 5), 'EEE'), messages: 18 },
-                      { name: format(subDays(new Date(), 4), 'EEE'), messages: 15 },
-                      { name: format(subDays(new Date(), 3), 'EEE'), messages: 25 },
-                      { name: format(subDays(new Date(), 2), 'EEE'), messages: 32 },
-                      { name: format(subDays(new Date(), 1), 'EEE'), messages: 20 },
-                      { name: format(new Date(), 'EEE'), messages: 28 },
-                    ]}
-                  >
-                    <defs>
-                      <linearGradient id="colorMsg" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke="#ffffff50" 
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis 
-                      stroke="#ffffff50" 
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `${value}`}
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid var(--primary)', borderRadius: '12px' }}
-                      itemStyle={{ color: 'var(--primary)' }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="messages" 
-                      stroke="var(--primary)" 
-                      fillOpacity={1} 
-                      fill="url(#colorMsg)" 
-                      strokeWidth={3}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {cumulativeCo2Data.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={cumulativeCo2Data}>
+                      <defs>
+                        <linearGradient id="colorCo2" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#ffffff50" 
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        stroke="#ffffff50" 
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}kg`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid var(--primary)', borderRadius: '12px' }}
+                        itemStyle={{ color: 'var(--primary)' }}
+                        formatter={(value: number) => [`${value} kg`, 'Total Savings']}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="total" 
+                        stroke="var(--primary)" 
+                        fillOpacity={1} 
+                        fill="url(#colorCo2)" 
+                        strokeWidth={3}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+                    <TrendingUp className="h-8 w-8 opacity-20" />
+                    <p>No transaction data available for impact tracking.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -586,89 +627,108 @@ export default function Dashboard() {
                 <CardTitle>My Listings</CardTitle>
                 <CardDescription>Manage your industrial assets listed on HiX.</CardDescription>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative w-full sm:w-48">
-                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search listings..." 
-                    className="pl-8 h-9 text-xs rounded-full"
-                    value={listingSearch}
-                    onChange={(e) => setListingSearch(e.target.value)}
-                  />
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex gap-4 mr-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Available</span>
+                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'available').length}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sold</span>
+                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'sold').length}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Draft</span>
+                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'draft').length}</span>
+                  </div>
                 </div>
-                <Select value={listingStatusFilter} onValueChange={setListingStatusFilter}>
-                  <SelectTrigger className="h-9 text-xs rounded-full w-full sm:w-32">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="sold">Sold</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="sm" className="rounded-full h-9" asChild>
-                  <Link to="/marketplace">View Marketplace</Link>
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative w-full sm:w-48">
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search listings..." 
+                      className="pl-8 h-9 text-xs rounded-full"
+                      value={listingSearch}
+                      onChange={(e) => setListingSearch(e.target.value)}
+                    />
+                  </div>
+                  <Select value={listingStatusFilter} onValueChange={setListingStatusFilter}>
+                    <SelectTrigger className="h-9 text-xs rounded-full w-full sm:w-32">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="sm" className="rounded-full h-9" asChild>
+                    <Link to="/marketplace">View Marketplace</Link>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMyListings.map((listing) => (
-                    <TableRow key={`my-listing-${listing.id}`}>
-                      <TableCell className="font-medium">{listing.title}</TableCell>
-                      <TableCell>£{listing.price.toLocaleString()}</TableCell>
-                      <TableCell>{listing.quantity}</TableCell>
-                      <TableCell>
-                        <Badge variant={listing.status === 'available' ? 'default' : 'secondary'}>
-                          {listing.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="sm" asChild title="View Listing">
-                          <Link to={`/listing/${listing.id}`}>
-                            <ExternalLink className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" asChild title="Edit Listing">
-                          <Link to={`/edit-listing/${listing.id}`}>
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-muted-foreground hover:text-destructive"
-                          onClick={() => {
-                            setListingToDelete(listing.id);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                          disabled={isDeleting === listing.id}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {myListings.length === 0 && (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                        You haven't listed any assets yet.
-                      </TableCell>
+                      <TableHead className="whitespace-nowrap">Asset</TableHead>
+                      <TableHead className="whitespace-nowrap">Price</TableHead>
+                      <TableHead className="whitespace-nowrap">Quantity</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMyListings.map((listing) => (
+                      <TableRow key={`my-listing-${listing.id}`}>
+                        <TableCell className="font-medium whitespace-nowrap">{listing.title}</TableCell>
+                        <TableCell className="whitespace-nowrap">£{listing.price.toLocaleString()}</TableCell>
+                        <TableCell className="whitespace-nowrap">{listing.quantity}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Badge variant={listing.status === 'available' ? 'default' : 'secondary'}>
+                            {listing.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-2 whitespace-nowrap">
+                          <Button variant="ghost" size="sm" asChild title="View Listing">
+                            <Link to={`/listing/${listing.id}`}>
+                              <ExternalLink className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="sm" asChild title="Edit Listing">
+                            <Link to={`/edit-listing/${listing.id}`}>
+                              <Pencil className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => {
+                              setListingToDelete(listing.id);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            disabled={isDeleting === listing.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {myListings.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                          You haven't listed any assets yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -703,59 +763,72 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>CO2 Saved</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTransactions.map((t) => (
-                    <TableRow key={`transaction-${t.id}`}>
-                      <TableCell>{format(new Date(t.createdAt), 'MMM d, yyyy')}</TableCell>
-                      <TableCell className="font-mono text-xs">{t.id}</TableCell>
-                      <TableCell>£{t.amount.toLocaleString()}</TableCell>
-                      <TableCell className="text-primary font-medium">{t.co2Saved} kg</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="gap-2"
-                          onClick={() => {
-                            toast.info("Generating certificate...");
-                          }}
-                        >
-                          <Download className="h-4 w-4" />
-                          PDF
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-muted-foreground hover:text-destructive gap-2"
-                          onClick={() => {
-                            setSelectedTransaction(t);
-                            setIsReportModalOpen(true);
-                          }}
-                        >
-                          <AlertTriangle className="h-4 w-4" />
-                          Report
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {transactions.length === 0 && (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                        No trade history found.
-                      </TableCell>
+                      <TableHead className="whitespace-nowrap">Date</TableHead>
+                      <TableHead className="whitespace-nowrap">ID</TableHead>
+                      <TableHead className="whitespace-nowrap">Amount</TableHead>
+                      <TableHead className="whitespace-nowrap">CO2 Saved</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTransactions.map((t) => (
+                      <TableRow key={`transaction-${t.id}`}>
+                        <TableCell className="whitespace-nowrap">
+                          {t.createdAt?.toDate ? format(t.createdAt.toDate(), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs whitespace-nowrap">{t.id}</TableCell>
+                        <TableCell className="whitespace-nowrap">£{t.amount.toLocaleString()}</TableCell>
+                        <TableCell className="text-primary font-medium whitespace-nowrap">{t.co2Saved} kg</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Badge 
+                            variant={t.status === 'completed' ? 'default' : 'secondary'} 
+                            className={`capitalize ${t.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}`}
+                          >
+                            {t.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right space-x-2 whitespace-nowrap">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="gap-2"
+                            onClick={() => {
+                              toast.info("Generating certificate...");
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                            PDF
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-muted-foreground hover:text-destructive gap-2"
+                            onClick={() => {
+                              setSelectedTransaction(t);
+                              setIsReportModalOpen(true);
+                            }}
+                          >
+                            <AlertTriangle className="h-4 w-4" />
+                            Report
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {transactions.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                          No trade history found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -775,14 +848,14 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground max-w-xs mb-6">
                   Ensure your CSV follows our template structure for successful processing.
                 </p>
-                <div className="flex gap-4">
-                  <Button variant="outline" className="rounded-full" onClick={downloadTemplate}>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button variant="outline" className="rounded-full w-full sm:w-auto" onClick={downloadTemplate}>
                     <Download className="mr-2 h-4 w-4" />
                     Download Template
                   </Button>
                   <Button 
                     variant="default" 
-                    className="rounded-full" 
+                    className="rounded-full w-full sm:w-auto" 
                     disabled={isBulkUploading}
                     onClick={() => fileInputRef.current?.click()}
                   >

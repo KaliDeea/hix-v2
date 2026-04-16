@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/lib/firebase";
+import { useAuth, db, onSnapshot, doc } from "@/lib/firebase";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Mail, Lock, Phone, Hash } from "lucide-react";
+import { Building2, Mail, Lock, Phone, Hash, AlertTriangle } from "lucide-react";
 
 export default function Auth() {
   const { login, register } = useAuth();
@@ -15,6 +15,16 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "register" ? "register" : "login");
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "platform_settings", "branding"), (docSnap) => {
+      if (docSnap.exists()) {
+        setMaintenanceMode(docSnap.data().maintenanceMode || false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -82,6 +92,10 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (maintenanceMode) {
+      toast.error("Registrations are currently disabled due to platform maintenance.");
+      return;
+    }
     setLoading(true);
     try {
       await register(regEmail, regPass, {
@@ -155,84 +169,96 @@ export default function Auth() {
             </TabsContent>
 
             <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reg-company">Business Name</Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input 
-                      id="reg-company" 
-                      placeholder="Acme Corp" 
-                      className="pl-10"
-                      value={regCompanyName}
-                      onChange={(e) => setRegCompanyName(e.target.value)}
-                      required 
-                    />
+              {maintenanceMode ? (
+                <div className="py-12 text-center space-y-4">
+                  <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                    <AlertTriangle className="h-8 w-8 text-destructive" />
                   </div>
+                  <h3 className="text-lg font-bold">Registrations Disabled</h3>
+                  <p className="text-sm text-muted-foreground">
+                    New user registrations are currently disabled due to scheduled system maintenance. Please try again later.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input 
-                      id="reg-email" 
-                      type="email" 
-                      placeholder="name@company.com" 
-                      className="pl-10"
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      required 
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              ) : (
+                <form onSubmit={handleRegister} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="reg-vat">VAT Number</Label>
+                    <Label htmlFor="reg-company">Business Name</Label>
                     <div className="relative">
-                      <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Building2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input 
-                        id="reg-vat" 
-                        placeholder="GB123456789" 
+                        id="reg-company" 
+                        placeholder="Acme Corp" 
                         className="pl-10"
-                        value={regVat}
-                        onChange={(e) => setRegVat(e.target.value)}
+                        value={regCompanyName}
+                        onChange={(e) => setRegCompanyName(e.target.value)}
                         required 
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="reg-phone">Phone</Label>
+                    <Label htmlFor="reg-email">Email</Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input 
-                        id="reg-phone" 
-                        placeholder="01234 567890" 
+                        id="reg-email" 
+                        type="email" 
+                        placeholder="name@company.com" 
                         className="pl-10"
-                        value={regPhone}
-                        onChange={(e) => setRegPhone(e.target.value)}
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
                         required 
                       />
                     </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input 
-                      id="reg-password" 
-                      type="password" 
-                      className="pl-10"
-                      value={regPass}
-                      onChange={(e) => setRegPass(e.target.value)}
-                      required 
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-vat">VAT Number</Label>
+                      <div className="relative">
+                        <Hash className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input 
+                          id="reg-vat" 
+                          placeholder="GB123456789" 
+                          className="pl-10"
+                          value={regVat}
+                          onChange={(e) => setRegVat(e.target.value)}
+                          required 
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-phone">Phone</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input 
+                          id="reg-phone" 
+                          placeholder="01234 567890" 
+                          className="pl-10"
+                          value={regPhone}
+                          onChange={(e) => setRegPhone(e.target.value)}
+                          required 
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <Button type="submit" className="w-full rounded-full" disabled={loading}>
-                  {loading ? "Creating Account..." : "Register Business"}
-                </Button>
-              </form>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input 
+                        id="reg-password" 
+                        type="password" 
+                        className="pl-10"
+                        value={regPass}
+                        onChange={(e) => setRegPass(e.target.value)}
+                        required 
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full rounded-full" disabled={loading}>
+                    {loading ? "Creating Account..." : "Register Business"}
+                  </Button>
+                </form>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

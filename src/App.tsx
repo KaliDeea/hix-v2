@@ -14,6 +14,7 @@ import CreateListing from "@/pages/CreateListing";
 import EditListing from "@/pages/EditListing";
 import Messages from "@/pages/Messages";
 import Admin from "@/pages/Admin";
+import AdminUserTransactions from "@/pages/AdminUserTransactions";
 import Hauling from "@/pages/Hauling";
 import Wishlist from "@/pages/Wishlist";
 import Notifications from "@/pages/Notifications";
@@ -35,7 +36,7 @@ function SuspendedOverlay() {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-background/80 backdrop-blur-xl flex items-center justify-center p-4">
-      <div className="max-w-md w-full glass border-destructive/20 p-8 rounded-[2rem] text-center shadow-2xl">
+      <div className="max-w-md w-full glass border-destructive/20 p-8 rounded-[2rem] text-center shadow-xl">
         <div className="h-20 w-20 rounded-3xl bg-destructive/10 flex items-center justify-center mx-auto mb-6">
           <AlertTriangle className="h-10 w-10 text-destructive" />
         </div>
@@ -84,6 +85,7 @@ export default function App() {
                     <Route path="/messages" element={<Messages />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/admin" element={<Admin />} />
+                    <Route path="/admin/transactions" element={<AdminUserTransactions />} />
                     <Route path="/hauling" element={<Hauling />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/notifications" element={<Notifications />} />

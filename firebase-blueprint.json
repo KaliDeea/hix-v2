@@ -116,22 +116,38 @@
       },
       "required": ["companyName", "contactEmail", "phoneNumber", "description"]
     },
-    "Message": {
-      "title": "Message",
-      "description": "Direct messages between buyers and sellers regarding listings.",
+    "Chat": {
+      "title": "Chat",
+      "description": "A conversation between two users regarding listings.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "senderId": { "type": "string" },
-        "senderName": { "type": "string" },
-        "receiverId": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" }, "description": "UIDs of the two participants" },
+        "participantNames": { "type": "object", "description": "Map of UID to company name" },
+        "participantLogos": { "type": "object", "description": "Map of UID to logo URL" },
         "listingId": { "type": "string" },
         "listingTitle": { "type": "string" },
-        "content": { "type": "string" },
-        "status": { "type": "string", "enum": ["unread", "read"] },
+        "listingImage": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "lastMessageTime": { "type": "string", "format": "date-time" },
+        "lastRead": { "type": "object", "description": "Map of UID to last read timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["senderId", "receiverId", "listingId", "content"]
+      "required": ["participants", "participantNames", "updatedAt", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "An individual message within a chat room.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "senderId", "text", "createdAt"]
     }
   },
   "firestore": {
@@ -155,9 +171,13 @@
       "schema": "HaulingPartnerApplication",
       "description": "Hauling partner applications"
     },
-    "/messages/{messageId}": {
-      "schema": "Message",
-      "description": "Direct messages"
+    "/chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Chat rooms"
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Individual messages in a chat"
     },
     "/reports/{reportId}": {
       "schema": "Report",

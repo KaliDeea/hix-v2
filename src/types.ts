@@ -29,11 +29,12 @@ export interface UserProfile {
   isVatVerified: boolean;
   isSuspended: boolean;
   suspensionReason?: string;
-  role: 'user' | 'admin' | 'superadmin' | 'hauler' | 'buyer' | 'seller';
+  role: 'user' | 'admin' | 'superadmin' | 'hauler' | 'buyer' | 'seller' | 'viewer' | 'editor';
   vettingStatus: 'pending' | 'approved' | 'rejected' | 'under_review';
   totalCo2Saved: number;
   logoUrl?: string;
   createdAt: any;
+  lastLogin?: any;
   stripeAccountId?: string;
   revenue: number;
   commissionsPaid: number;
@@ -80,6 +81,7 @@ export interface Chat {
   lastMessageTime?: any;
   lastRead?: { [uid: string]: any };
   updatedAt: any;
+  createdAt: any;
 }
 
 export interface Message {

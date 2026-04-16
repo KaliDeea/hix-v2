@@ -121,23 +121,23 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'companyName', 'vatNumber', 'phoneNumber', 'isVetted', 'isVatVerified', 'isSuspended', 'suspensionReason', 'role', 'logoUrl', 'revenue', 'commissionsPaid', 'createdAt']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'companyName', 'vatNumber', 'phoneNumber', 'address', 'website', 'bio', 'isVetted', 'isVatVerified', 'isSuspended', 'suspensionReason', 'role', 'vettingStatus', 'totalCo2Saved', 'logoUrl', 'createdAt', 'stripeAccountId', 'revenue', 'commissionsPaid', 'currency']) &&
              data.uid == request.auth.uid &&
              data.email == request.auth.token.email &&
              data.companyName is string && data.companyName.size() > 0 && data.companyName.size() < 100 &&
-             data.role in ['user', 'admin', 'superadmin'] &&
+             data.role in ['user', 'admin', 'superadmin', 'hauler', 'buyer', 'seller'] &&
              data.isSuspended is bool &&
              data.revenue is number &&
              data.commissionsPaid is number;
     }
 
     function isValidListing(data) {
-      return hasOnlyAllowedFields(['sellerId', 'sellerName', 'title', 'description', 'price', 'quantity', 'category', 'brand', 'model', 'year', 'condition', 'location', 'weight', 'dimensions', 'images', 'co2Savings', 'status', 'listingType', 'reservePrice', 'auctionEndTime', 'createdAt']) &&
+      return hasOnlyAllowedFields(['sellerId', 'sellerName', 'title', 'description', 'price', 'quantity', 'category', 'brand', 'model', 'year', 'condition', 'location', 'weight', 'dimensions', 'images', 'documents', 'co2Savings', 'status', 'listingType', 'shippingOptions', 'shippingCost', 'reservePrice', 'auctionEndTime', 'currentBid', 'bidCount', 'createdAt', 'updatedAt']) &&
              data.sellerId == request.auth.uid &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.price is number && data.price >= 0 &&
              data.quantity is number && data.quantity >= 0 &&
-             data.status in ['available', 'sold'];
+             data.status in ['available', 'sold', 'draft'];
     }
 
     function isValidChat(data) {
@@ -207,10 +207,17 @@ service cloud.firestore {
     }
 
     function isValidAuditLog(data) {
-      return hasOnlyAllowedFields(['adminId', 'adminName', 'action', 'details', 'targetId', 'targetType', 'createdAt']) &&
+      return hasOnlyAllowedFields(['adminId', 'adminName', 'action', 'details', 'targetId', 'targetType', 'targetName', 'targetEmail', 'createdAt']) &&
              data.adminId == request.auth.uid &&
              data.action is string && data.action.size() > 0 &&
              data.details is string && data.details.size() > 0;
+    }
+
+    function isValidTransaction(data) {
+      return hasOnlyAllowedFields(['listingId', 'buyerId', 'sellerId', 'amount', 'quantity', 'buyerCommission', 'sellerCommission', 'co2Saved', 'shippingMethod', 'shippingCost', 'status', 'createdAt', 'invoiceUrl', 'certificateUrl']) &&
+             data.buyerId == request.auth.uid &&
+             data.amount is number && data.amount >= 0 &&
+             data.status in ['pending', 'completed', 'failed', 'refunded', 'cancelled'];
     }
 
     // ===============================================================
@@ -321,7 +328,7 @@ service cloud.firestore {
       // Creation usually happens via a secure process (like after Stripe success)
       // For this prototype, we allow vetted non-suspended users to record trades
       allow create: if isVetted() && isNotSuspended() && 
-                    request.resource.data.buyerId == request.auth.uid &&
+                    isValidTransaction(request.resource.data) &&
                     request.resource.data.status == 'pending';
                     
       allow update: if isAdmin(); // Only admin can finalize or cancel for now

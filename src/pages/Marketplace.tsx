@@ -1,5 +1,5 @@
 import { useState, useEffect, MouseEvent, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   useAuth, 
   db, 
@@ -15,7 +15,7 @@ import {
   addDoc,
   serverTimestamp
 } from "@/lib/firebase";
-import { Listing } from "@/types";
+import { Listing, Chat } from "@/types";
 import { CATEGORIES } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,14 +36,24 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X } from "lucide-react";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { format } from "date-fns";
+import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
 export default function Marketplace() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [listings, setListings] = useState<Listing[]>([]);
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -62,6 +72,8 @@ export default function Marketplace() {
   const [showFilters, setShowFilters] = useState(false);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedListingForQuickView, setSelectedListingForQuickView] = useState<Listing | null>(null);
+  const [isStartingChat, setIsStartingChat] = useState(false);
   const itemsPerPage = 12;
 
   useEffect(() => {
@@ -155,6 +167,57 @@ export default function Marketplace() {
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, "wishlists");
+    }
+  };
+
+  const handleStartChat = async (listing: Listing) => {
+    if (!user || !profile) {
+      toast.error("Please log in to message the seller");
+      return;
+    }
+    if (user.uid === listing.sellerId) {
+      toast.error("You cannot message yourself");
+      return;
+    }
+
+    setIsStartingChat(true);
+    try {
+      const chatsPath = "chats";
+      const q = query(
+        collection(db, chatsPath),
+        where("participants", "array-contains", user.uid)
+      );
+      const querySnapshot = await getDocs(q);
+      let existingChat = querySnapshot.docs.find(doc => {
+        const data = doc.data() as Chat;
+        return data.participants.includes(listing.sellerId);
+      });
+
+      if (existingChat) {
+        navigate("/messages");
+      } else {
+        const newChat: Partial<Chat> = {
+          participants: [user.uid, listing.sellerId],
+          participantNames: {
+            [user.uid]: profile.companyName,
+            [listing.sellerId]: listing.sellerName
+          },
+          participantLogos: {
+            [user.uid]: profile.logoUrl || "",
+            [listing.sellerId]: "" 
+          },
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          lastMessage: `Inquiry about: ${listing.title}`,
+          lastMessageTime: serverTimestamp()
+        };
+        await addDoc(collection(db, "chats"), newChat);
+        navigate("/messages");
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "chats");
+    } finally {
+      setIsStartingChat(false);
     }
   };
 
@@ -455,7 +518,7 @@ export default function Marketplace() {
               className="h-full"
             >
               {viewMode === 'grid' ? (
-                <Card className={`overflow-hidden glass h-full flex flex-col border-2 transition-all duration-300 shadow-lg hover:shadow-primary/20 ${getCategoryColor(listing.category)}`}>
+                <Card className={`overflow-hidden glass h-full flex flex-col border-2 transition-all duration-300 shadow-md hover:shadow-primary/10 ${getCategoryColor(listing.category)}`}>
                   <div className="relative aspect-[4/3] overflow-hidden group">
                     <img 
                       src={listing.images?.[0] || "https://picsum.photos/seed/industrial/400/300"} 
@@ -465,11 +528,17 @@ export default function Marketplace() {
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-                      <Button size="sm" className="rounded-full gap-2" asChild>
-                        <Link to={`/listing/${listing.id}`}>
-                          <Eye className="h-4 w-4" />
-                          Quick View
-                        </Link>
+                      <Button 
+                        size="sm" 
+                        className="rounded-full gap-2" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedListingForQuickView(listing);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Quick View
                       </Button>
                     </div>
                     <div className="absolute top-3 right-3 flex flex-col gap-2">
@@ -737,6 +806,110 @@ export default function Marketplace() {
           </Button>
         </div>
       )}
+
+      <Dialog open={!!selectedListingForQuickView} onOpenChange={(open) => !open && setSelectedListingForQuickView(null)}>
+        <DialogContent className="glass border-primary/20 sm:max-w-4xl p-0 overflow-hidden">
+          {selectedListingForQuickView && (
+            <div className="flex flex-col md:flex-row h-full max-h-[90vh]">
+              <div className="md:w-1/2 bg-black/20">
+                <img 
+                  src={selectedListingForQuickView.images?.[0] || "https://picsum.photos/seed/industrial/800/600"} 
+                  alt={selectedListingForQuickView.title}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <div className="md:w-1/2 p-8 flex flex-col overflow-y-auto">
+                <DialogHeader className="mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge className="bg-primary/20 text-primary border-primary/20">
+                      {selectedListingForQuickView.category}
+                    </Badge>
+                    <Badge variant="outline" className="capitalize">
+                      {(selectedListingForQuickView.condition || 'used-good').replace('-', ' ')}
+                    </Badge>
+                  </div>
+                  <DialogTitle className="text-3xl font-black tracking-tight leading-tight">
+                    {selectedListingForQuickView.title}
+                  </DialogTitle>
+                  <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                    <ShieldCheck className={`h-4 w-4 ${selectedListingForQuickView.isVetted ? 'text-primary' : 'text-muted-foreground/40'}`} />
+                    <span className="font-medium">{selectedListingForQuickView.sellerName}</span>
+                    {selectedListingForQuickView.isVetted && (
+                      <Badge variant="outline" className="text-[8px] h-3 px-1 border-primary/30 text-primary bg-primary/5 uppercase font-black">Verified</Badge>
+                    )}
+                  </div>
+                </DialogHeader>
+
+                <div className="space-y-6 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-primary">£{selectedListingForQuickView.price?.toLocaleString()}</span>
+                    <span className="text-muted-foreground">/ unit</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                      <div className="flex items-center gap-2 text-primary mb-1">
+                        <Leaf className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Sustainability</span>
+                      </div>
+                      <p className="text-lg font-bold">{selectedListingForQuickView.co2Savings}kg CO2</p>
+                      <p className="text-[10px] text-muted-foreground">Estimated savings</p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                      <div className="flex items-center gap-2 text-primary mb-1">
+                        <Package className="h-4 w-4" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Availability</span>
+                      </div>
+                      <p className="text-lg font-bold">{selectedListingForQuickView.quantity} Units</p>
+                      <p className="text-[10px] text-muted-foreground">In stock</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{selectedListingForQuickView.location}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium capitalize">{(selectedListingForQuickView.shippingOptions?.[0] || 'Standard Shipping').replace('-', ' ')}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Listed {selectedListingForQuickView.createdAt?.toDate ? format(selectedListingForQuickView.createdAt.toDate(), "dd MMM yyyy") : "Recently"}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Description</h4>
+                    <p className="text-sm leading-relaxed text-muted-foreground line-clamp-4">
+                      {selectedListingForQuickView.description}
+                    </p>
+                  </div>
+                </div>
+
+                <DialogFooter className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 rounded-xl h-12 font-bold" 
+                    onClick={() => handleStartChat(selectedListingForQuickView)}
+                    disabled={isStartingChat}
+                  >
+                    {isStartingChat ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MessageSquare className="h-4 w-4 mr-2" />}
+                    Message Seller
+                  </Button>
+                  <Button className="flex-1 rounded-xl h-12 font-bold shadow-md shadow-primary/10" asChild>
+                    <Link to={`/listing/${selectedListingForQuickView.id}`}>
+                      Full Details
+                    </Link>
+                  </Button>
+                </DialogFooter>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

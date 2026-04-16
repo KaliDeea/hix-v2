@@ -28,7 +28,7 @@ export default function Home() {
                 Hartlepool Industrial Exchange (HiX) connects businesses across the UK and Europe for secure, efficient, and sustainable industrial transactions.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button size="lg" className="rounded-full px-8 text-lg shadow-lg shadow-primary/20" asChild>
+                <Button size="lg" className="rounded-full px-8 text-lg shadow-md shadow-primary/10" asChild>
                   <Link to="/auth?tab=register">
                     Register Your Business
                     <ArrowRight className="ml-2 h-5 w-5" />

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, db, collection, setDoc, doc, handleFirestoreError, OperationType } from "@/lib/firebase";
+import { useAuth, db, collection, setDoc, doc, handleFirestoreError, OperationType, onSnapshot } from "@/lib/firebase";
 import { CATEGORIES } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,8 @@ import {
   HelpCircle, 
   Trash2, 
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 import { 
@@ -45,6 +46,7 @@ export default function CreateListing() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -69,6 +71,15 @@ export default function CreateListing() {
   const [uploading, setUploading] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "platform_settings", "branding"), (docSnap) => {
+      if (docSnap.exists()) {
+        setMaintenanceMode(docSnap.data().maintenanceMode || false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -155,6 +166,35 @@ export default function CreateListing() {
     );
   }
 
+  if (maintenanceMode) {
+    return (
+      <div className="container py-20">
+        <Card className="glass max-w-2xl mx-auto border-destructive/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-6 w-6" />
+              System Maintenance
+            </CardTitle>
+            <CardDescription>
+              New listings are temporarily disabled during scheduled system maintenance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              We are currently performing essential platform updates to improve your experience. 
+              You will be able to create new listings once the maintenance is complete.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button variant="outline" className="w-full rounded-full" onClick={() => navigate("/marketplace")}>
+              Return to Marketplace
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
   const handleAiGenerate = async () => {
     if (!formData.title) {
       toast.error("Please enter a title first so AI has context");
@@ -200,6 +240,11 @@ export default function CreateListing() {
 
   const handleSubmit = async (e: React.FormEvent, status: 'available' | 'draft' = 'available') => {
     if (e) e.preventDefault();
+
+    if (maintenanceMode && status === 'available') {
+      toast.error("New listings are currently disabled due to platform maintenance.");
+      return;
+    }
     
     if (status === 'available' && !validateForm()) {
       toast.error("Please fix the errors before publishing");
@@ -265,6 +310,15 @@ export default function CreateListing() {
               <CardDescription>Provide accurate information about the industrial asset.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+            {maintenanceMode && (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3 mb-6">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-amber-500">Maintenance Mode Active</p>
+                  <p className="text-xs text-amber-500/80">Publishing new listings is temporarily disabled. You can still save drafts.</p>
+                </div>
+              </div>
+            )}
               <div className="grid gap-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="title" className={errors.title ? "text-destructive" : ""}>
@@ -662,7 +716,7 @@ export default function CreateListing() {
                 </Button>
                 <Button 
                   type="submit" 
-                  className="flex-1 rounded-full h-12 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" 
+                  className="flex-1 rounded-full h-12 bg-primary hover:bg-primary/90 shadow-md shadow-primary/10" 
                   disabled={loading}
                 >
                   {loading ? (

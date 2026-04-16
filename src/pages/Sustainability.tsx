@@ -109,7 +109,7 @@ export default function Sustainability() {
                 transition={{ delay: i * 0.1 }}
                 className="text-center space-y-2"
               >
-                <div className={`mx-auto w-12 h-12 rounded-2xl bg-background border border-primary/10 flex items-center justify-center ${stat.color} shadow-lg shadow-primary/5`}>
+                <div className={`mx-auto w-12 h-12 rounded-2xl bg-background border border-primary/10 flex items-center justify-center ${stat.color} shadow-md shadow-primary/5`}>
                   <stat.icon className="h-6 w-6" />
                 </div>
                 <h3 className="text-3xl font-black tracking-tight">{stat.value}</h3>
@@ -198,7 +198,7 @@ export default function Sustainability() {
               viewport={{ once: true }}
               className="relative"
             >
-              <div className="glass p-8 rounded-[2.5rem] border-primary/20 shadow-2xl relative z-10">
+              <div className="glass p-8 rounded-[2.5rem] border-primary/20 shadow-xl relative z-10">
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">

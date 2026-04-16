@@ -142,6 +142,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u);
       if (u) {
         const docRef = doc(db, "users", u.uid);
+        
+        // Update last login
+        await updateDoc(docRef, { lastLogin: serverTimestamp() }).catch(e => console.error("Error updating last login:", e));
+
         // Use onSnapshot for real-time profile updates
         unsubscribeProfile = onSnapshot(docRef, (docSnap) => {
           if (docSnap.exists()) {
@@ -199,6 +203,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     await setDoc(doc(db, "users", u.uid), profileData);
+
+    // Log registration
+    await addDoc(collection(db, "audit_logs"), {
+      adminId: "system",
+      adminName: "System",
+      action: "USER_REGISTRATION",
+      details: `New user registered: ${email}`,
+      targetId: u.uid,
+      targetType: 'user',
+      targetName: data.companyName || email,
+      targetEmail: email,
+      createdAt: serverTimestamp()
+    }).catch(e => console.error("Error logging registration:", e));
   };
 
   const logout = async () => {

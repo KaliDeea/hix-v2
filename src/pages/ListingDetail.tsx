@@ -16,6 +16,7 @@ import {
   serverTimestamp
 } from "@/lib/firebase";
 import { Listing, Chat } from "@/types";
+import { calculateListingQualityScore, getQualityScoreColor, getQualityScoreLabel } from "@/lib/qualityScore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -77,6 +78,8 @@ export default function ListingDetail() {
     buyerCommission: 3,
     maintenanceMode: false
   });
+
+  const qualityScore = listing ? calculateListingQualityScore(listing, profile?.isVatVerified || false) : 0;
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "platform_settings", "branding"), (docSnap) => {
@@ -173,6 +176,19 @@ export default function ListingDetail() {
         status: "pending",
         createdAt: serverTimestamp()
       });
+
+      // Log report to audit_logs
+      await addDoc(collection(db, "audit_logs"), {
+        adminId: "system",
+        adminName: "System",
+        action: "REPORT_CREATED",
+        details: `New report created by ${profile?.companyName || user.email}. Reason: ${reportData.reason}`,
+        targetId: listing.id,
+        targetType: 'report',
+        targetName: `Report on Listing ${listing.id}`,
+        createdAt: serverTimestamp()
+      }).catch(e => console.error("Error logging report:", e));
+
       toast.success("Report submitted to administration.");
       setIsReportModalOpen(false);
       setReportData({ reason: "", description: "" });
@@ -368,7 +384,7 @@ export default function ListingDetail() {
             animate={{ opacity: 1, y: 0 }}
             className={`p-6 rounded-3xl border-2 transition-colors ${getCategoryColor(listing.category)}`}
           >
-            <div className="aspect-[16/10] overflow-hidden rounded-3xl glass border-white/10 shadow-2xl relative group">
+            <div className="aspect-[16/10] overflow-hidden rounded-3xl glass border-white/10 shadow-xl relative group">
               <img 
                 src={listing.images?.[0] || "https://picsum.photos/seed/industrial/1200/800"} 
                 alt={listing.title} 
@@ -402,6 +418,12 @@ export default function ListingDetail() {
                 <Badge variant="outline" className="capitalize">
                   {(listing.condition || 'used-good').replace('-', ' ')}
                 </Badge>
+                
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                  <div className={`h-2 w-2 rounded-full ${getQualityScoreColor(qualityScore)}`} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Quality: {getQualityScoreLabel(qualityScore)} ({qualityScore}%)</span>
+                </div>
+
                 <div className="flex flex-col items-end ml-auto">
                   <div className="flex items-center gap-2 text-primary font-bold">
                     <Leaf className="h-5 w-5" />
@@ -481,7 +503,7 @@ export default function ListingDetail() {
               </div>
             </div>
 
-            <div className="glass rounded-3xl p-8 border-primary/20 shadow-xl">
+            <div className="glass rounded-3xl p-8 border-primary/20 shadow-lg">
               {listing.listingType === 'auction' ? (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
@@ -572,7 +594,7 @@ export default function ListingDetail() {
 
                   <Button 
                     size="lg" 
-                    className="w-full rounded-full h-14 text-lg shadow-lg shadow-primary/20" 
+                    className="w-full rounded-full h-14 text-lg shadow-md shadow-primary/10" 
                     onClick={handleBuy}
                     disabled={platformSettings.maintenanceMode}
                   >
