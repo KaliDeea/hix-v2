@@ -13,9 +13,10 @@ import {
   getDocs,
   deleteDoc,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from "@/lib/firebase";
-import { Listing, Chat } from "@/types";
+import { Listing, Chat, UserProfile } from "@/types";
 import { calculateListingQualityScore, getQualityScoreColor, getQualityScoreLabel } from "@/lib/qualityScore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +71,7 @@ export default function ListingDetail() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [listing, setListing] = useState<Listing | null>(null);
+  const [sellerProfile, setSellerProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportData, setReportData] = useState({ reason: "", description: "" });
@@ -162,6 +164,23 @@ export default function ListingDetail() {
 
     return () => unsubscribe();
   }, [id]);
+
+  useEffect(() => {
+    if (!listing?.sellerId) return;
+
+    const fetchSellerProfile = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, "users", listing.sellerId));
+        if (docSnap.exists()) {
+          setSellerProfile(docSnap.data() as UserProfile);
+        }
+      } catch (error) {
+        console.error("Error fetching seller profile:", error);
+      }
+    };
+
+    fetchSellerProfile();
+  }, [listing?.sellerId]);
 
   const handleReport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -457,14 +476,22 @@ export default function ListingDetail() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex items-center gap-2 p-3 rounded-2xl glass-dark inline-flex cursor-help">
-                        <ShieldCheck className="h-5 w-5 text-primary" />
+                      <Link 
+                        to={`/profile/${listing.sellerId}`}
+                        className="flex items-center gap-2 p-3 rounded-2xl glass-dark inline-flex cursor-pointer hover:border-primary/50 transition-all border border-transparent"
+                      >
+                        <ShieldCheck className={`h-5 w-5 ${(sellerProfile?.isVetted || listing.isVetted) ? 'text-primary' : 'text-muted-foreground/40'}`} />
                         <span className="text-sm font-medium">{listing.sellerName}</span>
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 ml-2">Verified</Badge>
-                      </div>
+                        {(sellerProfile?.isVetted || listing.isVetted) && (
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 ml-2">ID Verified</Badge>
+                        )}
+                        {sellerProfile?.isVatVerified && (
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 ml-2">VAT Verified</Badge>
+                        )}
+                      </Link>
                     </TooltipTrigger>
                     <TooltipContent className="glass border-primary/20">
-                      <p className="text-xs">Verified Seller: This company has passed our vetting process.</p>
+                      <p className="text-xs">{(sellerProfile?.isVetted || listing.isVetted) ? 'Verified Seller: This company has passed our vetting process.' : 'Unverified Seller: Exercise caution.'}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

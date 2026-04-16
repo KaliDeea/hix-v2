@@ -1,4 +1,4 @@
-import { useState, useEffect, MouseEvent, useMemo } from "react";
+import { useState, useEffect, MouseEvent, useMemo, FormEvent } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { 
   useAuth, 
@@ -13,9 +13,10 @@ import {
   deleteDoc,
   doc,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  getDoc
 } from "@/lib/firebase";
-import { Listing, Chat } from "@/types";
+import { Listing, Chat, UserProfile } from "@/types";
 import { CATEGORIES } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2 } from "lucide-react";
+import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -61,6 +62,7 @@ export default function Marketplace() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [listings, setListings] = useState<Listing[]>([]);
+  const [sellerProfiles, setSellerProfiles] = useState<Record<string, UserProfile>>({});
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [category, setCategory] = useState("all");
@@ -79,6 +81,10 @@ export default function Marketplace() {
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedListingForQuickView, setSelectedListingForQuickView] = useState<Listing | null>(null);
+  const [selectedListingForReport, setSelectedListingForReport] = useState<Listing | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportData, setReportData] = useState({ reason: "", description: "" });
+  const [isReporting, setIsReporting] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
   const itemsPerPage = 12;
 
@@ -121,6 +127,36 @@ export default function Marketplace() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (listings.length === 0) return;
+
+    const fetchSellerProfiles = async () => {
+      const uniqueSellerIds = Array.from(new Set(listings.map(l => l.sellerId))) as string[];
+      const newProfiles: Record<string, UserProfile> = { ...sellerProfiles };
+      let updated = false;
+
+      for (const sid of uniqueSellerIds) {
+        if (!newProfiles[sid]) {
+          try {
+            const docSnap = await getDoc(doc(db, "users", sid));
+            if (docSnap.exists()) {
+              newProfiles[sid] = docSnap.data() as UserProfile;
+              updated = true;
+            }
+          } catch (error) {
+            console.error("Error fetching seller profile:", sid, error);
+          }
+        }
+      }
+
+      if (updated) {
+        setSellerProfiles(newProfiles);
+      }
+    };
+
+    fetchSellerProfiles();
+  }, [listings]);
 
   useEffect(() => {
     if (!user) {
@@ -224,6 +260,48 @@ export default function Marketplace() {
       handleFirestoreError(error, OperationType.CREATE, "chats");
     } finally {
       setIsStartingChat(false);
+    }
+  };
+
+  const handleReport = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!user || !selectedListingForReport) return;
+
+    setIsReporting(true);
+    const path = "reports";
+    try {
+      await addDoc(collection(db, path), {
+        reporterId: user.uid,
+        reporterName: profile?.companyName || user.email,
+        reportedUserId: selectedListingForReport.sellerId,
+        reportedUserName: selectedListingForReport.sellerName,
+        listingId: selectedListingForReport.id,
+        co2Saved: selectedListingForReport.co2Savings,
+        reason: reportData.reason,
+        description: reportData.description,
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+
+      await addDoc(collection(db, "audit_logs"), {
+        adminId: "system",
+        adminName: "System",
+        action: "REPORT_CREATED",
+        details: `New report created by ${profile?.companyName || user.email}. Reason: ${reportData.reason}`,
+        targetId: selectedListingForReport.id,
+        targetType: 'report',
+        targetName: `Report on Listing ${selectedListingForReport.id}`,
+        createdAt: serverTimestamp()
+      }).catch(e => console.error("Error logging report:", e));
+
+      toast.success("Report submitted to administration.");
+      setIsReportModalOpen(false);
+      setReportData({ reason: "", description: "" });
+      setSelectedListingForReport(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, path);
+    } finally {
+      setIsReporting(false);
     }
   };
 
@@ -582,31 +660,63 @@ export default function Marketplace() {
                     )}
                   </div>
                   <CardHeader className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <div className="relative">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1.5 cursor-help">
-                                  <ShieldCheck className={`h-3.5 w-3.5 ${listing.isVetted ? 'text-primary' : 'text-muted-foreground/40'}`} />
-                                  {listing.isVetted && (
-                                    <span className="absolute -top-1 -right-1 h-1.5 w-1.5 bg-primary rounded-full animate-pulse" />
-                                  )}
-                                  <span className="truncate max-w-[100px]">{listing.sellerName}</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent className="glass border-primary/20">
-                                <p className="text-xs">{listing.isVetted ? 'Verified Seller: This company has passed our verification process.' : 'Unverified Seller: Exercise caution.'}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground min-w-0 flex-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link 
+                                to={`/profile/${listing.sellerId}`}
+                                className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors min-w-0"
+                              >
+                                <ShieldCheck className={`h-3.5 w-3.5 shrink-0 ${(sellerProfiles[listing.sellerId]?.isVetted || listing.isVetted) ? 'text-primary' : 'text-muted-foreground/40'}`} />
+                                <span className="truncate max-w-[80px]">{listing.sellerName}</span>
+                              </Link>
+                            </TooltipTrigger>
+                            <TooltipContent className="glass border-primary/20">
+                              <p className="text-xs">{(sellerProfiles[listing.sellerId]?.isVetted || listing.isVetted) ? 'Verified Seller' : 'Unverified Seller'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <div className="flex gap-0.5 shrink-0">
+                          {(sellerProfiles[listing.sellerId]?.isVetted || listing.isVetted) && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-[8px] h-4 w-4 p-0 flex items-center justify-center border-primary/30 text-primary bg-primary/5">ID</Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>ID Verified</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {sellerProfiles[listing.sellerId]?.isVatVerified && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-[8px] h-4 w-4 p-0 flex items-center justify-center border-blue-500/30 text-blue-500 bg-blue-500/5">VAT</Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>VAT Verified</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
-                        {listing.isVetted && (
-                          <Badge variant="outline" className="text-[8px] h-3 px-1 border-primary/30 text-primary bg-primary/5 uppercase font-black">Verified</Badge>
-                        )}
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedListingForReport(listing);
+                            setIsReportModalOpen(true);
+                          }}
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <div className="flex flex-col items-end">
+                      <div className="flex flex-col items-end shrink-0">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -663,10 +773,21 @@ export default function Marketplace() {
                       )}
                     </div>
                   </CardContent>
-                  <CardFooter className="p-4 pt-0">
-                    <Button className="w-full rounded-full" asChild disabled={listing.status === 'sold'}>
+                  <CardFooter className="p-4 pt-0 flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 rounded-full text-xs h-9"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedListingForQuickView(listing);
+                      }}
+                    >
+                      Quick View
+                    </Button>
+                    <Button className="flex-1 rounded-full text-xs h-9" asChild disabled={listing.status === 'sold'}>
                       <Link to={`/listing/${listing.id}`}>
-                        View Details
+                        Details
                       </Link>
                     </Button>
                   </CardFooter>
@@ -701,10 +822,23 @@ export default function Marketplace() {
                         <CardTitle className="text-xl">{listing.title}</CardTitle>
                         <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                           <ShieldCheck className={`h-3.5 w-3.5 ${listing.isVetted ? 'text-primary' : 'text-muted-foreground/40'}`} />
-                          <span className="font-medium">{listing.sellerName}</span>
+                          <span className="font-medium truncate max-w-[120px]">{listing.sellerName}</span>
                           {listing.isVetted && (
-                            <Badge variant="outline" className="text-[8px] h-3 px-1 border-primary/30 text-primary bg-primary/5 uppercase font-black">Verified Seller</Badge>
+                            <Badge variant="outline" className="text-[8px] h-3 px-1 border-primary/30 text-primary bg-primary/5 uppercase font-black">Verified</Badge>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedListingForReport(listing);
+                              setIsReportModalOpen(true);
+                            }}
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                          </Button>
                           <span className="mx-1">•</span>
                           {listing.location}
                         </p>
@@ -750,9 +884,16 @@ export default function Marketplace() {
                         >
                           <Heart className={`h-5 w-5 ${wishlist.includes(listing.id) ? 'fill-current' : ''}`} />
                         </Button>
-                        <Button className="rounded-full px-8" asChild disabled={listing.status === 'sold'}>
+                        <Button
+                          variant="outline"
+                          className="rounded-full px-4 h-9 text-xs"
+                          onClick={() => setSelectedListingForQuickView(listing)}
+                        >
+                          Quick View
+                        </Button>
+                        <Button className="rounded-full px-8 h-9 text-xs" asChild disabled={listing.status === 'sold'}>
                           <Link to={`/listing/${listing.id}`}>
-                            View Details
+                            Details
                           </Link>
                         </Button>
                       </div>
@@ -934,6 +1075,54 @@ export default function Marketplace() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
+        <DialogContent className="glass border-primary/20 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Report Listing</DialogTitle>
+            <DialogDescription>
+              Report a violation of terms or inaccurate listing details.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleReport} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reason">Reason for Report</Label>
+              <Select 
+                value={reportData.reason} 
+                onValueChange={(v) => setReportData({...reportData, reason: v})}
+                required
+              >
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Select a reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inaccurate">Inaccurate Details</SelectItem>
+                  <SelectItem value="prohibited">Prohibited Item</SelectItem>
+                  <SelectItem value="scam">Potential Scam</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="report-desc">Detailed Description</Label>
+              <textarea 
+                id="report-desc" 
+                className="w-full min-h-[100px] rounded-xl bg-white/5 border border-white/10 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Please provide more details..."
+                value={reportData.description}
+                onChange={(e) => setReportData({...reportData, description: e.target.value})}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" variant="destructive" className="w-full rounded-full" disabled={isReporting}>
+                {isReporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit Report
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

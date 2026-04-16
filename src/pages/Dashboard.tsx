@@ -67,7 +67,10 @@ import {
   Area,
   BarChart,
   Bar,
-  Cell
+  Cell,
+  PieChart,
+  Pie,
+  Legend
 } from "recharts";
 import { format, subDays } from "date-fns";
 import { motion } from "motion/react";
@@ -584,30 +587,27 @@ export default function Dashboard() {
               <CardContent className="h-[300px]">
                 {esgChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={esgChartData} layout="vertical" margin={{ left: 40, right: 40 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-                      <XAxis type="number" hide />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        stroke="#ffffff50" 
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        width={100}
-                      />
+                    <PieChart>
+                      <Pie
+                        data={esgChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {esgChartData.map((entry, index) => (
+                          <Cell key={`dashboard-esg-cell-${index}`} fill={`oklch(0.75 0.22 145 / ${1 - (index * 0.15)})`} />
+                        ))}
+                      </Pie>
                       <Tooltip 
-                        cursor={{ fill: '#ffffff05' }}
                         contentStyle={{ backgroundColor: '#1e293b', border: '1px solid var(--primary)', borderRadius: '12px' }}
                         itemStyle={{ color: 'var(--primary)' }}
                         formatter={(value: number) => [`${value} kg CO2`, 'Savings']}
                       />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={30}>
-                        {esgChartData.map((entry, index) => (
-                          <Cell key={`dashboard-esg-cell-${index}`} fill={`oklch(0.75 0.22 145 / ${1 - (index * 0.15)})`} />
-                        ))}
-                      </Bar>
-                    </BarChart>
+                      <Legend verticalAlign="bottom" height={36}/>
+                    </PieChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">

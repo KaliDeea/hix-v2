@@ -23,7 +23,7 @@ import Sustainability from "@/pages/Sustainability";
 import Contact from "@/pages/Contact";
 import Terms from "@/pages/Terms";
 import Auth from "@/pages/Auth";
-import Pricing from "@/pages/Pricing";
+import PublicProfile from "@/pages/PublicProfile";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/firebase";
@@ -85,6 +85,7 @@ export default function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/messages" element={<Messages />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/profile/:uid" element={<PublicProfile />} />
                     <Route path="/admin" element={<Admin />} />
                     <Route path="/admin/transactions" element={<AdminUserTransactions />} />
                     <Route path="/hauling" element={<Hauling />} />
@@ -95,7 +96,6 @@ export default function App() {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/auth" element={<Auth />} />
-                    <Route path="/pricing" element={<Pricing />} />
                   </Routes>
                 </main>
                 <Footer />

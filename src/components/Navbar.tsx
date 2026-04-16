@@ -286,7 +286,6 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-6">
           <Link to="/marketplace" className="text-sm font-medium hover:text-primary transition-colors">Marketplace</Link>
-          <Link to="/pricing" className="text-sm font-medium hover:text-primary transition-colors">Pricing</Link>
           <Link to="/messages" className="text-sm font-medium hover:text-primary transition-colors">Messages</Link>
           <Link to="/hauling" className="text-sm font-medium hover:text-primary transition-colors">Hauling</Link>
           <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">About</Link>
@@ -348,13 +347,6 @@ export function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Marketplace
-                </Link>
-                <Link 
-                  to="/pricing" 
-                  className="text-lg font-medium px-4 py-3 rounded-lg border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Pricing
                 </Link>
                 <Link 
                   to="/messages" 
