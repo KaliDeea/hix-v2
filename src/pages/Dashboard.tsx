@@ -52,7 +52,8 @@ import {
   Loader2,
   Trash2,
   Pencil,
-  Search
+  Search,
+  BarChart3
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
 import { 
@@ -677,214 +678,345 @@ export default function Dashboard() {
         </TabsContent>
 
         <TabsContent value="listings">
-          <Card className="glass">
-            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Card className="glass border-primary/20">
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-primary/10">
               <div>
-                <CardTitle>My Listings</CardTitle>
-                <CardDescription>Manage your industrial assets listed on HiX.</CardDescription>
+                <CardTitle className="text-xl font-black uppercase tracking-tighter">Inventory Ledger</CardTitle>
+                <CardDescription className="text-[10px] font-mono uppercase opacity-60">Management interface for your industrial portfolio.</CardDescription>
               </div>
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex gap-4 mr-4">
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="hidden xs:flex gap-4 mr-2">
                   <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Available</span>
-                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'available').length}</span>
+                    <span className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest opacity-60 leading-none mb-1">Stock</span>
+                    <span className="text-lg font-black leading-none">{myListings.filter(l => l.status === 'available').length}</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sold</span>
-                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'sold').length}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Draft</span>
-                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'draft').length}</span>
+                    <span className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest opacity-60 leading-none mb-1">Liquid</span>
+                    <span className="text-lg font-black leading-none">{myListings.filter(l => l.status === 'sold').length}</span>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <div className="relative w-full sm:w-48">
                     <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                     <Input 
-                      placeholder="Search listings..." 
-                      className="pl-8 h-9 text-xs rounded-full"
+                      placeholder="Filter Ledger..." 
+                      className="pl-8 h-9 text-[10px] sm:text-xs rounded-full bg-primary/5 focus:bg-background transition-all border-primary/10"
                       value={listingSearch}
                       onChange={(e) => setListingSearch(e.target.value)}
                     />
                   </div>
                   <Select value={listingStatusFilter} onValueChange={setListingStatusFilter}>
-                    <SelectTrigger className="h-9 text-xs rounded-full w-full sm:w-32">
-                      <SelectValue placeholder="Status" />
+                    <SelectTrigger className="h-9 text-[10px] sm:text-xs rounded-full w-full sm:w-32 bg-primary/5 border-primary/10">
+                      <SelectValue placeholder="Protocol" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="sold">Sold</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
+                    <SelectContent className="glass">
+                      <SelectItem value="all">ALL_PROTOCOLS</SelectItem>
+                      <SelectItem value="available">ACTIVE_STOCK</SelectItem>
+                      <SelectItem value="sold">SETTLED</SelectItem>
+                      <SelectItem value="draft">STAGED_DRAFT</SelectItem>
+                      <SelectItem value="pending">PENDING_VERIF</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm" className="rounded-full h-9" asChild>
-                    <Link to="/marketplace">View Marketplace</Link>
-                  </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">Asset</TableHead>
-                      <TableHead className="whitespace-nowrap">Price</TableHead>
-                      <TableHead className="whitespace-nowrap">Quantity</TableHead>
-                      <TableHead className="whitespace-nowrap">Status</TableHead>
-                      <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+            <CardContent className="p-0">
+              {filteredMyListings.length === 0 ? (
+                <div className="py-20 px-4 text-center space-y-4">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center border border-primary/20">
+                    <Package className="h-8 w-8 text-primary/30" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold uppercase tracking-widest">Inventory Empty</p>
+                    <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed italic">
+                      No matching assets found in your current ledger. Upload new technical data to begin trading.
+                    </p>
+                    <Button variant="outline" className="rounded-full h-8 text-[10px] font-black uppercase tracking-widest px-6" asChild>
+                      <Link to="/create-listing">Initiate Listing</Link>
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Desktop Table View */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-primary/5">
+                        <TableRow className="hover:bg-transparent border-primary/20">
+                          <TableHead className="tech-header px-6">Asset Specification</TableHead>
+                          <TableHead className="tech-header">Unit Valuation</TableHead>
+                          <TableHead className="tech-header">Availability</TableHead>
+                          <TableHead className="tech-header">Status Code</TableHead>
+                          <TableHead className="text-right tech-header px-6">Administrative</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredMyListings.map((listing) => (
+                          <TableRow key={`my-listing-${listing.id}`} className="border-primary/10 hover:bg-white/5 transition-colors group">
+                            <TableCell className="px-6 py-4">
+                              <div className="flex items-center gap-4">
+                                <img src={listing.images?.[0]} className="h-10 w-10 sm:h-12 sm:w-12 rounded object-cover grayscale group-hover:grayscale-0 transition-all border border-primary/10" referrerPolicy="no-referrer" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-bold truncate pr-4">{listing.title}</p>
+                                  <p className="text-[10px] font-mono opacity-50 uppercase tracking-tighter">REF: {listing.id.slice(-8)}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm font-black italic">£{listing.price.toLocaleString()}</TableCell>
+                            <TableCell className="font-mono text-xs opacity-70">{listing.quantity} UNITS</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-[9px] uppercase font-black px-2 h-5 tracking-widest ${
+                                listing.status === 'available' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted text-muted-foreground border-border'
+                              }`}>
+                                {listing.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right px-6 space-x-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10" asChild title="View Listing">
+                                <Link to={`/listing/${listing.id}`}>
+                                  <ExternalLink className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10" asChild title="Edit Listing">
+                                <Link to={`/edit-listing/${listing.id}`}>
+                                  <Pencil className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => {
+                                  setListingToDelete(listing.id);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                                disabled={isDeleting === listing.id}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Mobile Cards */}
+                  <div className="lg:hidden divide-y divide-primary/10">
                     {filteredMyListings.map((listing) => (
-                      <TableRow key={`my-listing-${listing.id}`}>
-                        <TableCell className="font-medium whitespace-nowrap">{listing.title}</TableCell>
-                        <TableCell className="whitespace-nowrap">£{listing.price.toLocaleString()}</TableCell>
-                        <TableCell className="whitespace-nowrap">{listing.quantity}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <Badge variant={listing.status === 'available' ? 'default' : 'secondary'}>
-                            {listing.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-2 whitespace-nowrap">
-                          <Button variant="ghost" size="sm" asChild title="View Listing">
-                            <Link to={`/listing/${listing.id}`}>
-                              <ExternalLink className="h-4 w-4" />
-                            </Link>
+                      <div key={`mob-listing-${listing.id}`} className="p-4 space-y-4 hover:bg-white/5 transition-colors">
+                        <div className="flex gap-4">
+                          <img src={listing.images?.[0]} className="h-16 w-16 rounded object-cover border border-primary/10" referrerPolicy="no-referrer" />
+                          <div className="flex-1 min-w-0">
+                             <div className="flex justify-between items-start mb-1">
+                                <span className="text-[9px] font-mono text-primary font-bold">REF_{listing.id.slice(-6).toUpperCase()}</span>
+                                <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none uppercase tracking-widest">{listing.status}</Badge>
+                             </div>
+                             <p className="text-sm font-bold truncate pr-4">{listing.title}</p>
+                             <div className="flex justify-between items-center mt-2">
+                               <span className="text-lg font-black font-mono tracking-tighter italic">£{listing.price.toLocaleString()}</span>
+                               <span className="text-[10px] font-mono opacity-60 uppercase">{listing.quantity} Units</span>
+                             </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" className="flex-1 h-9 rounded-xl text-[10px] font-black uppercase tracking-widest border-primary/20" asChild>
+                            <Link to={`/listing/${listing.id}`}>View</Link>
                           </Button>
-                          <Button variant="ghost" size="sm" asChild title="Edit Listing">
-                            <Link to={`/edit-listing/${listing.id}`}>
-                              <Pencil className="h-4 w-4" />
-                            </Link>
+                          <Button variant="outline" className="flex-1 h-9 rounded-xl text-[10px] font-black uppercase tracking-widest border-primary/20" asChild>
+                            <Link to={`/edit-listing/${listing.id}`}>Edit</Link>
                           </Button>
                           <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => {
-                              setListingToDelete(listing.id);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                            disabled={isDeleting === listing.id}
+                             variant="destructive" 
+                             className="h-9 w-9 p-0 rounded-xl"
+                             onClick={() => {
+                               setListingToDelete(listing.id);
+                               setIsDeleteDialogOpen(true);
+                             }}
+                             disabled={isDeleting === listing.id}
                           >
-                            <Trash2 className="h-4 w-4" />
+                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                     ))}
-                    {myListings.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                          You haven't listed any assets yet.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="history">
           <Card className="glass">
-            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-primary/10">
               <div>
-                <CardTitle>Trade History</CardTitle>
-                <CardDescription>A record of all your purchases and sales.</CardDescription>
+                <CardTitle className="text-xl font-black uppercase tracking-tighter">Trade Ledger</CardTitle>
+                <CardDescription className="text-[10px] font-mono uppercase opacity-60">Complete history of technical asset settlements.</CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative w-full sm:w-48">
                   <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input 
                     placeholder="Search history..." 
-                    className="pl-8 h-9 text-xs rounded-full"
+                    className="pl-8 h-9 text-[10px] sm:text-xs rounded-full bg-primary/5 border-primary/10"
                     value={historySearch}
                     onChange={(e) => setHistorySearch(e.target.value)}
                   />
                 </div>
                 <Select value={historyTypeFilter} onValueChange={setHistoryTypeFilter}>
-                  <SelectTrigger className="h-9 text-xs rounded-full w-full sm:w-32">
-                    <SelectValue placeholder="Type" />
+                  <SelectTrigger className="h-9 text-[10px] sm:text-xs rounded-full w-full sm:w-32 bg-primary/5 border-primary/10">
+                    <SelectValue placeholder="Protocol" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="purchase">Purchases</SelectItem>
-                    <SelectItem value="sale">Sales</SelectItem>
+                  <SelectContent className="glass">
+                    <SelectItem value="all">ALL_HISTORY</SelectItem>
+                    <SelectItem value="purchase">INBOUND_ACQ</SelectItem>
+                    <SelectItem value="sale">OUTBOUND_SALE</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">Date</TableHead>
-                      <TableHead className="whitespace-nowrap">ID</TableHead>
-                      <TableHead className="whitespace-nowrap">Amount</TableHead>
-                      <TableHead className="whitespace-nowrap">CO2 Saved</TableHead>
-                      <TableHead className="whitespace-nowrap">Status</TableHead>
-                      <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTransactions.map((t) => (
-                      <TableRow key={`transaction-${t.id}`}>
-                        <TableCell className="whitespace-nowrap">
-                          {t.createdAt?.toDate ? format(t.createdAt.toDate(), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs whitespace-nowrap">{t.id}</TableCell>
-                        <TableCell className="whitespace-nowrap">£{t.amount.toLocaleString()}</TableCell>
-                        <TableCell className="text-primary font-medium whitespace-nowrap">{t.co2Saved} kg</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <Badge 
-                            variant={t.status === 'completed' ? 'default' : 'secondary'} 
-                            className={`capitalize ${t.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}`}
-                          >
-                            {t.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-2 whitespace-nowrap">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="gap-2"
-                            onClick={() => {
-                              toast.info("Generating certificate...");
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                            PDF
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="rounded-full h-8 w-8 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10 shadow-[0_0_8px_rgba(239,68,68,0.2)] hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-                            onClick={() => {
-                              setSelectedTransaction(t);
-                              setIsReportModalOpen(true);
-                            }}
-                            title="Report Transaction"
-                          >
-                            <AlertTriangle className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {transactions.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                          No trade history found.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+            <CardContent className="p-0">
+              {filteredTransactions.length === 0 ? (
+                <div className="py-20 px-4 text-center space-y-4">
+                   <div className="mx-auto w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center border border-primary/20">
+                     <BarChart3 className="h-8 w-8 text-primary/30" />
+                   </div>
+                   <div className="space-y-2">
+                     <p className="text-sm font-bold uppercase tracking-widest">No Settlement History</p>
+                     <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed italic">
+                       No transactions have been recorded in this ledger yet. Complete a trade to see results here.
+                     </p>
+                   </div>
+                </div>
+              ) : (
+                <>
+                  {/* Desktop History Table */}
+                  <div className="hidden lg:block overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-primary/5">
+                        <TableRow className="hover:bg-transparent border-primary/20">
+                          <TableHead className="tech-header px-6 font-mono text-[10px] uppercase">Settlement Date</TableHead>
+                          <TableHead className="tech-header font-mono text-[10px] uppercase">Log Reference</TableHead>
+                          <TableHead className="tech-header font-mono text-[10px] uppercase">Total Valuation</TableHead>
+                          <TableHead className="tech-header font-mono text-[10px] uppercase">Impact Metrics</TableHead>
+                          <TableHead className="tech-header font-mono text-[10px] uppercase">Status Phase</TableHead>
+                          <TableHead className="text-right tech-header px-6 font-mono text-[10px] uppercase">Relational Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTransactions.map((t) => (
+                          <TableRow key={`transaction-${t.id}`} className="border-primary/10 hover:bg-white/5 transition-colors group">
+                            <TableCell className="px-6 py-4 text-xs font-mono font-bold opacity-70">
+                              {t.createdAt?.toDate ? format(t.createdAt.toDate(), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d, yyyy')}
+                            </TableCell>
+                            <TableCell className="font-mono text-[10px] font-bold text-primary">TRX_{t.id.slice(-12).toUpperCase()}</TableCell>
+                            <TableCell className="font-mono text-sm font-black italic">£{t.amount.toLocaleString()}</TableCell>
+                            <TableCell className="text-primary font-bold text-xs">
+                               <div className="flex items-center gap-1.5">
+                                  <Leaf className="h-3 w-3" />
+                                  {t.co2Saved} kg
+                               </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant="outline"
+                                className={`text-[9px] uppercase font-black px-2 h-5 tracking-widest ${
+                                  t.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-muted text-muted-foreground'
+                                }`}
+                              >
+                                {t.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right px-6 space-x-1">
+                               <Button variant="ghost" size="sm" className="h-8 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 px-3" onClick={() => navigate(`/listing/${t.listingId}`)}>
+                                  Entry
+                               </Button>
+                               <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 px-3 gap-2"
+                                  onClick={() => toast.info("Generating certificate...")}
+                                >
+                                  <Download className="h-4 w-4" />
+                                  PDF
+                               </Button>
+                               <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  className="rounded-full h-8 w-8 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10 shadow-[0_0_8px_rgba(239,68,68,0.2)] hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                                  onClick={() => {
+                                    setSelectedTransaction(t);
+                                    setIsReportModalOpen(true);
+                                  }}
+                                  title="Report Transaction"
+                                >
+                                  <AlertTriangle className="h-4 w-4" />
+                                </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Mobile Mobile History View */}
+                  <div className="lg:hidden divide-y divide-primary/10">
+                     {filteredTransactions.map((t) => (
+                       <div key={`mob-trx-${t.id}`} className="p-4 space-y-4 hover:bg-white/5 transition-colors">
+                          <div className="flex justify-between items-start">
+                             <div className="space-y-1">
+                                <span className="text-[10px] font-mono text-primary font-bold">TRX_{t.id.slice(-8).toUpperCase()}</span>
+                                <p className="text-[10px] font-mono opacity-50 uppercase">{t.createdAt?.toDate ? format(t.createdAt.toDate(), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d, yyyy')}</p>
+                             </div>
+                             <Badge 
+                                variant="outline"
+                                className={`text-[8px] uppercase font-black px-2 h-4 tracking-widest ${
+                                  t.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-muted text-muted-foreground'
+                                }`}
+                              >
+                                {t.status}
+                              </Badge>
+                          </div>
+                          
+                          <div className="flex justify-between items-end">
+                             <div className="flex flex-col">
+                                <span className="text-[8px] uppercase font-bold text-muted-foreground tracking-[0.2em] mb-1 leading-none">Valuation</span>
+                                <span className="text-xl font-black font-mono tracking-tighter italic leading-none">£{t.amount.toLocaleString()}</span>
+                             </div>
+                             <div className="flex flex-col items-end">
+                                <span className="text-[8px] uppercase font-bold text-muted-foreground tracking-[0.2em] mb-1 leading-none">Sustainability</span>
+                                <div className="flex items-center gap-1.5 text-primary text-sm font-bold leading-none">
+                                   <Leaf className="h-3 w-3" />
+                                   {t.co2Saved} kg
+                                </div>
+                             </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                             <Button variant="outline" className="flex-1 h-9 rounded-xl text-[10px] font-black uppercase tracking-widest border-primary/20" onClick={() => navigate(`/listing/${t.listingId}`)}>
+                                Entry
+                             </Button>
+                             <Button variant="outline" className="flex-1 h-9 rounded-xl text-[10px] font-black uppercase tracking-widest border-primary/20 gap-2" onClick={() => toast.info("Generating certificate...")}>
+                                <Download className="h-4 w-4" />
+                                PDF
+                             </Button>
+                             <Button 
+                                variant="outline" 
+                                className="h-9 w-9 p-0 rounded-xl border-red-500/30 text-red-500 hover:bg-red-500/10"
+                                onClick={() => {
+                                  setSelectedTransaction(t);
+                                  setIsReportModalOpen(true);
+                                }}
+                              >
+                                <AlertTriangle className="h-4 w-4" />
+                             </Button>
+                          </div>
+                       </div>
+                     ))}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

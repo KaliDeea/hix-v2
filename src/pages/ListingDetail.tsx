@@ -563,7 +563,7 @@ export default function ListingDetail() {
               </div>
             </div>
 
-            <div className="glass p-10 relative overflow-hidden bg-primary/[0.02] rounded-xl">
+            <div className="glass p-5 sm:p-10 relative overflow-hidden bg-primary/[0.02] rounded-xl">
               <div className="absolute top-0 right-0 p-4">
                  <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold font-sans tracking-tight text-primary">Trading System Active</span>
@@ -572,15 +572,15 @@ export default function ListingDetail() {
               </div>
 
               {listing.listingType === 'auction' ? (
-                <div className="space-y-10">
-                  <div className="grid grid-cols-2 gap-px bg-primary/10 border border-primary/20">
-                    <div className="p-6 bg-background/40 backdrop-blur-md">
+                <div className="space-y-6 sm:space-y-10 pt-8 sm:pt-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-primary/10 border border-primary/20">
+                    <div className="p-4 sm:p-6 bg-background/40 backdrop-blur-md">
                       <p className="tech-header p-0 mb-2">Current Bid Floor</p>
-                      <p className="text-4xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
+                      <p className="text-3xl sm:text-4xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
                     </div>
-                    <div className="p-6 bg-background/40 backdrop-blur-md border-l border-primary/20">
+                    <div className="p-4 sm:p-6 bg-background/40 backdrop-blur-md border-t sm:border-t-0 sm:border-l border-primary/20">
                       <p className="tech-header p-0 mb-2">Timer [UTC]</p>
-                      <div className="flex items-center gap-2 text-lg font-mono font-bold">
+                      <div className="flex items-center gap-2 text-base sm:text-lg font-mono font-bold">
                         <Clock className="h-4 w-4 text-amber-600" />
                         {listing.auctionEndTime ? formatDistanceToNow(new Date(listing.auctionEndTime)) : "48:02:11"}
                       </div>
@@ -604,11 +604,11 @@ export default function ListingDetail() {
                     <div className="relative group">
                        <div className="absolute -inset-0.5 bg-primary/20 blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
                        <div className="relative flex items-center bg-background/60 border border-primary/30">
-                          <span className="pl-6 pr-4 font-mono text-primary/70">GBP_AMT:</span>
+                          <span className="pl-4 sm:pl-6 pr-4 font-mono text-primary/70 text-[10px] sm:text-xs">GBP_AMT:</span>
                           <Input 
                             type="number" 
                             placeholder="000,000.00" 
-                            className="bg-transparent border-none h-16 rounded-none focus-visible:ring-0 font-mono text-xl font-black placeholder:text-muted-foreground/50"
+                            className="bg-transparent border-none h-14 sm:h-16 rounded-none focus-visible:ring-0 font-mono text-lg sm:text-xl font-black placeholder:text-muted-foreground/50"
                             value={bidAmount}
                             onChange={(e) => setBidAmount(e.target.value)}
                           />
@@ -616,7 +616,7 @@ export default function ListingDetail() {
                     </div>
                     <motion.div whileHover={{ scale: 1.02, translateY: -4 }} whileTap={{ scale: 0.98 }}>
                       <Button 
-                        className="rounded-2xl h-16 w-full text-xs font-black uppercase tracking-[0.3em] bg-primary text-primary-foreground hover:shadow-[0_0_30px_var(--primary)] transition-all shadow-[0_0_20px_var(--primary)] border-none" 
+                        className="rounded-2xl h-14 sm:h-16 w-full text-[10px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] bg-primary text-primary-foreground hover:shadow-[0_0_30px_var(--primary)] transition-all shadow-[0_0_20px_var(--primary)] border-none" 
                         onClick={handlePlaceBid} 
                         disabled={isBidding || platformSettings.maintenanceMode}
                       >
@@ -627,15 +627,15 @@ export default function ListingDetail() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-10">
-                  <div className="grid grid-cols-2 gap-px bg-primary/10 border border-primary/20">
-                    <div className="p-6 bg-background/40 backdrop-blur-md">
+                <div className="space-y-6 sm:space-y-10 pt-8 sm:pt-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-primary/10 border border-primary/20">
+                    <div className="p-4 sm:p-6 bg-background/40 backdrop-blur-md">
                       <p className="tech-header p-0 mb-2">Unit Valuation</p>
-                      <p className="text-4xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
+                      <p className="text-3xl sm:text-4xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
                     </div>
-                    <div className="p-6 bg-background/40 backdrop-blur-md border-l border-primary/20">
+                    <div className="p-4 sm:p-6 bg-background/40 backdrop-blur-md border-t sm:border-t-0 sm:border-l border-primary/20">
                       <p className="tech-header p-0 mb-2">Buffer Stock</p>
-                      <p className="text-xl font-mono font-bold">{listing.quantity} UNITS</p>
+                      <p className="text-lg sm:text-xl font-mono font-bold">{listing.quantity} UNITS</p>
                     </div>
                   </div>
 
@@ -643,10 +643,10 @@ export default function ListingDetail() {
                     <div className="flex items-center justify-between px-1">
                       <Label className="tech-header p-0">Select Quantity</Label>
                     </div>
-                    <div className="flex items-center border border-primary/30 h-16 bg-background/60 overflow-hidden group">
+                    <div className="flex items-center border border-primary/30 h-14 sm:h-16 bg-background/60 overflow-hidden group">
                       <Button 
                         variant="ghost" 
-                        className="h-full rounded-none px-6 border-r border-primary/20 hover:bg-primary/10"
+                        className="h-full rounded-none px-4 sm:px-6 border-r border-primary/20 hover:bg-primary/10"
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
                         disabled={quantity <= 1}
                       >
@@ -655,13 +655,13 @@ export default function ListingDetail() {
                       <Input 
                         id="quantity"
                         type="number" 
-                        className="h-full text-center font-black font-mono text-xl bg-transparent border-none focus-visible:ring-0 rounded-none w-full"
+                        className="h-full text-center font-black font-mono text-lg sm:text-xl bg-transparent border-none focus-visible:ring-0 rounded-none w-full"
                         value={quantity}
                         onChange={(e) => setQuantity(Math.min(listing.quantity || 1, Math.max(1, parseInt(e.target.value) || 1)))}
                       />
                       <Button 
                         variant="ghost" 
-                        className="h-full rounded-none px-6 border-l border-primary/20 hover:bg-primary/10"
+                        className="h-full rounded-none px-4 sm:px-6 border-l border-primary/20 hover:bg-primary/10"
                         onClick={() => setQuantity(Math.min(listing.quantity || 1, quantity + 1))}
                         disabled={quantity >= (listing.quantity || 1)}
                       >
@@ -669,8 +669,8 @@ export default function ListingDetail() {
                       </Button>
                     </div>
                     <div className="flex justify-between items-center px-1">
-                       <span className="text-[10px] font-mono opacity-70 lowercase italic">Total Commitment [ex. vat]</span>
-                       <span className="text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
+                       <span className="text-[9px] font-mono opacity-70 lowercase italic">Total Commitment [ex. vat]</span>
+                       <span className="text-base sm:text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -692,20 +692,20 @@ export default function ListingDetail() {
                        whileHover={{ scale: 1.02, translateY: -4 }}
                        whileTap={{ scale: 0.98 }}
                        size="lg" 
-                       className="w-full rounded-2xl h-20 text-[11px] font-black uppercase tracking-[0.4em] bg-primary text-primary-foreground shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:shadow-[0_0_40px_rgba(var(--primary),0.5)] transition-all border-none" 
+                       className="w-full rounded-2xl h-16 sm:h-20 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.4em] bg-primary text-primary-foreground shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:shadow-[0_0_40px_rgba(var(--primary),0.5)] transition-all border-none" 
                        onClick={handleBuy}
                        disabled={platformSettings.maintenanceMode}
                      >
-                       <ShoppingCart className="mr-4 h-5 w-5" />
+                       <ShoppingCart className="mr-3 sm:mr-4 h-5 w-5" />
                        BUY
                      </MotionButton>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <MotionButton 
                             whileHover={{ scale: 1.05, translateY: -2 }} 
                             whileTap={{ scale: 0.95 }}
                             variant="outline" 
-                            className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+                            className="w-full h-14 sm:h-16 rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
                             onClick={handleMessageSeller}
                         >
                             <MessageSquare className="h-4 w-4 mr-2" />
@@ -717,7 +717,7 @@ export default function ListingDetail() {
                                  whileHover={{ scale: 1.05, translateY: -2 }} 
                                  whileTap={{ scale: 0.95 }}
                                  variant="outline" 
-                                 className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+                                 className="w-full h-14 sm:h-16 rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
                               >
                                  <Send className="h-4 w-4 mr-2" />
                                  Counter Offer

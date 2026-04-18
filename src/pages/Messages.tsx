@@ -18,7 +18,11 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showChatMobile, setShowChatMobile] = useState(false);
+
+  useEffect(() => {
+    if (selectedChat) setShowChatMobile(true);
+  }, [selectedChat]);
 
   useEffect(() => {
     if (!user) return;
@@ -132,15 +136,15 @@ export default function Messages() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 h-[calc(100vh-120px)]">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-full">
+    <div className="container mx-auto px-4 py-4 sm:py-8 h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)]">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-full relative">
         {/* Chat List */}
-        <Card className="md:col-span-4 glass overflow-hidden flex flex-col h-full">
+        <Card className={`md:col-span-4 glass overflow-hidden flex flex-col h-full transition-all duration-300 ${showChatMobile ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-border">
-            <h2 className="text-xl font-bold mb-4">Messages</h2>
+            <h2 className="text-xl font-bold mb-4 uppercase tracking-tighter">Messages</h2>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search chats..." className="pl-10 rounded-full bg-muted/20 border-border" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input placeholder="Search Ledger..." className="pl-10 rounded-full bg-primary/5 border-primary/10 text-xs py-5" />
             </div>
           </div>
           <ScrollArea className="flex-1">
@@ -150,8 +154,14 @@ export default function Messages() {
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : chats.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  No conversations yet.
+                <div className="text-center py-20 px-4 space-y-4">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center border border-primary/20">
+                    <Send className="h-8 w-8 text-primary/30" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-foreground">Secure Uplink Quiet</p>
+                    <p className="text-[10px] text-muted-foreground font-mono uppercase opacity-60 italic">No communication logs recorded.</p>
+                  </div>
                 </div>
               ) : (
                 chats.map((chat) => {
@@ -201,22 +211,25 @@ export default function Messages() {
         </Card>
 
         {/* Chat Area */}
-        <Card className="md:col-span-8 glass overflow-hidden flex flex-col h-full relative">
+        <Card className={`md:col-span-8 glass overflow-hidden flex flex-col h-full relative border-primary/20 transition-all duration-300 ${showChatMobile ? 'flex' : 'hidden md:flex'}`}>
           {selectedChat ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-border flex items-center gap-3 bg-muted/10">
-                <Avatar className="h-10 w-10 border border-border">
+              <div className="p-3 sm:p-4 border-b border-border flex items-center gap-3 bg-primary/5">
+                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 rounded-full" onClick={() => setShowChatMobile(false)}>
+                  <Search className="h-4 w-4 rotate-180" />
+                </Button>
+                <Avatar className="h-8 w-8 sm:h-10 sm:w-10 border border-border shrink-0">
                   <AvatarImage src={selectedChat.participantLogos[selectedChat.participants.find(p => p !== user.uid) || ""]} />
                   <AvatarFallback><Building2 className="h-5 w-5" /></AvatarFallback>
                 </Avatar>
-                <div>
-                  <h3 className="font-bold text-foreground">
+                <div className="min-w-0">
+                  <h3 className="font-bold text-foreground truncate text-sm sm:text-base">
                     {selectedChat.participantNames[selectedChat.participants.find(p => p !== user.uid) || ""]}
                   </h3>
-                  <p className="text-[10px] text-primary flex items-center gap-1 font-bold">
+                  <p className="text-[9px] text-primary flex items-center gap-1 font-bold">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
-                    ONLINE
+                    SECURE_UPLINK_ACTIVE
                   </p>
                 </div>
               </div>

@@ -202,10 +202,10 @@
     @apply grid border-b border-border transition-colors duration-200 cursor-pointer hover:bg-primary hover:text-primary-foreground;
   }
   .tech-header {
-    @apply font-serif italic text-[11px] opacity-85 uppercase tracking-widest py-3 px-4;
+    @apply font-serif italic text-[10px] sm:text-[11px] opacity-85 uppercase tracking-widest py-2 sm:py-3 px-3 sm:px-4;
   }
   .tech-value {
-    @apply font-mono text-xs tracking-tight py-4 px-4;
+    @apply font-mono text-[11px] sm:text-xs tracking-tight py-3 sm:py-4 px-3 sm:px-4;
   }
 
   /* Hardware Surface (Recipe 3) */

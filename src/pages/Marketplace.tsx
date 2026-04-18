@@ -509,105 +509,143 @@ export default function Marketplace() {
         {/* Rows */}
         <div className="flex flex-col gap-4">
           <AnimatePresence mode="popLayout">
-            {filteredListings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((listing, idx) => (
-              <motion.div
-                key={`market-listing-${listing.id}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ delay: idx * 0.05 }}
-                className="grid grid-cols-1 md:grid-cols-12 tech-row bg-white/5 group border border-border rounded-2xl overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-primary/20 transition-all duration-300"
+            {filteredListings.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="py-24 px-4 text-center space-y-6"
               >
-                {/* Asset Info */}
-                <div className="col-span-1 md:col-span-4 p-6 flex items-center gap-6">
-                  <div className="relative h-24 w-24 shrink-0 overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-500 border border-white/10">
-                    <img 
-                      src={listing.images?.[0] || "https://picsum.photos/seed/industrial/200/200"} 
-                      alt={listing.title}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      referrerPolicy="no-referrer"
-                    />
-                    {listing.status === 'sold' && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <span className="text-[10px] font-black tracking-widest uppercase text-white -rotate-12 border-2 border-white px-2">Sold</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="tech-value opacity-90 font-bold uppercase tracking-tighter truncate">#{listing.id.slice(-6)}</span>
-                      {(sellerProfiles[listing.sellerId]?.isVetted || listing.isVetted) && <Badge className="bg-primary/20 text-primary border-none text-[8px] h-4 rounded-none uppercase font-bold tracking-widest">Verified</Badge>}
-                    </div>
-                    <Link to={`/listing/${listing.id}`} className="text-lg font-bold tracking-tight hover:underline underline-offset-4 decoration-primary truncate text-foreground">{listing.title}</Link>
-                    <div className="flex items-center gap-2 mt-2">
-                       <MapPin className="h-3 w-3 text-muted-foreground" />
-                       <span className="text-[10px] font-mono uppercase text-muted-foreground font-medium">LOC: {listing.location || "UK-WIDE"}</span>
-                    </div>
-                  </div>
+                <div className="mx-auto w-20 h-20 rounded-full bg-primary/5 flex items-center justify-center border border-primary/20 shadow-[0_0_30px_rgba(0,0,0,0.1)]">
+                  <Package className="h-10 w-10 text-primary/30" />
                 </div>
-
-                {/* Specs */}
-                <div className="col-span-1 md:col-span-3 p-6 flex flex-col justify-center border-l border-border md:border-l-0 lg:border-l">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="tech-header p-0 opacity-80">Condition</span>
-                      <span className="tech-value uppercase font-bold text-foreground">{(listing.condition || 'Used').replace('-', ' ')}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="tech-header p-0 opacity-80">OEM / Manufacturer</span>
-                      <span className="tech-value truncate max-w-[120px] font-bold text-foreground">{listing.brand || "—"}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="tech-header p-0 opacity-80">Build Version</span>
-                      <span className="tech-value font-bold text-foreground">{listing.year || listing.model || "—"}</span>
-                    </div>
-                  </div>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-black uppercase tracking-tighter">No Assets Detected</h2>
+                  <p className="text-muted-foreground font-mono text-[10px] uppercase opacity-60 max-w-sm mx-auto leading-relaxed">
+                    Zero technical identifiers matched your current filtering parameters. Adjust your diagnostics or search query.
+                  </p>
                 </div>
-
-                {/* ESG Impact */}
-                <div className="col-span-1 md:col-span-2 p-6 flex flex-col items-center justify-center border-l border-border bg-primary/5">
-                  <div className="text-2xl font-black font-display text-primary flex items-baseline gap-1">
-                    {listing.co2Savings}
-                    <span className="text-[10px] font-sans font-bold uppercase tracking-widest opacity-80">kg</span>
-                  </div>
-                  <span className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-80 mt-1">CO2 Offset Value</span>
-                  
-                  <div className="mt-4 w-full h-1 bg-primary/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: `${Math.min(100, (listing.co2Savings / 500) * 100)}%` }} />
-                  </div>
-                </div>
-
-                {/* Price */}
-                <div className="col-span-1 md:col-span-2 p-6 flex flex-col justify-center border-l border-border">
-                  <div className="text-3xl font-black font-mono tracking-tighter text-foreground">
-                    £{listing.price?.toLocaleString()}
-                  </div>
-                  <span className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-80 mt-1">Valuation (GBP)</span>
-                </div>
-
-                {/* Action */}
-                <div className="col-span-1 md:col-span-1 p-6 flex items-center justify-center border-l border-border">
-                  <div className="flex flex-col gap-2">
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="hover:bg-primary hover:text-primary-foreground rounded-none"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setSelectedListingForQuickView(listing);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="hover:bg-primary hover:text-primary-foreground rounded-none" asChild>
-                      <Link to={`/listing/${listing.id}`}>
-                        <ArrowUpDown className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
+                {!search && (
+                   <Button variant="outline" className="rounded-none uppercase tracking-widest text-[10px] font-black h-12 px-8 border-primary/20 hover:bg-primary/5" onClick={() => {
+                     setCategory("all");
+                     setCondition("all");
+                     setMinPrice("");
+                     setMaxPrice("");
+                     setLocation("");
+                   }}>
+                     Reset Diagnostic Filters
+                   </Button>
+                )}
               </motion.div>
-            ))}
+            ) : (
+              filteredListings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((listing, idx) => (
+                <motion.div
+                  key={`market-listing-${listing.id}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="grid grid-cols-1 md:grid-cols-12 tech-row bg-white/5 group border border-border rounded-2xl overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-primary/20 transition-all duration-300"
+                >
+                  {/* Asset Info */}
+                  <div className="col-span-1 md:col-span-4 p-4 sm:p-6 flex items-center gap-4 sm:gap-6">
+                    <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-500 border border-white/10">
+                      <img 
+                        src={listing.images?.[0] || "https://picsum.photos/seed/industrial/200/200"} 
+                        alt={listing.title}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        referrerPolicy="no-referrer"
+                      />
+                      {listing.status === 'sold' && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <span className="text-[10px] font-black tracking-widest uppercase text-white -rotate-12 border-2 border-white px-2">Sold</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col justify-center min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[9px] sm:text-[10px] sm:tech-value opacity-90 font-bold uppercase tracking-tighter truncate">#{listing.id.slice(-6)}</span>
+                        {(sellerProfiles[listing.sellerId]?.isVetted || listing.isVetted) && <Badge className="bg-primary/20 text-primary border-none text-[8px] h-4 rounded-none uppercase font-bold tracking-widest">Verified</Badge>}
+                      </div>
+                      <Link to={`/listing/${listing.id}`} className="text-base sm:text-lg font-bold tracking-tight hover:underline underline-offset-4 decoration-primary truncate text-foreground">{listing.title}</Link>
+                      <div className="flex items-center justify-between mt-2">
+                         <div className="flex items-center gap-2">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[9px] sm:text-[10px] font-mono uppercase text-muted-foreground font-medium truncate max-w-[100px] sm:max-w-none">{listing.location || "UK-WIDE"}</span>
+                         </div>
+                         <div className="md:hidden flex items-baseline gap-1">
+                           <span className="text-xs font-black text-primary">{listing.co2Savings}kg</span>
+                           <span className="text-[8px] font-bold opacity-60">CO2</span>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Specs */}
+                  <div className="col-span-1 md:col-span-3 p-4 sm:p-6 flex flex-col justify-center border-t md:border-t-0 md:border-l border-border mt-0 sm:mt-0">
+                    <div className="grid grid-cols-2 md:flex md:flex-col gap-3 sm:gap-4 md:space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[8px] sm:tech-header p-0 opacity-80">Condition</span>
+                        <span className="text-[10px] sm:tech-value uppercase font-bold text-foreground truncate ml-2">{(listing.condition || 'Used').replace('-', ' ')}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[8px] sm:tech-header p-0 opacity-80">Manufacturer</span>
+                        <span className="text-[10px] sm:tech-value truncate max-w-[120px] font-bold text-foreground text-right">{listing.brand || "—"}</span>
+                      </div>
+                      <div className="hidden md:flex items-center justify-between">
+                        <span className="tech-header p-0 opacity-80">Build Version</span>
+                        <span className="tech-value font-bold text-foreground">{listing.year || listing.model || "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ESG Impact (Hidden on mobile, summarized in title area) */}
+                  <div className="hidden md:flex col-span-1 md:col-span-2 p-6 flex flex-col items-center justify-center border-l border-border bg-primary/5">
+                    <div className="text-2xl font-black font-display text-primary flex items-baseline gap-1">
+                      {listing.co2Savings}
+                      <span className="text-[10px] font-sans font-bold uppercase tracking-widest opacity-80">kg</span>
+                    </div>
+                    <span className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-80 mt-1">CO2 Offset Value</span>
+                    
+                    <div className="mt-4 w-full h-1 bg-primary/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary" style={{ width: `${Math.min(100, (listing.co2Savings / 500) * 100)}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Price & Action integrated on mobile */}
+                  <div className="col-span-1 md:col-span-3 border-t md:border-t-0 md:border-l border-border">
+                    <div className="grid grid-cols-2 h-full">
+                      <div className="p-4 sm:p-6 flex flex-col justify-center border-r md:border-r-0 border-border">
+                        <div className="text-xl sm:text-3xl font-black font-mono tracking-tighter text-foreground">
+                          £{listing.price?.toLocaleString()}
+                        </div>
+                        <span className="text-[8px] font-bold uppercase tracking-[0.2em] opacity-80 mt-1">VALUATION</span>
+                      </div>
+
+                      <div className="p-4 sm:p-6 flex items-center justify-center md:border-l md:border-border">
+                        <div className="flex items-center md:flex-col gap-3 md:gap-2">
+                          <Button 
+                            size="icon" 
+                            variant="outline" 
+                            className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border-primary/20 text-primary hover:bg-primary/10 bg-transparent shrink-0"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setSelectedListingForQuickView(listing);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="outline" className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl border-primary/20 text-primary hover:bg-primary/10 bg-transparent shrink-0" asChild>
+                            <Link to={`/listing/${listing.id}`}>
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </AnimatePresence>
         </div>
       </div>
@@ -686,11 +724,11 @@ export default function Marketplace() {
 
       {/* Quick View Dialog - Refined Wide Ledger (Recipe 1 & 8) */}
       <Dialog open={!!selectedListingForQuickView} onOpenChange={() => setSelectedListingForQuickView(null)}>
-        <DialogContent className="max-w-7xl w-[98vw] p-0 border-none bg-transparent shadow-none h-auto sm:h-[90vh] overflow-visible focus:outline-none">
+        <DialogContent className="max-w-7xl w-[95vw] sm:w-[98vw] p-0 border-none bg-transparent shadow-none h-[95vh] sm:h-[90vh] overflow-visible focus:outline-none">
           {selectedListingForQuickView && (
-            <div className="flex flex-col md:flex-row h-full w-full glass border border-primary/40 rounded-[2rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+            <div className="flex flex-col md:flex-row h-full w-full glass border border-primary/40 rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)]">
               {/* Left Side: Visuals - Specialist Hardware Feel */}
-              <div className="md:w-5/12 lg:w-[38%] relative bg-black/60 border-r border-primary/20 h-full overflow-hidden flex flex-col">
+              <div className="h-64 md:h-full md:w-5/12 lg:w-[38%] relative bg-black/60 border-b md:border-b-0 md:border-r border-primary/20 shrink-0 overflow-hidden flex flex-col">
                 <div className="flex-1 relative overflow-hidden group">
                   <img 
                     src={selectedListingForQuickView.images?.[0] || "https://picsum.photos/seed/industrial/1200/800"} 
@@ -702,7 +740,7 @@ export default function Marketplace() {
                 </div>
                 
                 {/* Secondary Visuals Rail */}
-                <div className="h-28 p-4 grid grid-cols-3 gap-2 border-t border-primary/10 bg-black/40">
+                <div className="h-20 sm:h-28 p-2 sm:p-4 grid grid-cols-3 gap-2 border-t border-primary/10 bg-black/40">
                   {[1, 2, 3].map((i) => (
                     <div key={`qv-thumb-${i}`} className="glass rounded-lg overflow-hidden border-white/5 opacity-40 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center bg-black/10">
                       <img src={`https://picsum.photos/seed/machine-${i+10}/200/200`} alt="" className="w-full h-full object-cover grayscale" />
@@ -710,63 +748,63 @@ export default function Marketplace() {
                   ))}
                 </div>
 
-                <div className="absolute top-6 left-6 flex flex-col gap-2">
-                  <Badge className="rounded-md px-3 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[9px] h-6 border-none">
+                <div className="absolute top-4 sm:top-6 left-4 sm:left-6 flex flex-col gap-2">
+                  <Badge className="rounded-md px-2 sm:px-3 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[8px] sm:text-[9px] h-5 sm:h-6 border-none">
                     {selectedListingForQuickView.category}
                   </Badge>
-                  <div className="glass px-3 py-1.5 rounded-md border-primary/20 flex items-center gap-2 bg-black/60 backdrop-blur-md">
-                    <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-[9px] font-black uppercase tracking-widest leading-none text-white/90">{selectedListingForQuickView.sellerName}</span>
+                  <div className="glass px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border-primary/20 flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md">
+                    <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary" />
+                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest leading-none text-white/90 truncate max-w-[80px] sm:max-w-none">{selectedListingForQuickView.sellerName}</span>
                   </div>
                 </div>
               </div>
 
               {/* Right Side: Data - Pristine Industrial Ledger */}
-              <div className="md:w-7/12 lg:w-[62%] flex flex-col h-full bg-slate-50/5 text-foreground">
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-10">
+              <div className="flex-1 flex flex-col min-h-0 bg-slate-50/5 text-foreground">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-8 lg:p-10 space-y-8 lg:space-y-10">
                   {/* Ledger Header */}
                   <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="px-2 py-1 bg-primary/10 border border-primary/30 rounded text-[9px] font-mono font-bold text-primary tracking-widest leading-none">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-primary/10 border border-primary/30 rounded text-[8px] sm:text-[9px] font-mono font-bold text-primary tracking-widest leading-none">
                         LOG_REF: {selectedListingForQuickView.id.toUpperCase().slice(0, 12)}
                       </div>
                       <div className="h-px flex-1 bg-border/40" />
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 italic">Industrial Record</span>
+                      <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] opacity-40 italic hidden xs:inline">Industrial Record</span>
                     </div>
                     
-                    <DialogTitle className="text-2xl lg:text-3xl font-black tracking-tight uppercase leading-snug font-sans">
+                    <DialogTitle className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight uppercase leading-snug font-sans">
                       {selectedListingForQuickView.title}
                     </DialogTitle>
                   </div>
 
                   {/* Valuation & Impact Area */}
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1 glass p-6 rounded-xl border-primary/20 bg-white/[0.03] hover:bg-white/[0.05] transition-all">
-                      <p className="text-[8px] font-black uppercase tracking-[0.3em] text-primary/70 mb-3">Asset Valuation</p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl lg:text-4xl font-black font-mono tracking-tighter text-foreground italic">£{selectedListingForQuickView.price?.toLocaleString()}</span>
-                        <span className="text-[9px] font-mono opacity-40 uppercase tracking-widest">GBP</span>
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <div className="flex-1 glass p-4 sm:p-6 rounded-xl border-primary/20 bg-white/[0.03] hover:bg-white/[0.05] transition-all">
+                      <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.3em] text-primary/70 mb-2 sm:mb-3">Asset Valuation</p>
+                      <div className="flex items-baseline gap-1.5 sm:gap-2">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono tracking-tighter text-foreground italic">£{selectedListingForQuickView.price?.toLocaleString()}</span>
+                        <span className="text-[8px] sm:text-[9px] font-mono opacity-40 uppercase tracking-widest">GBP</span>
                       </div>
                     </div>
-                    <div className="flex-1 glass p-6 rounded-xl border-primary/20 bg-primary/[0.03] hover:bg-primary/[0.06] transition-all">
-                      <p className="text-[8px] font-black uppercase tracking-[0.3em] text-primary/70 mb-3 italic">CO2e Delta Offset</p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl lg:text-4xl font-black font-mono text-primary italic">-{selectedListingForQuickView.co2Savings}</span>
+                    <div className="flex-1 glass p-4 sm:p-6 rounded-xl border-primary/20 bg-primary/[0.03] hover:bg-primary/[0.06] transition-all">
+                      <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.3em] text-primary/70 mb-2 sm:mb-3 italic">CO2e Delta Offset</p>
+                      <div className="flex items-baseline gap-1.5 sm:gap-2">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-primary italic">-{selectedListingForQuickView.co2Savings}</span>
                         <div className="flex flex-col">
-                          <span className="text-[9px] font-black uppercase tracking-tighter leading-none text-primary">kgCO2e</span>
+                          <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tighter leading-none text-primary">kgCO2e</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Specification Table */}
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">01 // Asset Specifications</h3>
-                      <div className="text-[9px] font-mono font-bold opacity-30">P_COUNT: 06</div>
+                      <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.3em] text-primary">01 // Asset Specifications</h3>
+                      <div className="text-[8px] sm:text-[9px] font-mono font-bold opacity-30">P_COUNT: 06</div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-primary/10 border border-primary/20 rounded-xl overflow-hidden shadow-inner">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-primary/10 border border-primary/20 rounded-xl overflow-hidden shadow-inner">
                       {[
                         { label: "Weight Class", val: selectedListingForQuickView.weight ? `${selectedListingForQuickView.weight}kg` : "SYSTEM_SPEC" },
                         { label: "Inventory", val: `${selectedListingForQuickView.quantity} UNITS` },
@@ -775,29 +813,29 @@ export default function Marketplace() {
                         { label: "Reference", val: selectedListingForQuickView.model || "GENERIC_SPEC" },
                         { label: "Facility Loc.", val: (selectedListingForQuickView.location || "TEESSIDE").toUpperCase() }
                       ].map(item => (
-                        <div key={`qv-spec-${item.label}`} className="bg-background/80 p-5 hover:bg-background/40 transition-colors">
-                          <div className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest mb-1.5">{item.label}</div>
-                          <div className="font-mono text-sm font-black uppercase text-foreground truncate">{item.val}</div>
+                        <div key={`qv-spec-${item.label}`} className="bg-background/80 p-3 sm:p-5 hover:bg-background/40 transition-colors">
+                          <div className="text-[7px] sm:text-[8px] uppercase font-bold text-muted-foreground tracking-widest mb-1 sm:mb-1.5">{item.label}</div>
+                          <div className="font-mono text-xs sm:text-sm font-black uppercase text-foreground truncate">{item.val}</div>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Descriptive Narrative */}
-                  <div className="space-y-6">
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">02 // Operational Review</h3>
-                    <div className="glass p-8 lg:p-10 rounded-2xl border-primary/20 bg-white/[0.02] italic font-serif leading-relaxed text-muted-foreground/90 text-base border-l-4 border-l-primary">
+                  <div className="space-y-4 sm:space-y-6">
+                    <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.3em] text-primary">02 // Operational Review</h3>
+                    <div className="glass p-5 sm:p-8 lg:p-10 rounded-2xl border-primary/20 bg-white/[0.02] italic font-serif leading-relaxed text-muted-foreground/90 text-sm sm:text-base border-l-4 border-l-primary">
                       {selectedListingForQuickView.description || "No narrative evaluation provided for this terminal asset reference."}
                     </div>
                   </div>
                 </div>
 
                 {/* Secure Tactical Footer */}
-                <div className="p-6 lg:p-10 bg-black/10 backdrop-blur-2xl border-t border-primary/10">
-                  <div className="flex flex-col sm:flex-row gap-4">
+                <div className="p-4 sm:p-6 lg:p-10 bg-black/10 backdrop-blur-2xl border-t border-primary/10">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <Button 
                       variant="outline" 
-                      className="flex-1 h-16 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] border-primary/20 hover:border-primary/60 hover:bg-primary/5 transition-all flex items-center justify-center"
+                      className="flex-1 h-14 sm:h-16 rounded-xl font-black uppercase tracking-[0.2em] text-[9px] sm:text-[10px] border-primary/20 hover:border-primary/60 hover:bg-primary/5 transition-all flex items-center justify-center shrink-0"
                       onClick={() => handleStartChat(selectedListingForQuickView)}
                       disabled={isStartingChat}
                     >
