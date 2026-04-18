@@ -22,6 +22,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { 
   ImagePlus, 
   Leaf, 
@@ -137,13 +138,9 @@ export default function EditListing() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newImages: string[] = [];
-    let hasError = false;
-
     (Array.from(files) as File[]).forEach(file => {
       if (file.size > 5000 * 1024) {
         toast.error(`${file.name} is too large. Max 5MB.`);
-        hasError = true;
         return;
       }
 
@@ -154,11 +151,22 @@ export default function EditListing() {
       reader.readAsDataURL(file);
     });
 
-    if (!hasError) toast.success("Images added");
+    toast.success("Images added");
   };
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const setPrimaryImage = (index: number) => {
+    if (index === 0) return;
+    setImages(prev => {
+      const newImages = [...prev];
+      const [primary] = newImages.splice(index, 1);
+      newImages.unshift(primary);
+      return newImages;
+    });
+    toast.success("Primary image updated");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -468,54 +476,74 @@ export default function EditListing() {
 
               <div className="grid gap-2">
                 <div className="flex justify-between items-center">
-                  <Label>Asset Images</Label>
-                  <span className="text-[10px] text-muted-foreground font-medium">{images.length} images added</span>
+                  <Label>Asset Images / Gallery</Label>
+                  <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">{images.length}/8 images</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                   {images.map((img, idx) => (
-                    <div key={`edit-img-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
+                    <div key={`edit-img-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group bg-muted/20">
                       <img src={img} alt={`Asset ${idx}`} className="h-full w-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button 
+                      
+                      {/* Badge for Primary */}
+                      {idx === 0 && (
+                        <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-primary text-[8px] font-black uppercase tracking-widest text-white shadow-lg border border-primary-foreground/20">
+                          Primary Asset
+                        </div>
+                      )}
+
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2 px-4">
+                        <Button 
                           type="button"
+                          variant="destructive"
+                          size="sm"
                           onClick={() => removeImage(idx)}
-                          className="h-8 w-8 rounded-full bg-destructive/80 text-white flex items-center justify-center hover:bg-destructive transition-colors"
+                          className="w-full h-8 rounded-full text-[10px] font-black uppercase tracking-widest"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                        {idx === 0 && (
-                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-primary text-[8px] font-bold uppercase tracking-widest text-white">
-                            Primary
-                          </div>
+                          <Trash2 className="h-3 w-3 mr-2" />
+                          Remove
+                        </Button>
+                        
+                        {idx !== 0 && (
+                          <Button 
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setPrimaryImage(idx)}
+                            className="w-full h-8 rounded-full text-[10px] font-black uppercase tracking-widest bg-white/10 hover:bg-white/20 text-white border-none"
+                          >
+                            Set Primary
+                          </Button>
                         )}
                       </div>
                     </div>
                   ))}
-                  <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors bg-white/5 relative group">
-                    {uploading ? (
-                      <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <>
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors mb-2">
-                          <ImagePlus className="h-5 w-5 text-primary" />
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Add Images</span>
-                        <span className="text-[8px] text-muted-foreground/60 mt-1">Multiple allowed</span>
-                      </>
-                    )}
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept="image/*" 
-                      multiple
-                      onChange={handleImageUpload}
-                      disabled={uploading}
-                    />
-                  </label>
+                  {images.length < 8 && (
+                    <label className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-all duration-300 bg-white/5 hover:bg-white/10 relative group">
+                      {uploading ? (
+                        <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <>
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors mb-2">
+                            <ImagePlus className="h-5 w-5 text-primary" />
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Add Data</span>
+                          <span className="text-[8px] text-muted-foreground/60 mt-1">Multi-upload</span>
+                        </>
+                      )}
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*" 
+                        multiple
+                        onChange={handleImageUpload}
+                        disabled={uploading}
+                      />
+                    </label>
+                  )}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
-                  Max 5MB per image. First image will be used as the primary thumbnail.
+                  Max 5MB per capture. The 'Primary Asset' image will characterize this listing in the marketplace.
                 </p>
               </div>
             </CardContent>

@@ -15,12 +15,15 @@ export default function Auth() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") === "register" ? "register" : "login");
+  const [platformLogo, setPlatformLogo] = useState<string | null>(null);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "platform_settings", "branding"), (docSnap) => {
       if (docSnap.exists()) {
-        setMaintenanceMode(docSnap.data().maintenanceMode || false);
+        const data = docSnap.data();
+        setMaintenanceMode(data.maintenanceMode || false);
+        setPlatformLogo(data.hixLogoUrl || null);
       }
     });
     return () => unsubscribe();
@@ -72,7 +75,6 @@ export default function Auth() {
     
     return message || "An unexpected error occurred. Please try again.";
   };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -116,7 +118,22 @@ export default function Auth() {
   };
 
   return (
-    <div className="container mx-auto flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
+    <div className="container mx-auto flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-12">
+      <div className="mb-12 text-center flex flex-col items-center">
+        {platformLogo ? (
+          <img 
+            src={platformLogo} 
+            alt="Logo" 
+            className="h-24 w-24 rounded-full object-cover border-4 border-primary/30 logo-reflection logo-primary-glow mb-8" 
+          />
+        ) : (
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary font-black text-4xl text-primary-foreground shadow-2xl shadow-primary/30 logo-reflection logo-primary-glow mb-8">
+            H
+          </div>
+        )}
+        <h1 className="text-4xl font-black uppercase tracking-tighter text-primary">Hartlepool Industrial Exchange</h1>
+      </div>
+
       <Card className="w-full max-w-md glass">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Welcome to HiX</CardTitle>

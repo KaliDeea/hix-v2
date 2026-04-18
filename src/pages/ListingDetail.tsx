@@ -499,17 +499,22 @@ export default function ListingDetail() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className={`rounded-full h-11 w-11 glass border-white/10 ${isWishlisted ? 'text-red-500' : 'text-muted-foreground'}`}
+                  className={`rounded-full h-11 w-11 glass border-white/10 transition-all duration-300 ${isWishlisted ? 'text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'text-muted-foreground'} hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]`}
                   onClick={toggleWishlist}
+                  title="Add to Wishlist"
                 >
                   <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
                 </Button>
                 
                 <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="ml-4 text-muted-foreground hover:text-destructive">
-                      <AlertTriangle className="h-4 w-4 mr-1" />
-                      Report
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="ml-2 rounded-full h-11 w-11 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10 shadow-[0_0_10px_rgba(239,68,68,0.2)] hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]" 
+                      title="Report Listing"
+                    >
+                      <AlertTriangle className="h-5 w-5" />
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="glass sm:max-w-[425px]">
@@ -555,125 +560,219 @@ export default function ListingDetail() {
               </div>
             </div>
 
-            <div className="glass rounded-3xl p-8 border-primary/20 shadow-lg">
+            <div className="glass p-10 relative overflow-hidden bg-primary/[0.02] rounded-xl">
+              <div className="absolute top-0 right-0 p-4">
+                 <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold font-sans tracking-tight text-primary">Trading System Active</span>
+                    <div className="glow-indicator glow-green" />
+                 </div>
+              </div>
+
               {listing.listingType === 'auction' ? (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Current Bid</p>
-                      <p className="text-4xl font-bold text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
+                <div className="space-y-10">
+                  <div className="grid grid-cols-2 gap-px bg-primary/10 border border-primary/20">
+                    <div className="p-6 bg-background/40 backdrop-blur-md">
+                      <p className="tech-header p-0 mb-2">Current Bid Floor</p>
+                      <p className="text-4xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground mb-1 flex items-center justify-end gap-1">
-                        <Clock className="h-3 w-3" />
-                        Ends in
-                      </p>
-                      <p className="text-lg font-semibold">
-                        {listing.auctionEndTime ? formatDistanceToNow(new Date(listing.auctionEndTime)) : "2 days"}
-                      </p>
+                    <div className="p-6 bg-background/40 backdrop-blur-md border-l border-primary/20">
+                      <p className="tech-header p-0 mb-2">Timer [UTC]</p>
+                      <div className="flex items-center gap-2 text-lg font-mono font-bold">
+                        <Clock className="h-4 w-4 text-amber-600" />
+                        {listing.auctionEndTime ? formatDistanceToNow(new Date(listing.auctionEndTime)) : "48:02:11"}
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
-                      <Input 
-                        type="number" 
-                        placeholder="Enter amount" 
-                        className="pl-7 rounded-full h-12"
-                        value={bidAmount}
-                        onChange={(e) => setBidAmount(e.target.value)}
-                      />
+                  <div className="flex flex-col gap-4">
+                    {/* Quick Guide */}
+                    <div className="p-4 bg-primary/5 border border-primary/20 space-y-2 mb-2">
+                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                          <Leaf className="h-3 w-3" />
+                          Auction Quick Guide
+                       </div>
+                       <p className="text-[10px] text-muted-foreground leading-relaxed">
+                          1. Enter Bid Amount (above current floor) <br />
+                          2. Review Auction Timer <br />
+                          3. <span className="font-medium text-foreground">PLACE BID</span> to enter the cycle. Top bidder at timer expiration wins the procurement right.
+                       </p>
                     </div>
-                    <Button 
-                      className="rounded-full h-12 px-8" 
-                      onClick={handlePlaceBid} 
-                      disabled={isBidding || platformSettings.maintenanceMode}
-                    >
-                      {isBidding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
-                      {platformSettings.maintenanceMode ? "System Maintenance" : "Bid"}
-                    </Button>
+
+                    <div className="relative group">
+                       <div className="absolute -inset-0.5 bg-primary/20 blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                       <div className="relative flex items-center bg-background/60 border border-primary/30">
+                          <span className="pl-6 pr-4 font-mono text-primary/70">GBP_AMT:</span>
+                          <Input 
+                            type="number" 
+                            placeholder="000,000.00" 
+                            className="bg-transparent border-none h-16 rounded-none focus-visible:ring-0 font-mono text-xl font-black placeholder:text-muted-foreground/50"
+                            value={bidAmount}
+                            onChange={(e) => setBidAmount(e.target.value)}
+                          />
+                       </div>
+                    </div>
+                    <motion.div whileHover={{ scale: 1.02, translateY: -4 }} whileTap={{ scale: 0.98 }}>
+                      <Button 
+                        className="rounded-2xl h-16 w-full text-xs font-black uppercase tracking-[0.3em] bg-primary text-primary-foreground hover:shadow-[0_0_30px_var(--primary)] transition-all shadow-[0_0_20px_var(--primary)] border-none" 
+                        onClick={handlePlaceBid} 
+                        disabled={isBidding || platformSettings.maintenanceMode}
+                      >
+                        {isBidding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gavel className="mr-3 h-4 w-4" />}
+                        PLACE BID
+                      </Button>
+                    </motion.div>
                   </div>
                 </div>
               ) : (
-                <>
-                  <div className="flex items-end justify-between mb-6">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Price per unit</p>
-                      <p className="text-4xl font-bold text-primary">£{listing.price.toLocaleString()}</p>
+                <div className="space-y-10">
+                  <div className="grid grid-cols-2 gap-px bg-primary/10 border border-primary/20">
+                    <div className="p-6 bg-background/40 backdrop-blur-md">
+                      <p className="tech-header p-0 mb-2">Unit Valuation</p>
+                      <p className="text-4xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground mb-1">Available</p>
-                      <p className="text-xl font-semibold">{listing.quantity} units</p>
+                    <div className="p-6 bg-background/40 backdrop-blur-md border-l border-primary/20">
+                      <p className="tech-header p-0 mb-2">Buffer Stock</p>
+                      <p className="text-xl font-mono font-bold">{listing.quantity} UNITS</p>
                     </div>
                   </div>
 
-                  <div className="mb-6 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="quantity" className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Quantity</Label>
-                      <span className="text-xs font-medium text-primary">Total: £{(listing.price * quantity).toLocaleString()}</span>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <Label className="tech-header p-0">Select Quantity</Label>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center border border-primary/30 h-16 bg-background/60 overflow-hidden group">
                       <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-10 w-10 rounded-xl glass border-white/10"
+                        variant="ghost" 
+                        className="h-full rounded-none px-6 border-r border-primary/20 hover:bg-primary/10"
                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
                         disabled={quantity <= 1}
                       >
-                        -
+                        <span className="text-xl">-</span>
                       </Button>
                       <Input 
                         id="quantity"
                         type="number" 
-                        min="1" 
-                        max={listing.quantity}
+                        className="h-full text-center font-black font-mono text-xl bg-transparent border-none focus-visible:ring-0 rounded-none w-full"
                         value={quantity}
                         onChange={(e) => setQuantity(Math.min(listing.quantity || 1, Math.max(1, parseInt(e.target.value) || 1)))}
-                        className="h-10 text-center font-bold glass border-white/10 rounded-xl"
                       />
                       <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-10 w-10 rounded-xl glass border-white/10"
+                        variant="ghost" 
+                        className="h-full rounded-none px-6 border-l border-primary/20 hover:bg-primary/10"
                         onClick={() => setQuantity(Math.min(listing.quantity || 1, quantity + 1))}
                         disabled={quantity >= (listing.quantity || 1)}
                       >
-                        +
+                        <span className="text-xl">+</span>
                       </Button>
+                    </div>
+                    <div className="flex justify-between items-center px-1">
+                       <span className="text-[10px] font-mono opacity-70 lowercase italic">Total Commitment [ex. vat]</span>
+                       <span className="text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
                     </div>
                   </div>
 
-                  <Button 
-                    size="lg" 
-                    className="w-full rounded-full h-14 text-lg shadow-md shadow-primary/10" 
-                    onClick={handleBuy}
-                    disabled={platformSettings.maintenanceMode}
-                  >
-                    <ShoppingCart className="mr-2 h-5 w-5" />
-                    {platformSettings.maintenanceMode ? "System Maintenance" : `Buy ${quantity} Now`}
-                  </Button>
-                </>
+                  <div className="flex flex-col gap-4">
+                     {/* Quick Guide */}
+                     <div className="p-4 bg-primary/5 border border-primary/20 space-y-2 mb-2">
+                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                         <Leaf className="h-3 w-3" />
+                         Trading Quick Guide
+                       </div>
+                       <p className="text-[10px] text-muted-foreground leading-relaxed">
+                         1. Select Required Quantity <br />
+                         2. Review Total Commitment <br />
+                         3. Choose Action: Instantly <span className="font-medium text-foreground">BUY</span>, <span className="font-medium text-foreground">Message</span> for inquiry, or submit a <span className="font-medium text-foreground">Counter Offer</span>.
+                       </p>
+                     </div>
+
+                     <motion.div
+                       whileHover={{ scale: 1.02, translateY: -4 }}
+                       whileTap={{ scale: 0.98 }}
+                       className="w-full"
+                     >
+                       <Button 
+                          size="lg" 
+                          className="w-full rounded-2xl h-20 text-[11px] font-black uppercase tracking-[0.4em] bg-primary text-primary-foreground shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:shadow-[0_0_40px_rgba(var(--primary),0.5)] transition-all border-none" 
+                          onClick={handleBuy}
+                          disabled={platformSettings.maintenanceMode}
+                        >
+                          <ShoppingCart className="mr-4 h-5 w-5" />
+                          BUY
+                        </Button>
+                     </motion.div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <motion.div whileHover={{ scale: 1.05, translateY: -2 }} whileTap={{ scale: 0.95 }}>
+                           <Button 
+                              variant="outline" 
+                              className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+                              onClick={handleMessageSeller}
+                           >
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Message Seller
+                           </Button>
+                        </motion.div>
+                        <Dialog>
+                           <DialogTrigger asChild>
+                              <motion.div whileHover={{ scale: 1.05, translateY: -2 }} whileTap={{ scale: 0.95 }}>
+                                 <Button 
+                                    variant="outline" 
+                                    className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+                                 >
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Counter Offer
+                                 </Button>
+                              </motion.div>
+                           </DialogTrigger>
+                           <DialogContent className="glass border-primary/40 rounded-none sm:max-w-md p-10">
+                              <DialogHeader className="mb-8">
+                                 <div className="flex items-center gap-3 mb-2">
+                                    <div className="glow-indicator glow-amber" />
+                                    <span className="text-[10px] font-mono tracking-widest uppercase opacity-80">Offer_Terminal_v1</span>
+                                 </div>
+                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic font-serif text-primary">Submit Counter-Offer</DialogTitle>
+                                 <DialogDescription className="font-mono text-xs opacity-70 uppercase mt-2">
+                                    Offers below 85% of valuation are statistically less likely to resolve.
+                                 </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-6">
+                                 <div className="space-y-2">
+                                    <Label className="tech-header p-0">Proposed Unit Value</Label>
+                                    <div className="flex items-center bg-background/40 border border-primary/20 h-14">
+                                       <span className="px-4 font-mono text-primary/70">£</span>
+                                       <Input className="bg-transparent border-none rounded-none font-mono font-bold" placeholder="0.00" />
+                                    </div>
+                                 </div>
+                                 <div className="space-y-2">
+                                    <Label className="tech-header p-0">Tactical Reasoning</Label>
+                                    <Textarea className="bg-background/40 border-primary/20 rounded-none h-24 font-mono text-xs resize-none" placeholder="Provide justification for deviation from valuation..." />
+                                 </div>
+                              </div>
+                              <DialogFooter className="mt-8">
+                                 <Button className="w-full rounded-none h-14 bg-primary text-primary-foreground font-black tracking-widest text-[10px] uppercase border-none">
+                                    Submit Offer
+                                 </Button>
+                              </DialogFooter>
+                           </DialogContent>
+                        </Dialog>
+                      </div>
+                  </div>
+                </div>
               )}
               
-              <div className="mt-4 flex flex-col gap-3">
-                <Button variant="outline" className="rounded-2xl h-12 w-full border-white/10 hover:bg-white/5" onClick={handleMessageSeller} disabled={isStartingChat}>
-                  {isStartingChat ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MessageSquare className="mr-2 h-4 w-4" />}
-                  Message Seller
-                </Button>
-                <Button variant="outline" className="rounded-2xl h-12 w-full border-white/10 hover:bg-white/5" onClick={handleRequestDocs}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Request Docs
-                </Button>
+              <div className="mt-8 pt-6 border-t border-primary/10 flex items-center justify-between">
+                 <div className="flex flex-col">
+                    <span className="text-[8px] font-black uppercase tracking-widest opacity-80">Settlement Ledger</span>
+                    <span className="text-[10px] font-mono opacity-90">Stripe Connect Protocol</span>
+                 </div>
+                 <Badge variant="outline" className="rounded-none border-primary/30 text-primary text-[8px] font-black uppercase tracking-widest px-3 h-6">
+                    Verified_Transaction
+                 </Badge>
               </div>
-              
-              <p className="text-center text-[10px] text-muted-foreground mt-4">
-                Secure transaction via Stripe Connect. {platformSettings.buyerCommission}% buyer commission applies.
-              </p>
             </div>
 
             <div className="flex flex-col gap-4">
-              <Card className="glass border-white/5 hover:border-primary/20 transition-colors">
+              <Card className="glass border-border hover:border-primary/20 transition-colors">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Truck className="h-4 w-4 text-blue-500" />
@@ -683,7 +782,7 @@ export default function ListingDetail() {
                 <CardContent className="p-4 pt-0 space-y-3">
                   <div className="flex flex-wrap gap-2">
                     {listing.shippingOptions?.map((opt, idx) => (
-                      <Badge key={`${opt}-${idx}`} variant="secondary" className="bg-white/5 text-[10px] capitalize">
+                      <Badge key={`${opt}-${idx}`} variant="secondary" className="bg-muted text-[10px] capitalize">
                         {opt.replace('-', ' ')}
                       </Badge>
                     ))}
@@ -704,7 +803,7 @@ export default function ListingDetail() {
                   </Button>
                 </CardContent>
               </Card>
-              <Card className="glass border-white/5 hover:border-primary/20 transition-colors">
+              <Card className="glass border-border hover:border-primary/20 transition-colors">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 text-amber-500" />
@@ -802,26 +901,79 @@ export default function ListingDetail() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
                         <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 20)}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase">Trees/Year</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Trees/Yr</p>
                       </div>
                       <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
                         <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 0.4).toLocaleString()}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase">Car Miles</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Car Miles</p>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 flex-1 bg-primary/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary w-[85%]" />
-                      </div>
-                      <span className="text-xs font-medium text-primary">85% Lower Footprint</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      Choosing this circular asset instead of buying new prevents significant carbon emissions associated with manufacturing and raw material extraction.
-                    </p>
+                     <div className="flex items-center justify-between mb-2">
+                         <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Circular Economy Efficiency</span>
+                         <span className="text-xs font-bold text-primary">85% Reduced Footprint</span>
+                     </div>
+                     <div className="h-3 w-full bg-muted border border-border p-[2px]">
+                         <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: "85%" }}
+                            transition={{ duration: 1.5, ease: "circOut" }}
+                            className="h-full bg-primary shadow-[0_0_10px_var(--primary)]" 
+                         />
+                     </div>
+                     <p className="text-xs text-muted-foreground leading-relaxed font-light italic">
+                        Selecting this industrial asset prevents the high-intensity manufacturing emissions related to new machinery production.
+                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Visual Asset Timeline - Recipe 1/3 Style */}
+            <div className="glass p-10 rounded-3xl border border-border bg-muted/20 overflow-hidden relative">
+              <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-4">
+                   <div className="h-10 w-10 bg-primary/20 flex items-center justify-center border border-primary/40 rounded-none">
+                      <Clock className="h-5 w-5 text-primary" />
+                   </div>
+                   <div className="flex flex-col">
+                      <h2 className="text-xl font-black uppercase tracking-tighter">Asset Lifecycle Ledger</h2>
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Chronological Verification History</span>
+                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                   <div className="glow-indicator glow-green animate-pulse" />
+                   <span className="text-[8px] font-bold uppercase tracking-widest text-primary">Traceability Active</span>
+                </div>
+              </div>
+
+              <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[1.25rem] before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary/40 before:via-white/5 before:to-transparent">
+                {[
+                  { date: "MAR 2026", event: "Industrial Health Audit", desc: "Passed internal maintenance sweep. New hydraulic seals installed.", status: "Verified", icon: <ShieldCheck className="h-3 w-3" /> },
+                  { date: "JAN 2026", event: "Safety Certification", desc: "BS EN ISO 12100:2010 compliance renewed for 12 months.", status: "Active", icon: <FileText className="h-3 w-3" /> },
+                  { date: "SEP 2025", event: "Ownership Transfer", desc: "Relocated from Teesport Terminal 4 to current staging facility.", status: "Logged", icon: <Truck className="h-3 w-3" /> },
+                  { date: "MAY 2025", event: "Asset Commissioning", desc: "Initial entry into regional industrial directory.", status: "Genesis", icon: <Send className="h-3 w-3" /> }
+                ].map((item, i) => (
+                  <div key={i} className="relative flex items-center justify-between group">
+                    <div className="flex items-center w-full">
+                      <div className="absolute left-0 mt-0.5 h-6 w-6 flex items-center justify-center rounded-none bg-black border border-primary/50 group-hover:scale-125 transition-transform z-10">
+                        <div className="h-2 w-2 bg-primary shadow-[0_0_8px_var(--primary)]" />
+                      </div>
+                      <div className="ml-12 w-full">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-mono font-black text-primary/60">{item.date}</span>
+                          <Badge variant="outline" className="text-[8px] h-4 border-white/10 uppercase tracking-widest font-bold rounded-none">
+                             {item.icon}
+                             <span className="ml-1">{item.status}</span>
+                          </Badge>
+                        </div>
+                        <h4 className="text-sm font-bold uppercase tracking-tight">{item.event}</h4>
+                        <p className="text-xs text-muted-foreground font-light mt-1">{item.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

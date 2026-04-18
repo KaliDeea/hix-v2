@@ -136,11 +136,11 @@ export default function Messages() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 h-full">
         {/* Chat List */}
         <Card className="md:col-span-4 glass overflow-hidden flex flex-col h-full">
-          <div className="p-4 border-b border-white/5">
+          <div className="p-4 border-b border-border">
             <h2 className="text-xl font-bold mb-4">Messages</h2>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search chats..." className="pl-10 rounded-full" />
+              <Input placeholder="Search chats..." className="pl-10 rounded-full bg-muted/20 border-border" />
             </div>
           </div>
           <ScrollArea className="flex-1">
@@ -169,23 +169,23 @@ export default function Messages() {
                       key={`chat-item-${chat.id}`}
                       onClick={() => setSelectedChat(chat)}
                       className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all relative ${
-                        isSelected ? "bg-primary/20 border border-primary/20" : "hover:bg-white/5 border border-transparent"
+                        isSelected ? "bg-primary/20 border border-primary/20" : "hover:bg-muted/20 border border-transparent"
                       }`}
                     >
-                      <Avatar className="h-12 w-12 border border-white/10">
+                      <Avatar className="h-12 w-12 border border-border">
                         <AvatarImage src={otherLogo} />
                         <AvatarFallback><Building2 className="h-6 w-6" /></AvatarFallback>
                       </Avatar>
                       <div className="flex-1 text-left overflow-hidden">
                         <div className="flex justify-between items-start">
-                          <span className={`font-semibold truncate ${isUnread ? "text-primary" : ""}`}>{otherName}</span>
+                          <span className={`font-semibold truncate ${isUnread ? "text-primary" : "text-foreground"}`}>{otherName}</span>
                           {chat.lastMessageTime && (
                             <span className={`text-[10px] ${isUnread ? "text-primary font-bold" : "text-muted-foreground"}`}>
                               {format(chat.lastMessageTime.toDate ? chat.lastMessageTime.toDate() : new Date(chat.lastMessageTime), "HH:mm")}
                             </span>
                           )}
                         </div>
-                        <p className={`text-xs truncate ${isUnread ? "text-white font-medium" : "text-muted-foreground"}`}>
+                        <p className={`text-xs truncate ${isUnread ? "text-foreground font-bold" : "text-muted-foreground font-medium"}`}>
                           {chat.lastMessage || "No messages yet"}
                         </p>
                       </div>
@@ -205,18 +205,18 @@ export default function Messages() {
           {selectedChat ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-white/5 flex items-center gap-3 bg-white/5">
-                <Avatar className="h-10 w-10 border border-white/10">
+              <div className="p-4 border-b border-border flex items-center gap-3 bg-muted/10">
+                <Avatar className="h-10 w-10 border border-border">
                   <AvatarImage src={selectedChat.participantLogos[selectedChat.participants.find(p => p !== user.uid) || ""]} />
                   <AvatarFallback><Building2 className="h-5 w-5" /></AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-bold">
+                  <h3 className="font-bold text-foreground">
                     {selectedChat.participantNames[selectedChat.participants.find(p => p !== user.uid) || ""]}
                   </h3>
-                  <p className="text-[10px] text-primary flex items-center gap-1">
+                  <p className="text-[10px] text-primary flex items-center gap-1 font-bold">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></span>
-                    Online
+                    ONLINE
                   </p>
                 </div>
               </div>
@@ -236,11 +236,11 @@ export default function Messages() {
                       className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                     >
                       <div className={`max-w-[70%] p-3 rounded-2xl ${
-                        isMe ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-white/10 rounded-tl-none"
+                        isMe ? "bg-primary text-primary-foreground rounded-tr-none shadow-md shadow-primary/10" : "bg-muted/20 border border-border rounded-tl-none"
                       }`}>
-                        <p className="text-sm">{msg.text}</p>
-                        <div className={`text-[9px] mt-1 ${isMe ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                          {msg.createdAt ? format(msg.createdAt.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt), "HH:mm") : "Sending..."}
+                        <p className="text-sm font-medium">{msg.text}</p>
+                        <div className={`text-[9px] mt-1 font-bold ${isMe ? "text-primary-foreground/70" : "text-muted-foreground/80"}`}>
+                          {msg.createdAt ? format(msg.createdAt.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt), "HH:mm") : "SENDING..."}
                         </div>
                       </div>
                     </motion.div>
@@ -249,14 +249,14 @@ export default function Messages() {
               </div>
 
               {/* Input Area */}
-              <div className="p-4 border-t border-white/5 bg-white/5">
+              <div className="p-4 border-t border-border bg-muted/10">
                 <form onSubmit={handleSendMessage} className="flex gap-2">
                   <Button type="button" variant="ghost" size="icon" className="rounded-full">
                     <ImageIcon className="h-5 w-5" />
                   </Button>
                   <Input 
                     placeholder="Type a message..." 
-                    className="rounded-full bg-white/5 border-white/10"
+                    className="rounded-full bg-background border-border"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                   />
@@ -268,11 +268,11 @@ export default function Messages() {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
-              <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+              <div className="h-16 w-16 rounded-full bg-muted/10 flex items-center justify-center mb-4">
                 <Send className="h-8 w-8 opacity-20" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Your Conversations</h3>
-              <p className="max-w-xs text-sm">Select a chat from the left to start messaging with other members of the exchange.</p>
+              <h3 className="text-lg font-bold text-foreground uppercase tracking-tighter">Your Conversations</h3>
+              <p className="max-w-xs text-sm font-medium">Select a chat from the left to start messaging with other members of the exchange.</p>
             </div>
           )}
         </Card>

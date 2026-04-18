@@ -1,119 +1,200 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "motion/react";
 import { ArrowRight, Leaf, ShieldCheck, Zap, Globe } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/firebase";
 
+const MotionButton = motion(Button);
+
 export default function Home() {
-  const { login } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-24 md:py-32">
-        <div className="container relative z-10 mx-auto px-4">
-          <div className="mx-auto max-w-3xl text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6">
-                The Future of Industrial B2B
+    <div className="flex flex-col min-h-[calc(100vh-5rem)] page-transition bg-background text-foreground">
+      {/* Hero Section - Recipe 10.1 B2B SaaS Split & Recipe 11 Giant Typography */}
+      <section className="relative flex-1 flex flex-col lg:flex-row overflow-hidden min-h-[85vh]">
+        {/* Left Panel: High Impact Typography */}
+        <div className="flex-1 flex flex-col justify-center p-8 md:p-20 z-10 border-r border-border relative">
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+          
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "circOut" }}
+            className="max-w-4xl"
+          >
+            <div className="flex items-center gap-4 mb-8">
+              <div className="h-[2px] w-16 bg-primary" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary">
+                Industrial Exchange Protocol v4.0
               </span>
-              <h1 className="mb-6 text-5xl font-bold tracking-tight md:text-7xl">
-                Trade Industrial Assets, <span className="text-primary">Save the Planet.</span>
-              </h1>
-              <p className="mb-10 text-lg text-muted-foreground md:text-xl">
-                Hartlepool Industrial Exchange (HiX) connects businesses across the UK for secure, efficient, and sustainable industrial transactions.
+            </div>
+            
+            <h1 className="giant-header mb-12 text-foreground">
+              INDUSTRIAL <br />
+              <span className="text-primary italic font-serif">LIQUIDITY</span> <br />
+              DEFINED.
+            </h1>
+            
+            <p className="max-w-xl text-lg text-muted-foreground leading-relaxed font-mono uppercase text-xs tracking-wider mb-12">
+              Transform surplus machinery into active working capital. <br />
+              The premium marketplace for Net-Zero industrial procurement.
+            </p>
+
+            <div className="flex flex-wrap gap-6 pt-4">
+              <MotionButton 
+                size="lg" 
+                whileHover={{ scale: 1.05 }} 
+                whileTap={{ scale: 0.95 }}
+                className="rounded-full px-12 h-16 text-[10px] font-bold uppercase tracking-[0.2em] bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-shadow hover:shadow-primary/40 border-none"
+                onClick={() => navigate(user ? "/dashboard" : "/auth?tab=register")}
+              >
+                {user ? "Go to Dashboard" : "Sign Up"}
+                <ArrowRight className="ml-4 h-4 w-4" />
+              </MotionButton>
+              
+              <MotionButton 
+                size="lg" 
+                variant="outline" 
+                whileHover={{ scale: 1.05 }} 
+                whileTap={{ scale: 0.95 }}
+                className="rounded-full px-12 h-16 text-[10px] font-bold uppercase tracking-[0.2em] border-border hover:border-primary hover:bg-primary/5 transition-colors"
+                onClick={() => navigate("/marketplace")}
+              >
+                Marketplace
+              </MotionButton>
+            </div>
+          </motion.div>
+
+          {/* Background Decorative Element */}
+          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-primary/10 blur-[120px] rounded-full" />
+        </div>
+
+        {/* Right Panel: Industrial Precision Imagery */}
+        <div className="flex-1 relative bg-muted/10 overflow-hidden group">
+          <motion.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="h-full w-full"
+          >
+            <img 
+              src="https://images.unsplash.com/photo-1513828742140-ccaa28f3eda0?auto=format&fit=crop&q=80&w=2070" 
+              alt="Industrial Precision"
+              className="w-full h-full object-cover brightness-75 grayscale contrast-125 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-[2s] ease-in-out"
+              referrerPolicy="no-referrer"
+            />
+            {/* Overlay Grid lines */}
+            <div className="absolute inset-0 bg-[linear-gradient(var(--border)_1px,transparent_1px),linear-gradient(90deg,var(--border)_1px,transparent_1px)] bg-[size:40px_40px] opacity-10 pointer-events-none" />
+            
+            {/* Interactive Badge */}
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1, duration: 0.8 }}
+              className="absolute bottom-20 right-0 glass border-primary/30 p-10 max-w-sm rounded-none border-r-0"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-4 w-4 rounded-none bg-primary animate-pulse shadow-[0_0_8px_var(--primary)]" />
+                <span className="font-mono text-[10px] uppercase font-black tracking-widest text-primary">Live Buffer Activity</span>
+              </div>
+              <p className="font-serif italic text-2xl mb-4 leading-tight whitespace-pre-line text-foreground">
+                "Every trade synchronizes your balance sheet with the planet."
               </p>
-              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button size="lg" className="rounded-full px-8 text-lg shadow-md shadow-primary/10" asChild>
-                  <Link to="/auth?tab=register">
-                    Register Your Business
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="rounded-full px-8 text-lg" asChild>
-                  <Link to="/marketplace">Browse Marketplace</Link>
-                </Button>
+              <div className="flex items-center gap-2 text-muted-foreground text-[10px] uppercase font-mono tracking-widest">
+                <Leaf className="h-3 w-3" />
+                12,402kg Offset Recorded Today
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         </div>
-        
-        {/* Background Elements */}
-        <div className="absolute top-0 left-1/2 -z-10 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute bottom-0 right-0 -z-10 h-[400px] w-[400px] rounded-full bg-orange-500/10 blur-[100px]" />
       </section>
 
-      {/* Features Grid */}
-      <section className="bg-muted/30 py-24">
-        <div className="container mx-auto px-4">
-          <div className="mb-16 text-center">
-            <h2 className="mb-4 text-3xl font-bold md:text-4xl">Why Choose HiX?</h2>
-            <p className="text-muted-foreground">Built for reliability, security, and sustainability.</p>
-          </div>
-          
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats - Card Based Approach */}
+      <section className="py-24 bg-background relative overflow-hidden">
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              {
-                icon: <ShieldCheck className="h-8 w-8 text-primary" />,
-                title: "Vetted Companies",
-                desc: "Every business on HiX is manually verified for VAT and legitimacy."
-              },
-              {
-                icon: <Leaf className="h-8 w-8 text-orange-500" />,
-                title: "Sustainability First",
-                desc: "Track CO2 savings for every transaction and receive ESG certificates."
-              },
-              {
-                icon: <Zap className="h-8 w-8 text-amber-500" />,
-                title: "Stripe Connect",
-                desc: "Secure B2B payments with automated commission handling."
-              },
-              {
-                icon: <Globe className="h-8 w-8 text-blue-500" />,
-                title: "Global Reach",
-                desc: "Connect Hartlepool businesses with buyers across the UK."
-              }
-            ].map((feature, i) => (
-              <motion.div
-                key={`home-feature-${feature.title}`}
+              { label: "Assets Traded", val: "8.4k", icon: <Zap className="h-5 w-5" /> },
+              { label: "CO2 Offset", val: "1.2M", unit: "kg", icon: <Leaf className="h-5 w-5" /> },
+              { label: "Vetted Firms", val: "500+", icon: <ShieldCheck className="h-5 w-5" /> },
+              { label: "Industrial Liquidity", val: "£4.5M", icon: <Globe className="h-5 w-5" /> }
+            ].map((stat, i) => (
+              <motion.div 
+                key={stat.label}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
                 viewport={{ once: true }}
-                className="glass rounded-2xl p-8"
+                transition={{ delay: i * 0.1 }}
+                className="glass p-8 rounded-[2rem] border-primary/20 hover:border-primary/50 transition-all group hover:shadow-2xl hover:shadow-primary/10 bg-white/50 dark:bg-white/5"
               >
-                <div className="mb-4">{feature.icon}</div>
-                <h3 className="mb-2 text-xl font-semibold">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                <div className="mb-6 h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                  {stat.icon}
+                </div>
+                <div className="space-y-1">
+                  <div className="text-4xl font-black font-display tracking-tighter text-foreground">
+                    {stat.val}<span className="text-lg opacity-40 ml-1">{stat.unit || ""}</span>
+                  </div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary opacity-80">
+                    {stat.label}
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
         </div>
+        {/* Decorative subtle glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[300px] bg-primary/5 blur-[120px] rounded-full pointer-events-none" />
       </section>
 
-      {/* Stats Section */}
-      <section className="py-24">
+      {/* Industry Pillars */}
+      <section className="py-32 bg-background border-t border-border">
         <div className="container mx-auto px-4">
-          <div className="glass-dark rounded-3xl p-12 md:p-20 text-center relative overflow-hidden">
-            <div className="relative z-10 grid gap-12 md:grid-cols-3">
-              <div>
-                <div className="text-4xl font-bold text-primary md:text-6xl">500+</div>
-                <div className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">Verified Businesses</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold text-primary md:text-6xl">1.2M</div>
-                <div className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">kg CO2 Saved</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold text-primary md:text-6xl">£4.5M</div>
-                <div className="mt-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">Trade Volume</div>
-              </div>
+          <div className="grid lg:grid-cols-3 gap-16">
+            <div className="space-y-6">
+              <h2 className="text-4xl font-bold tracking-tight font-display">The HiX <br /> <span className="text-primary">Ecosystem</span></h2>
+              <p className="text-muted-foreground leading-relaxed">We provide the technical infrastructure for circular industrial procurement.</p>
+              <Button variant="link" className="p-0 text-primary h-auto group text-xs uppercase font-bold tracking-widest">
+                Learn about our vetting protocol 
+                <ArrowRight className="ml-2 h-3 w-3 transition-transform group-hover:translate-x-2" />
+              </Button>
             </div>
-            <div className="absolute top-0 left-0 h-full w-full hix-gradient -z-10" />
+            
+            <div className="lg:col-span-2 grid md:grid-cols-2 gap-8">
+              {[
+                {
+                  icon: <ShieldCheck className="h-6 w-6" />,
+                  title: "KYB Compliance",
+                  desc: "Every participants undergoes rigorous manual vetting ensuring only legitimate industrial operators access the exchange."
+                },
+                {
+                  icon: <Zap className="h-6 w-6" />,
+                  title: "Instant Settlement",
+                  desc: "Integrated Stripe Connect workflows for instant, secure financial routing across complex industrial supply chains."
+                },
+                {
+                  icon: <Leaf className="h-6 w-6" />,
+                  title: "ESG Reporting",
+                  desc: "Automated data generation for Scope 3 emissions reporting, verified through the HiX sustainability engine."
+                },
+                {
+                  icon: <Globe className="h-6 w-6" />,
+                  title: "Regional Network",
+                  desc: "Connecting the Tees Valley industrial cluster with buyers across the UK to minimize haulage emissions."
+                }
+              ].map((item, i) => (
+                <div key={item.title} className="p-8 border border-border bg-muted/10 rounded-3xl hover:border-primary/50 transition-colors">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                    {item.icon}
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

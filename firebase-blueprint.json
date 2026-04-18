@@ -148,6 +148,24 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["chatId", "senderId", "text", "createdAt"]
+    },
+    "AssetRequest": {
+      "title": "Asset Request",
+      "description": "Specific project requirements posted by buyers for AI matching.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "companyName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "specifications": { "type": "object", "description": "Technical requirements like weight, voltage, dimensions" },
+        "budget": { "type": "number" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "matched", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "description", "status"]
     }
   },
   "firestore": {
@@ -182,6 +200,10 @@
     "/reports/{reportId}": {
       "schema": "Report",
       "description": "User reports"
+    },
+    "/asset_requests/{requestId}": {
+      "schema": "AssetRequest",
+      "description": "Buyer asset requests"
     }
   }
 }

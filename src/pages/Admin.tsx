@@ -543,9 +543,18 @@ export default function Admin() {
   const [selectedUserForSuspension, setSelectedUserForSuspension] = useState<UserProfile | null>(null);
   const [isUserDeleteDialogOpen, setIsUserDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [reportReasonFilter, setReportReasonFilter] = useState("all");
   const [showESGCertModal, setShowESGCertModal] = useState(false);
   const [selectedUserForCert, setSelectedUserForCert] = useState<UserProfile | null>(null);
+  const [editedVatNumber, setEditedVatNumber] = useState("");
+  const [isUpdatingVat, setIsUpdatingVat] = useState(false);
+
+  useEffect(() => {
+    if (selectedUserForVetting) {
+      setEditedVatNumber(selectedUserForVetting.vatNumber || "");
+    }
+  }, [selectedUserForVetting]);
 
   // Transactions Tab State
   const [transactionSearch, setTransactionSearch] = useState("");
@@ -929,6 +938,27 @@ export default function Admin() {
     }
   };
 
+  const handleUpdateUserVat = async (userId: string, newVat: string) => {
+    setIsUpdatingVat(true);
+    const targetUser = users.find(u => u.uid === userId);
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        vatNumber: newVat
+      });
+      await createAuditLog("UPDATE_VAT", `Updated VAT Number to ${newVat}`, userId, 'user', targetUser?.companyName, targetUser?.email);
+      toast.success("VAT number updated successfully");
+      
+      // Update selected user info in modal if matches
+      if (selectedUserForVetting?.uid === userId) {
+        setSelectedUserForVetting(prev => prev ? { ...prev, vatNumber: newVat } : null);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    } finally {
+      setIsUpdatingVat(false);
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     if (userId === user?.uid) {
       toast.error("You cannot delete your own account from the admin panel.");
@@ -943,6 +973,7 @@ export default function Admin() {
       toast.success("User deleted successfully");
       setIsUserDeleteDialogOpen(false);
       setUserToDelete(null);
+      setDeleteConfirmationText("");
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
     }
@@ -1144,6 +1175,7 @@ export default function Admin() {
         u.companyName?.toLowerCase().includes(searchLower) || 
         u.email?.toLowerCase().includes(searchLower) ||
         u.vatNumber?.toLowerCase().includes(searchLower) ||
+        u.phoneNumber?.toLowerCase().includes(searchLower) ||
         u.uid?.toLowerCase().includes(searchLower) ||
         u.role?.toLowerCase().includes(searchLower);
       
@@ -1678,7 +1710,7 @@ export default function Admin() {
                       <div className="relative group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input 
-                          placeholder="Search companies..." 
+                          placeholder="Search by name, email or VAT..." 
                           className="pl-9 pr-9 w-full sm:w-[250px] rounded-xl glass border-primary/20 focus:ring-primary/50"
                           value={userSearch}
                           onChange={(e) => setUserSearch(e.target.value)}
@@ -1717,6 +1749,18 @@ export default function Admin() {
                           <TableHead className="cursor-pointer hover:text-primary transition-colors pl-6" onClick={() => sortUsers('companyName')}>
                             <div className="flex items-center gap-1">
                               Company
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:text-primary transition-colors text-xs" onClick={() => sortUsers('vatNumber')}>
+                            <div className="flex items-center gap-1">
+                              VAT Number
+                              <ArrowUpDown className="h-3 w-3" />
+                            </div>
+                          </TableHead>
+                          <TableHead className="cursor-pointer hover:text-primary transition-colors text-xs" onClick={() => sortUsers('phoneNumber')}>
+                            <div className="flex items-center gap-1">
+                              Phone
                               <ArrowUpDown className="h-3 w-3" />
                             </div>
                           </TableHead>
@@ -1775,6 +1819,12 @@ export default function Admin() {
                               <TableCell className="pl-6">
                                 <div className="font-bold text-foreground">{u.companyName}</div>
                                 <div className="text-xs text-muted-foreground">{u.email}</div>
+                              </TableCell>
+                              <TableCell className="text-xs font-mono">
+                                {u.vatNumber || <span className="text-muted-foreground italic opacity-50">Not Provided</span>}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                {u.phoneNumber || <span className="text-muted-foreground italic opacity-50">N/A</span>}
                               </TableCell>
                               <TableCell>
                                 {u.isVatVerified ? (
@@ -1881,6 +1931,7 @@ export default function Admin() {
                                   {canDelete && (
                                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-destructive hover:bg-destructive/10" onClick={() => {
                                       setUserToDelete(u);
+                                      setDeleteConfirmationText("");
                                       setIsUserDeleteDialogOpen(true);
                                     }}>
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -2849,23 +2900,31 @@ export default function Admin() {
                       </div>
                       <div className="grid gap-4">
                         <label className="text-sm font-bold uppercase tracking-widest text-muted-foreground/70">Platform Logo</label>
-                        <div className="flex items-center gap-6 p-6 rounded-3xl bg-white/5 border border-white/10 group">
-                          <div className="h-20 w-40 rounded-2xl bg-muted/30 flex items-center justify-center overflow-hidden border border-primary/20 shadow-inner group-hover:border-primary/50 transition-colors">
-                            {platformSettings.hixLogoUrl ? (
-                              <img src={platformSettings.hixLogoUrl} alt="Logo" className="h-full w-full object-contain p-4" />
-                            ) : (
-                              <div className="flex flex-col items-center gap-1 opacity-30">
-                                <Upload className="h-6 w-6" />
-                                <span className="text-[10px] font-bold uppercase">No Logo</span>
-                              </div>
-                            )}
+                        <div className="flex items-center gap-8 p-8 rounded-3xl bg-white/5 border border-white/10 group overflow-hidden relative">
+                          <div className="flex flex-col items-center gap-6">
+                            <label className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Live Preview</label>
+                            <div className="h-24 w-24 rounded-full bg-muted/30 flex items-center justify-center overflow-visible border border-primary/20 shadow-inner group-hover:border-primary/50 transition-colors">
+                              {platformSettings.hixLogoUrl ? (
+                                <img src={platformSettings.hixLogoUrl} alt="Logo" className="h-full w-full rounded-full object-cover logo-reflection logo-primary-glow" />
+                              ) : (
+                                <div className="flex flex-col items-center gap-1 opacity-30">
+                                  <Upload className="h-6 w-6" />
+                                  <span className="text-[10px] font-bold uppercase">No Logo</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <Button variant="outline" size="sm" asChild className="rounded-xl font-bold uppercase tracking-widest text-[10px] h-10 px-6">
-                            <label className="cursor-pointer">
-                              Update Logo
-                              <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                            </label>
-                          </Button>
+                          <div className="flex-1 space-y-4">
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              Upload a high-resolution circular logo. It will be displayed at the top of every page with a mirror reflection effect.
+                            </p>
+                            <Button variant="outline" size="sm" asChild className="rounded-xl font-bold uppercase tracking-widest text-[10px] h-10 px-6 w-full">
+                              <label className="cursor-pointer">
+                                Update Platform Logo
+                                <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                              </label>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -3109,7 +3168,23 @@ export default function Admin() {
                   </div>
                   <div className="group p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/30 transition-all duration-300">
                     <Label className="text-[10px] uppercase tracking-[0.2em] text-primary/60 font-black block mb-1.5">VAT Registration</Label>
-                    <p className="font-bold text-lg leading-none font-mono tracking-tight">{selectedUserForVetting.vatNumber || "Not provided"}</p>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        value={editedVatNumber}
+                        onChange={(e) => setEditedVatNumber(e.target.value)}
+                        className="glass border-white/10 h-10 rounded-xl font-mono"
+                        placeholder="Enter VAT number..."
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        disabled={isUpdatingVat || editedVatNumber === selectedUserForVetting.vatNumber}
+                        onClick={() => handleUpdateUserVat(selectedUserForVetting.uid, editedVatNumber)}
+                        className="rounded-xl h-10 px-4 whitespace-nowrap"
+                      >
+                        {isUpdatingVat ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 
@@ -3228,21 +3303,41 @@ export default function Admin() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={isUserDeleteDialogOpen} onOpenChange={setIsUserDeleteDialogOpen}>
+      <AlertDialog open={isUserDeleteDialogOpen} onOpenChange={(open) => {
+        setIsUserDeleteDialogOpen(open);
+        if (!open) setDeleteConfirmationText("");
+      }}>
         <AlertDialogContent className="glass border-primary/20">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the account for 
-              <span className="font-bold text-foreground"> {userToDelete?.companyName} </span> 
-              and remove their data from our servers.
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  This action cannot be undone. This will permanently delete the account for 
+                  <span className="font-bold text-foreground"> {userToDelete?.companyName} </span> 
+                  and remove their data from our servers.
+                </p>
+                <div className="pt-4 border-t border-white/10 space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest opacity-70">
+                    Type <span className="text-foreground select-none">{userToDelete?.companyName}</span> to confirm
+                  </Label>
+                  <Input 
+                    value={deleteConfirmationText}
+                    onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                    className="glass border-destructive/50 focus:ring-destructive/20 text-sm h-10 rounded-xl"
+                    placeholder="Type company name exactly..."
+                    autoFocus
+                  />
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl" onClick={() => setUserToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl" onClick={() => { setUserToDelete(null); setDeleteConfirmationText(""); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all"
               onClick={() => userToDelete && handleDeleteUser(userToDelete.uid)}
+              disabled={deleteConfirmationText !== userToDelete?.companyName}
             >
               Delete Account
             </AlertDialogAction>

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/lib/firebase";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Navbar } from "@/components/Navbar";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import { SystemBanner } from "@/components/SystemBanner";
 import { Footer } from "@/components/Footer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -24,6 +25,7 @@ import Contact from "@/pages/Contact";
 import Terms from "@/pages/Terms";
 import Auth from "@/pages/Auth";
 import PublicProfile from "@/pages/PublicProfile";
+import RequestAsset from "@/pages/RequestAsset";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/firebase";
@@ -72,6 +74,7 @@ export default function App() {
           <TooltipProvider>
             <SuspendedOverlay />
             <Router>
+              <ScrollToTop />
               <div className="flex min-h-screen flex-col">
                 <SystemBanner />
                 <Navbar />
@@ -80,6 +83,7 @@ export default function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/marketplace" element={<Marketplace />} />
                     <Route path="/create-listing" element={<CreateListing />} />
+                    <Route path="/post-asset" element={<CreateListing />} />
                     <Route path="/edit-listing/:id" element={<EditListing />} />
                     <Route path="/listing/:id" element={<ListingDetail />} />
                     <Route path="/dashboard" element={<Dashboard />} />
@@ -96,6 +100,7 @@ export default function App() {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/auth" element={<Auth />} />
+                    <Route path="/request-asset" element={<RequestAsset />} />
                   </Routes>
                 </main>
                 <Footer />

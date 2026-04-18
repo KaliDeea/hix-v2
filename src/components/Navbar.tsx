@@ -28,6 +28,7 @@ import {
   Heart,
   Search,
   Settings,
+  Plus,
   X
 } from "lucide-react";
 import { onSnapshot, collection, query, where, db, doc, updateDoc, handleFirestoreError, OperationType, writeBatch } from "@/lib/firebase";
@@ -241,21 +242,23 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/90 backdrop-blur-md">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group shrink-0">
+      <div className="container flex h-24 items-center justify-between">
+        <Link to="/" className="flex items-center gap-4 group shrink-0 py-4">
           {platformLogo ? (
-            <img 
-              src={platformLogo} 
-              alt="HiX Logo" 
-              className="h-8 w-auto object-contain transition-transform group-hover:scale-105" 
-              referrerPolicy="no-referrer"
-            />
+            <div className="relative">
+              <img 
+                src={platformLogo} 
+                alt="HiX Logo" 
+                className="h-16 w-16 md:h-20 md:w-20 rounded-full object-cover border-2 border-primary/40 transition-all group-hover:scale-110 logo-reflection logo-primary-glow" 
+                referrerPolicy="no-referrer"
+              />
+            </div>
           ) : (
             <>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground transition-transform group-hover:rotate-12">
+              <div className="flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-lg shadow-primary/30 logo-reflection logo-primary-glow">
                 H
               </div>
-              <span className="text-xl font-bold tracking-tight">HiX</span>
+              <span className="text-4xl font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-2">HiX</span>
             </>
           )}
         </Link>
@@ -265,7 +268,7 @@ export function Navbar() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Search marketplace..." 
-              className="pl-10 pr-10 rounded-full bg-white/5 border-white/10 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+              className="pl-10 pr-10 rounded-full bg-muted/20 border-border focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
               value={navbarSearch}
               onChange={(e) => setNavbarSearch(e.target.value)}
             />
@@ -286,12 +289,16 @@ export function Navbar() {
 
         <div className="hidden md:flex items-center gap-6">
           <Link to="/marketplace" className="text-sm font-medium hover:text-primary transition-colors">Marketplace</Link>
+          <Link to="/request-asset" className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5">
+            Procurement
+            <Badge variant="outline" className="text-[8px] h-4 border-primary/30 text-primary">AI</Badge>
+          </Link>
           <Link to="/messages" className="text-sm font-medium hover:text-primary transition-colors">Messages</Link>
           <Link to="/hauling" className="text-sm font-medium hover:text-primary transition-colors">Hauling</Link>
-          <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">About</Link>
+          <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors mr-2">About</Link>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 ml-4 pl-4 border-l border-primary/20">
           <ThemeToggle />
           {user && (
             <>

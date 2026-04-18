@@ -183,16 +183,39 @@ export default function Dashboard() {
     }, (error) => handleFirestoreError(error, OperationType.LIST, listingsPath));
 
     const transPath = "transactions";
-    const unsubTrans = onSnapshot(collection(db, transPath), (snapshot) => {
-      const allTrans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[];
-      const myTrans = allTrans.filter(t => t.buyerId === user.uid || t.sellerId === user.uid);
-      setTransactions(myTrans);
+    const unsubBuyer = onSnapshot(query(collection(db, transPath), where("buyerId", "==", user.uid)), (snapshot) => {
+      const bTrans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[];
+      setTransactions(prev => {
+        const sTrans = prev.filter(t => t.sellerId === user.uid && t.buyerId !== user.uid);
+        const combined = [...bTrans, ...sTrans];
+        return combined.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+      });
+      setLoading(false);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, transPath));
+
+    const unsubSeller = onSnapshot(query(collection(db, transPath), where("sellerId", "==", user.uid)), (snapshot) => {
+      const sTrans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[];
+      setTransactions(prev => {
+        const bTrans = prev.filter(t => t.buyerId === user.uid);
+        const uniqueSTrans = sTrans.filter(st => !bTrans.find(bt => bt.id === st.id));
+        const combined = [...bTrans, ...uniqueSTrans];
+        return combined.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+      });
       setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.LIST, transPath));
 
     return () => {
       unsubListings();
-      unsubTrans();
+      unsubBuyer();
+      unsubSeller();
     };
   }, [user]);
 
@@ -443,10 +466,10 @@ export default function Dashboard() {
               Unverified VAT
             </Badge>
           )}
-          <Button className="rounded-full gap-2" asChild>
+          <Button className="rounded-full gap-2 shadow-lg shadow-primary/20" asChild>
             <Link to="/create-listing">
               <Plus className="h-4 w-4" />
-              New Listing
+              Post Asset
             </Link>
           </Button>
         </div>
@@ -507,74 +530,107 @@ export default function Dashboard() {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="glass lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Cumulative CO2 Savings</CardTitle>
-                <CardDescription>Your total environmental impact over time.</CardDescription>
+            <Card className="glass lg:col-span-2 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
+              <CardHeader className="border-b border-primary/10 bg-primary/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Cumulative Impact Node</CardTitle>
+                    <CardDescription className="font-mono text-[10px] uppercase opacity-70">Temporal sustainability distribution</CardDescription>
+                  </div>
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--primary)]" />
+                </div>
               </CardHeader>
-              <CardContent className="h-[300px]">
+              <CardContent className="h-[320px] pt-8">
                 {cumulativeCo2Data.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={cumulativeCo2Data}>
+                    <AreaChart data={cumulativeCo2Data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="colorCo2" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                        <linearGradient id="colorImpact" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="oklch(0.75 0.22 145)" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="oklch(0.75 0.22 145)" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.75 0.22 145)" strokeOpacity={0.1} vertical={false} />
                       <XAxis 
                         dataKey="date" 
-                        stroke="#ffffff50" 
-                        fontSize={12}
+                        stroke="oklch(0.75 0.22 145)" 
+                        opacity={0.5}
+                        fontSize={8}
                         tickLine={false}
                         axisLine={false}
+                        tick={{ fill: 'oklch(0.75 0.22 145)', fontWeight: 'bold' }}
                       />
                       <YAxis 
-                        stroke="#ffffff50" 
-                        fontSize={12}
+                        stroke="oklch(0.75 0.22 145)" 
+                        opacity={0.5}
+                        fontSize={8}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(value) => `${value}kg`}
+                        tickFormatter={(v) => `${v}kg`}
+                        tick={{ fill: 'oklch(0.75 0.22 145)', fontWeight: 'bold' }}
                       />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid var(--primary)', borderRadius: '12px' }}
-                        itemStyle={{ color: 'var(--primary)' }}
-                        formatter={(value: number) => [`${value} kg`, 'Total Savings']}
+                        contentStyle={{ 
+                          backgroundColor: 'var(--card)', 
+                          border: '1px solid oklch(0.75 0.22 145 / 0.3)', 
+                          borderRadius: '12px',
+                          fontFamily: 'monospace',
+                          fontSize: '10px',
+                          boxShadow: '0 10px 15px -3px oklch(0.75 0.22 145 / 0.1)'
+                        }}
+                        cursor={{ stroke: 'oklch(0.75 0.22 145)', strokeWidth: 1 }}
+                        formatter={(value: number) => [`${value.toLocaleString()} kg CO2`, 'IMPACT']}
                       />
                       <Area 
-                        type="monotone" 
+                        type="stepAfter" 
                         dataKey="total" 
-                        stroke="var(--primary)" 
+                        stroke="oklch(0.75 0.22 145)" 
                         fillOpacity={1} 
-                        fill="url(#colorCo2)" 
-                        strokeWidth={3}
+                        fill="url(#colorImpact)" 
+                        strokeWidth={2}
+                        animationDuration={1500}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
-                    <TrendingUp className="h-8 w-8 opacity-20" />
-                    <p>No transaction data available for impact tracking.</p>
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 font-mono text-[10px]">
+                    <TrendingUp className="h-8 w-8 opacity-10" />
+                    <p>NO IMPACT DATA DETECTED IN LOCAL BUFFER</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="glass">
-              <CardHeader>
-                <CardTitle>Sustainability Impact</CardTitle>
-                <CardDescription>Your contribution to the circular economy.</CardDescription>
+            <Card className="glass border-primary/20 shadow-xl shadow-primary/5">
+              <CardHeader className="border-b border-primary/10 bg-primary/5">
+                <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Impact Density Map</CardTitle>
+                <CardDescription className="font-mono text-[10px] uppercase opacity-70 italic tracking-wider">Visual Verification Protocol</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-6">
-                <div className="relative h-32 w-32 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-4 border-primary/20 border-t-primary animate-spin-slow"></div>
-                  <Leaf className="h-12 w-12 text-primary" />
+              <CardContent className="flex flex-col items-center justify-center py-10">
+                <div className="grid grid-cols-10 gap-1.5 mb-8">
+                  {Array.from({ length: Math.min(100, Math.ceil(stats.co2Saved / 10)) }).map((_, i) => (
+                    <motion.div 
+                      key={`impact-dot-${i}`}
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.01, ease: "easeOut" }}
+                      className="h-2.5 w-2.5 rounded-sm bg-primary shadow-[0_0_4px_var(--primary)]"
+                    />
+                  ))}
+                  {stats.co2Saved === 0 && (
+                    <div className="col-span-10 text-[8px] font-mono opacity-40 text-primary text-center py-12 flex flex-col items-center gap-2">
+                      <div className="h-4 w-4 rounded-full border border-primary/40 border-t-primary animate-spin" />
+                      CALIBRATING...
+                    </div>
+                  )}
                 </div>
-                <div className="mt-4 text-center">
-                  <p className="text-2xl font-bold text-primary">{stats.co2Saved} kg CO2</p>
-                  <p className="text-sm text-muted-foreground">≈ {Math.round(stats.co2Saved / 20)} trees planted</p>
-                  <p className="text-xs text-muted-foreground mt-1">or {Math.round(stats.co2Saved / 0.4).toLocaleString()} car miles saved</p>
+                <div className="text-center font-mono">
+                  <div className="text-3xl font-black text-primary tracking-tighter tabular-nums leading-none mb-2">
+                    {stats.co2Saved.toLocaleString()}<span className="text-xs uppercase ml-1">kg</span>
+                  </div>
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest leading-none">
+                    Verified Contribution
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -805,16 +861,16 @@ export default function Dashboard() {
                             PDF
                           </Button>
                           <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-muted-foreground hover:text-destructive gap-2"
+                            variant="outline" 
+                            size="icon" 
+                            className="rounded-full h-8 w-8 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10 shadow-[0_0_8px_rgba(239,68,68,0.2)] hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
                             onClick={() => {
                               setSelectedTransaction(t);
                               setIsReportModalOpen(true);
                             }}
+                            title="Report Transaction"
                           >
                             <AlertTriangle className="h-4 w-4" />
-                            Report
                           </Button>
                         </TableCell>
                       </TableRow>
