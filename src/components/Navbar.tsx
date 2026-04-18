@@ -298,7 +298,7 @@ export function Navbar() {
           <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors mr-2">About</Link>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 ml-4 pl-4 border-l border-primary/20">
+        <div className="flex items-center gap-4 sm:gap-6 ml-6 pl-6 border-l border-primary/20">
           <ThemeToggle />
           {user && (
             <>

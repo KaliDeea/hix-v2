@@ -1472,7 +1472,7 @@ export default function Admin() {
                 </div>
               </div>
 
-              <TabsList className="flex h-auto bg-transparent border-none p-0 gap-1 overflow-x-auto no-scrollbar justify-start flex-1 w-full">
+              <TabsList className="flex h-auto bg-transparent border-none p-0 gap-1 overflow-x-auto justify-start flex-1 w-full custom-scrollbar pb-2">
                 {[
                   { value: "dashboard", label: "Dashboard", icon: BarChart3, show: isViewer },
                   { value: "users", label: "Users", icon: Users, show: isViewer },
@@ -1489,10 +1489,10 @@ export default function Admin() {
                   <TabsTrigger 
                     key={`admin-tab-${tab.value}`}
                     value={tab.value} 
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/10 hover:bg-white/5 transition-all relative group shrink-0 border-none w-auto"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/10 hover:bg-white/5 transition-all relative group shrink-0 border-none w-auto"
                   >
                     <tab.icon className="h-4 w-4 shrink-0" />
-                    <span className="font-bold text-xs tracking-tight hidden md:inline-block whitespace-nowrap">{tab.label}</span>
+                    <span className="font-bold text-[10px] tracking-tight hidden xl:inline-block whitespace-nowrap">{tab.label}</span>
                     {tab.badge !== undefined && tab.badge > 0 && (
                       <span className={`h-4 w-4 rounded-full ${tab.badgeColor} text-white text-[9px] flex items-center justify-center font-bold shadow-sm shrink-0`}>
                         {tab.badge}

@@ -63,6 +63,9 @@ import {
 } from "@/components/ui/tooltip";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+
+const MotionButton = motion.create(Button);
+
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
@@ -685,44 +688,40 @@ export default function ListingDetail() {
                        </p>
                      </div>
 
-                     <motion.div
+                     <MotionButton
                        whileHover={{ scale: 1.02, translateY: -4 }}
                        whileTap={{ scale: 0.98 }}
-                       className="w-full"
+                       size="lg" 
+                       className="w-full rounded-2xl h-20 text-[11px] font-black uppercase tracking-[0.4em] bg-primary text-primary-foreground shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:shadow-[0_0_40px_rgba(var(--primary),0.5)] transition-all border-none" 
+                       onClick={handleBuy}
+                       disabled={platformSettings.maintenanceMode}
                      >
-                       <Button 
-                          size="lg" 
-                          className="w-full rounded-2xl h-20 text-[11px] font-black uppercase tracking-[0.4em] bg-primary text-primary-foreground shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:shadow-[0_0_40px_rgba(var(--primary),0.5)] transition-all border-none" 
-                          onClick={handleBuy}
-                          disabled={platformSettings.maintenanceMode}
-                        >
-                          <ShoppingCart className="mr-4 h-5 w-5" />
-                          BUY
-                        </Button>
-                     </motion.div>
+                       <ShoppingCart className="mr-4 h-5 w-5" />
+                       BUY
+                     </MotionButton>
                       
                       <div className="grid grid-cols-2 gap-4">
-                        <motion.div whileHover={{ scale: 1.05, translateY: -2 }} whileTap={{ scale: 0.95 }}>
-                           <Button 
-                              variant="outline" 
-                              className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
-                              onClick={handleMessageSeller}
-                           >
-                              <MessageSquare className="h-4 w-4 mr-2" />
-                              Message Seller
-                           </Button>
-                        </motion.div>
+                        <MotionButton 
+                            whileHover={{ scale: 1.05, translateY: -2 }} 
+                            whileTap={{ scale: 0.95 }}
+                            variant="outline" 
+                            className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+                            onClick={handleMessageSeller}
+                        >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Message Seller
+                        </MotionButton>
                         <Dialog>
                            <DialogTrigger asChild>
-                              <motion.div whileHover={{ scale: 1.05, translateY: -2 }} whileTap={{ scale: 0.95 }}>
-                                 <Button 
-                                    variant="outline" 
-                                    className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
-                                 >
-                                    <Send className="h-4 w-4 mr-2" />
-                                    Counter Offer
-                                 </Button>
-                              </motion.div>
+                              <MotionButton 
+                                 whileHover={{ scale: 1.05, translateY: -2 }} 
+                                 whileTap={{ scale: 0.95 }}
+                                 variant="outline" 
+                                 className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+                              >
+                                 <Send className="h-4 w-4 mr-2" />
+                                 Counter Offer
+                              </MotionButton>
                            </DialogTrigger>
                            <DialogContent className="glass border-primary/40 rounded-none sm:max-w-md p-10">
                               <DialogHeader className="mb-8">
@@ -833,49 +832,53 @@ export default function ListingDetail() {
               </p>
             </div>
 
-            <div className="glass p-8 rounded-3xl">
-              <h2 className="text-xl font-bold mb-6">Specifications</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Condition</p>
-                  <p className="font-medium capitalize">{listing.condition?.replace('-', ' ') || 'Used'}</p>
+            <div className="glass p-8 rounded-3xl border-primary/20 shadow-lg shadow-primary/5">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-black uppercase tracking-tighter text-primary italic">Technical Specifications</h2>
+                <div className="h-px flex-1 bg-primary/20 mx-6 hidden sm:block" />
+                <Badge variant="outline" className="border-primary/40 text-[10px] font-mono tracking-widest uppercase">Verified_Data_v2.1</Badge>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Condition</p>
+                  <p className="font-mono text-sm font-black uppercase truncate">{listing.condition?.replace('-', ' ') || 'Refurbished'}</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Category</p>
-                  <p className="font-medium">{listing.category}</p>
+                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Sector</p>
+                  <p className="font-mono text-sm font-black uppercase truncate">{listing.category}</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Location</p>
-                  <p className="font-medium">{listing.location}</p>
+                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Staging Area</p>
+                  <p className="font-mono text-sm font-black uppercase truncate">{listing.location}</p>
                 </div>
                 {listing.brand && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Brand</p>
-                    <p className="font-medium">{listing.brand}</p>
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Manufacturer</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.brand}</p>
                   </div>
                 )}
                 {listing.model && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Model</p>
-                    <p className="font-medium">{listing.model}</p>
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Model Type</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.model}</p>
                   </div>
                 )}
                 {listing.year && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Year</p>
-                    <p className="font-medium">{listing.year}</p>
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Release Cycle</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.year}</p>
                   </div>
                 )}
                 {listing.weight && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Weight</p>
-                    <p className="font-medium">{listing.weight} kg</p>
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Net Mass</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.weight} kg</p>
                   </div>
                 )}
                 {listing.dimensions && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Dimensions</p>
-                    <p className="font-medium">{listing.dimensions}</p>
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Dimensions</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.dimensions}</p>
                   </div>
                 )}
               </div>

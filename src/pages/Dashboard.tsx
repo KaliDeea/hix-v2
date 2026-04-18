@@ -530,17 +530,17 @@ export default function Dashboard() {
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="glass lg:col-span-2 border-primary/20 overflow-hidden shadow-xl shadow-primary/5">
-              <CardHeader className="border-b border-primary/10 bg-primary/5">
+            <Card className="glass lg:col-span-2 border-primary/20 overflow-hidden shadow-xl shadow-primary/10">
+              <CardHeader className="border-b border-primary/20 bg-primary/10">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Cumulative Impact Node</CardTitle>
-                    <CardDescription className="font-mono text-[10px] uppercase opacity-70">Temporal sustainability distribution</CardDescription>
+                    <CardDescription className="font-mono text-[10px] uppercase opacity-90 text-primary/70">Temporal sustainability distribution</CardDescription>
                   </div>
-                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--primary)]" />
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_12px_var(--primary)]" />
                 </div>
               </CardHeader>
-              <CardContent className="h-[320px] pt-8">
+              <CardContent className="h-[320px] pt-8 bg-primary/[0.02]">
                 {cumulativeCo2Data.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={cumulativeCo2Data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -601,12 +601,12 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="glass border-primary/20 shadow-xl shadow-primary/5">
-              <CardHeader className="border-b border-primary/10 bg-primary/5">
+            <Card className="glass border-primary/20 shadow-xl shadow-primary/10">
+              <CardHeader className="border-b border-primary/20 bg-primary/10">
                 <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Impact Density Map</CardTitle>
-                <CardDescription className="font-mono text-[10px] uppercase opacity-70 italic tracking-wider">Visual Verification Protocol</CardDescription>
+                <CardDescription className="font-mono text-[10px] uppercase opacity-90 text-primary/70 italic tracking-wider">Visual Verification Protocol</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-10">
+              <CardContent className="flex flex-col items-center justify-center py-10 bg-primary/[0.02]">
                 <div className="grid grid-cols-10 gap-1.5 mb-8">
                   {Array.from({ length: Math.min(100, Math.ceil(stats.co2Saved / 10)) }).map((_, i) => (
                     <motion.div 

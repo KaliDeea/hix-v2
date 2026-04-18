@@ -53,7 +53,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2, AlertTriangle } from "lucide-react";
+import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -684,84 +684,144 @@ export default function Marketplace() {
         </motion.div>
       )}
 
-      {/* Quick View Dialog - Unified & Fixed (Recipe 1) */}
+      {/* Quick View Dialog - Refined Wide Ledger (Recipe 1 & 8) */}
       <Dialog open={!!selectedListingForQuickView} onOpenChange={() => setSelectedListingForQuickView(null)}>
-        <DialogContent className="sm:max-w-5xl p-0 glass overflow-hidden border-primary/30 rounded-2xl h-[80vh] shadow-2xl">
+        <DialogContent className="max-w-7xl w-[98vw] p-0 border-none bg-transparent shadow-none h-auto sm:h-[90vh] overflow-visible focus:outline-none">
           {selectedListingForQuickView && (
-            <div className="flex flex-col md:flex-row h-full">
-              {/* Left Side: Visuals */}
-              <div className="md:w-1/2 relative bg-primary/5 border-r border-border/50">
-                <img 
-                  src={selectedListingForQuickView.images?.[0] || "https://picsum.photos/seed/industrial/800/800"} 
-                  alt={selectedListingForQuickView.title}
-                  className="w-full h-full object-cover shadow-inner"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute top-8 left-8 flex flex-col gap-3">
-                  <Badge className="rounded-none bg-primary text-primary-foreground font-black uppercase tracking-widest text-[10px] h-6">
+            <div className="flex flex-col md:flex-row h-full w-full glass border border-primary/40 rounded-[2rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+              {/* Left Side: Visuals - Specialist Hardware Feel */}
+              <div className="md:w-5/12 lg:w-[38%] relative bg-black/60 border-r border-primary/20 h-full overflow-hidden flex flex-col">
+                <div className="flex-1 relative overflow-hidden group">
+                  <img 
+                    src={selectedListingForQuickView.images?.[0] || "https://picsum.photos/seed/industrial/1200/800"} 
+                    alt={selectedListingForQuickView.title}
+                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-[5s] group-hover:scale-105"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                </div>
+                
+                {/* Secondary Visuals Rail */}
+                <div className="h-28 p-4 grid grid-cols-3 gap-2 border-t border-primary/10 bg-black/40">
+                  {[1, 2, 3].map((i) => (
+                    <div key={`qv-thumb-${i}`} className="glass rounded-lg overflow-hidden border-white/5 opacity-40 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center bg-black/10">
+                      <img src={`https://picsum.photos/seed/machine-${i+10}/200/200`} alt="" className="w-full h-full object-cover grayscale" />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="absolute top-6 left-6 flex flex-col gap-2">
+                  <Badge className="rounded-md px-3 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[9px] h-6 border-none">
                     {selectedListingForQuickView.category}
                   </Badge>
-                  <div className="glass p-3 rounded-none border-primary/30 flex items-center gap-3">
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">{selectedListingForQuickView.sellerName}</span>
+                  <div className="glass px-3 py-1.5 rounded-md border-primary/20 flex items-center gap-2 bg-black/60 backdrop-blur-md">
+                    <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[9px] font-black uppercase tracking-widest leading-none text-white/90">{selectedListingForQuickView.sellerName}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Right Side: Data */}
-              <div className="md:w-1/2 p-12 flex flex-col justify-between">
-                <div className="space-y-8">
-                  <DialogHeader>
-                    <div className="flex items-center gap-2 mb-2 text-primary">
-                      <div className="glow-indicator glow-blue" />
-                      <span className="text-[10px] font-mono tracking-widest uppercase">ID: {selectedListingForQuickView.id.toUpperCase()}</span>
+              {/* Right Side: Data - Pristine Industrial Ledger */}
+              <div className="md:w-7/12 lg:w-[62%] flex flex-col h-full bg-slate-50/5 text-foreground">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 space-y-10">
+                  {/* Ledger Header */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="px-2 py-1 bg-primary/10 border border-primary/30 rounded text-[9px] font-mono font-bold text-primary tracking-widest leading-none">
+                        LOG_REF: {selectedListingForQuickView.id.toUpperCase().slice(0, 12)}
+                      </div>
+                      <div className="h-px flex-1 bg-border/40" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 italic">Industrial Record</span>
                     </div>
-                    <DialogTitle className="text-4xl font-black tracking-tighter uppercase leading-none">
+                    
+                    <DialogTitle className="text-2xl lg:text-3xl font-black tracking-tight uppercase leading-snug font-sans">
                       {selectedListingForQuickView.title}
                     </DialogTitle>
-                  </DialogHeader>
+                  </div>
 
-                  <div className="space-y-6">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-black font-mono text-primary">£{selectedListingForQuickView.price?.toLocaleString()}</span>
-                      <span className="text-xs font-bold uppercase tracking-widest opacity-80">EXC VAT</span>
+                  {/* Valuation & Impact Area */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 glass p-6 rounded-xl border-primary/20 bg-white/[0.03] hover:bg-white/[0.05] transition-all">
+                      <p className="text-[8px] font-black uppercase tracking-[0.3em] text-primary/70 mb-3">Asset Valuation</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl lg:text-4xl font-black font-mono tracking-tighter text-foreground italic">£{selectedListingForQuickView.price?.toLocaleString()}</span>
+                        <span className="text-[9px] font-mono opacity-40 uppercase tracking-widest">GBP</span>
+                      </div>
                     </div>
+                    <div className="flex-1 glass p-6 rounded-xl border-primary/20 bg-primary/[0.03] hover:bg-primary/[0.06] transition-all">
+                      <p className="text-[8px] font-black uppercase tracking-[0.3em] text-primary/70 mb-3 italic">CO2e Delta Offset</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl lg:text-4xl font-black font-mono text-primary italic">-{selectedListingForQuickView.co2Savings}</span>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-black uppercase tracking-tighter leading-none text-primary">kgCO2e</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                  {/* Specification Table */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">01 // Asset Specifications</h3>
+                      <div className="text-[9px] font-mono font-bold opacity-30">P_COUNT: 06</div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-primary/10 border border-primary/20 rounded-xl overflow-hidden shadow-inner">
                       {[
-                        { label: "Technical Weight", val: selectedListingForQuickView.weight ? `${selectedListingForQuickView.weight}kg` : "Variable" },
-                        { label: "Inventory Level", val: `${selectedListingForQuickView.quantity} Units` },
-                        { label: "Asset Quality", val: (selectedListingForQuickView.condition || "Used").replace('-', ' ') },
-                        { label: "CO2 Equilibrium", val: `${selectedListingForQuickView.co2Savings}kg Offset` }
+                        { label: "Weight Class", val: selectedListingForQuickView.weight ? `${selectedListingForQuickView.weight}kg` : "SYSTEM_SPEC" },
+                        { label: "Inventory", val: `${selectedListingForQuickView.quantity} UNITS` },
+                        { label: "Certification", val: (selectedListingForQuickView.condition || "INDUSTRIAL").replace('-', '_').toUpperCase() },
+                        { label: "Brand Origin", val: selectedListingForQuickView.brand || "UK_CLUSTER" },
+                        { label: "Reference", val: selectedListingForQuickView.model || "GENERIC_SPEC" },
+                        { label: "Facility Loc.", val: (selectedListingForQuickView.location || "TEESSIDE").toUpperCase() }
                       ].map(item => (
-                        <div key={item.label} className="glass p-4 rounded-xl border-primary/20 space-y-1 bg-primary/5">
-                          <div className="text-[10px] uppercase font-bold text-primary tracking-widest opacity-70">{item.label}</div>
-                          <div className="font-mono text-sm font-black uppercase text-foreground">{item.val}</div>
+                        <div key={`qv-spec-${item.label}`} className="bg-background/80 p-5 hover:bg-background/40 transition-colors">
+                          <div className="text-[8px] uppercase font-bold text-muted-foreground tracking-widest mb-1.5">{item.label}</div>
+                          <div className="font-mono text-sm font-black uppercase text-foreground truncate">{item.val}</div>
                         </div>
                       ))}
                     </div>
+                  </div>
 
-                    <p className="text-sm text-muted-foreground leading-relaxed font-light line-clamp-4 italic border-l-2 border-primary/20 pl-4">
-                      {selectedListingForQuickView.description}
-                    </p>
+                  {/* Descriptive Narrative */}
+                  <div className="space-y-6">
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-primary">02 // Operational Review</h3>
+                    <div className="glass p-8 lg:p-10 rounded-2xl border-primary/20 bg-white/[0.02] italic font-serif leading-relaxed text-muted-foreground/90 text-base border-l-4 border-l-primary">
+                      {selectedListingForQuickView.description || "No narrative evaluation provided for this terminal asset reference."}
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-12">
-                  <Button 
-                    variant="outline" 
-                    className="rounded-none h-14 font-black uppercase tracking-widest text-[10px] border-border hover:bg-primary transition-colors"
-                    onClick={() => handleStartChat(selectedListingForQuickView)}
-                    disabled={isStartingChat}
-                  >
-                    {isStartingChat ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <MessageSquare className="h-4 w-4 mr-2" />}
-                    Direct Message
-                  </Button>
-                  <Button className="rounded-none h-14 font-black uppercase tracking-widest text-[10px]" asChild>
-                    <Link to={`/listing/${selectedListingForQuickView.id}`}>
-                      Full Data Analytics
-                    </Link>
-                  </Button>
+                {/* Secure Tactical Footer */}
+                <div className="p-6 lg:p-10 bg-black/10 backdrop-blur-2xl border-t border-primary/10">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 h-16 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] border-primary/20 hover:border-primary/60 hover:bg-primary/5 transition-all flex items-center justify-center"
+                      onClick={() => handleStartChat(selectedListingForQuickView)}
+                      disabled={isStartingChat}
+                    >
+                      {isStartingChat ? <Loader2 className="h-4 w-4 animate-spin mr-3" /> : <MessageSquare className="h-4 w-4 mr-3" />}
+                      Start inquiry
+                    </Button>
+                    <Button 
+                      className="flex-1 h-16 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] bg-primary text-primary-foreground border-none hover:opacity-90 shadow-[0_0_30px_rgba(var(--primary),0.2)] transition-all flex items-center justify-center gap-3"
+                      asChild
+                    >
+                      <Link to={`/listing/${selectedListingForQuickView.id}`}>
+                        Full Technical data
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+                  <div className="mt-8 flex items-center justify-between">
+                    <span className="text-[7px] font-mono tracking-widest font-black opacity-30 uppercase">HiX_PROTOCOL_VER_4.0.0</span>
+                    <div className="flex gap-4">
+                      {["VETTED", "SECURE", "CIRCULAR"].map(tag => (
+                        <span key={tag} className="text-[7px] font-black tracking-widest text-primary opacity-60 italic underline decoration-primary/30 underline-offset-4">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

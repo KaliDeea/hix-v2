@@ -4,7 +4,7 @@ import { ArrowRight, Leaf, ShieldCheck, Zap, Globe } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/firebase";
 
-const MotionButton = motion(Button);
+const MotionButton = motion.create(Button);
 
 export default function Home() {
   const { user } = useAuth();
@@ -155,9 +155,11 @@ export default function Home() {
             <div className="space-y-6">
               <h2 className="text-4xl font-bold tracking-tight font-display">The HiX <br /> <span className="text-primary">Ecosystem</span></h2>
               <p className="text-muted-foreground leading-relaxed">We provide the technical infrastructure for circular industrial procurement.</p>
-              <Button variant="link" className="p-0 text-primary h-auto group text-xs uppercase font-bold tracking-widest">
-                Learn about our vetting protocol 
-                <ArrowRight className="ml-2 h-3 w-3 transition-transform group-hover:translate-x-2" />
+              <Button variant="link" className="p-0 text-primary h-auto group text-xs uppercase font-bold tracking-widest" asChild>
+                <Link to="/about">
+                  Learn about our vetting protocol 
+                  <ArrowRight className="ml-2 h-3 w-3 transition-transform group-hover:translate-x-2" />
+                </Link>
               </Button>
             </div>
             
