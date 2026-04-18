@@ -574,7 +574,7 @@ export default function ListingDetail() {
               {listing.listingType === 'auction' ? (
                 <div className="space-y-6 sm:space-y-10 pt-8 sm:pt-0">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-primary/10 border border-primary/20">
-                    <div className="p-4 sm:p-6 bg-background/40 backdrop-blur-md">
+                    <div className="p-4 sm:p-6 bg-background/40 backdrop-blur-md flex flex-col items-center justify-center text-center">
                       <p className="tech-header p-0 mb-2">Current Bid Floor</p>
                       <p className="text-3xl sm:text-4xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
                     </div>
@@ -629,7 +629,7 @@ export default function ListingDetail() {
               ) : (
                 <div className="space-y-6 sm:space-y-10 pt-8 sm:pt-0">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-primary/10 border border-primary/20">
-                    <div className="p-4 sm:p-6 bg-background/40 backdrop-blur-md">
+                    <div className="p-4 sm:p-6 bg-background/40 backdrop-blur-md flex flex-col items-center justify-center text-center">
                       <p className="tech-header p-0 mb-2">Unit Valuation</p>
                       <p className="text-3xl sm:text-4xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
                     </div>
@@ -668,7 +668,7 @@ export default function ListingDetail() {
                         <span className="text-xl">+</span>
                       </Button>
                     </div>
-                    <div className="flex justify-between items-center px-1">
+                    <div className="flex flex-col items-center justify-center text-center px-1">
                        <span className="text-[9px] font-mono opacity-70 lowercase italic">Total Commitment [ex. vat]</span>
                        <span className="text-base sm:text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
                     </div>

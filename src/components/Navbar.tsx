@@ -356,6 +356,14 @@ export function Navbar() {
                   Marketplace
                 </Link>
                 <Link 
+                  to="/request-asset" 
+                  className="text-lg font-medium px-4 py-3 rounded-lg border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Procurement
+                  <Badge variant="outline" className="text-[10px] h-5 border-primary/30 text-primary">AI PROTOCOL</Badge>
+                </Link>
+                <Link 
                   to="/messages" 
                   className="text-lg font-medium px-4 py-3 rounded-lg border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all"
                   onClick={() => setIsMobileMenuOpen(false)}

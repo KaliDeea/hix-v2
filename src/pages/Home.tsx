@@ -15,17 +15,17 @@ export default function Home() {
       {/* Hero Section - Recipe 10.1 B2B SaaS Split & Recipe 11 Giant Typography */}
       <section className="relative flex-1 flex flex-col lg:flex-row overflow-hidden min-h-[85vh]">
         {/* Left Panel: High Impact Typography */}
-        <div className="flex-1 flex flex-col justify-center p-8 md:p-20 z-10 border-r border-border relative">
+        <div className="w-full lg:flex-1 flex flex-col items-center text-center lg:items-start lg:text-left justify-center p-8 md:p-20 z-10 lg:border-r border-b lg:border-b-0 border-border relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
           
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease: "circOut" }}
-            className="max-w-4xl"
+            className="max-w-4xl w-full flex flex-col items-center lg:items-start mx-auto lg:mx-0"
           >
             <div className="flex items-center gap-4 mb-8">
-              <div className="h-[2px] w-16 bg-primary" />
+              <div className="h-[2px] w-16 bg-primary hidden lg:block" />
               <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary">
                 Industrial Exchange Protocol v4.0
               </span>
@@ -42,7 +42,7 @@ export default function Home() {
               The premium marketplace for Net-Zero industrial procurement.
             </p>
 
-            <div className="flex flex-wrap gap-6 pt-4">
+            <div className="flex flex-wrap justify-center lg:justify-start gap-6 pt-4">
               <MotionButton 
                 size="lg" 
                 whileHover={{ scale: 1.05 }} 
@@ -63,6 +63,18 @@ export default function Home() {
                 onClick={() => navigate("/marketplace")}
               >
                 Marketplace
+              </MotionButton>
+
+              <MotionButton 
+                size="lg" 
+                variant="ghost" 
+                whileHover={{ scale: 1.05 }} 
+                whileTap={{ scale: 0.95 }}
+                className="rounded-full px-12 h-16 text-[10px] font-bold uppercase tracking-[0.2em] text-primary hover:bg-primary/5 transition-colors flex items-center gap-2"
+                onClick={() => navigate("/request-asset")}
+              >
+                <Zap className="h-4 w-4" />
+                Procurement
               </MotionButton>
             </div>
           </motion.div>

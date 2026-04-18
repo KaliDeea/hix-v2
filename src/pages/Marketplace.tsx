@@ -53,7 +53,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2, AlertTriangle, ArrowRight } from "lucide-react";
+import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowUpDown, LayoutGrid, List as ListIcon, Eye, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2, AlertTriangle, ArrowRight, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
@@ -408,7 +408,7 @@ export default function Marketplace() {
           </div>
           <div className="col-span-3 p-4"><div className="h-3 bg-white/5 w-2/3 rounded" /></div>
           <div className="col-span-2 p-4 text-center"><div className="h-3 bg-white/5 w-1/2 mx-auto rounded" /></div>
-          <div className="col-span-2 p-4"><div className="h-6 bg-white/5 w-full rounded" /></div>
+          <div className="col-span-2 p-4 flex justify-center"><div className="h-6 bg-white/5 w-full rounded" /></div>
           <div className="col-span-1 p-4"><div className="h-8 bg-white/5 w-full rounded" /></div>
         </div>
       ))}
@@ -429,17 +429,17 @@ export default function Marketplace() {
 
   return (
     <div className="container mx-auto px-4 py-20 page-transition">
-      <div className="mb-16 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between border-b border-border pb-12">
-        <div className="space-y-4">
+      <div className="mb-16 flex flex-col items-center text-center lg:items-end lg:text-left lg:flex-row lg:justify-between border-b border-border pb-12 gap-8">
+        <div className="space-y-4 flex flex-col items-center lg:items-start">
           <span className="text-xs font-bold uppercase tracking-[0.3em] text-primary">Live Asset Index</span>
-          <h1 className="text-6xl font-black font-display tracking-tighter">Marketplace</h1>
+          <h1 className="text-4xl md:text-6xl font-black font-display tracking-tighter">Marketplace</h1>
           <p className="text-muted-foreground font-light max-w-xl">
             Real-time industrial inventory across the UK cluster. 
             All listings are verified for technical specification accuracy.
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row items-center">
+        <div className="flex flex-col gap-4 sm:flex-row items-center w-full lg:w-auto">
           <div className="relative w-full sm:w-80 group">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input 
@@ -457,6 +457,13 @@ export default function Marketplace() {
           >
             <Filter className="h-4 w-4 mr-2" />
             Filters
+          </Button>
+
+          <Button variant="outline" className="h-14 px-8 rounded-none font-bold uppercase tracking-widest border-primary/20 hover:bg-primary/5 flex items-center gap-2" asChild>
+            <Link to="/request-asset">
+              <Zap className="h-4 w-4" />
+              Request Asset
+            </Link>
           </Button>
           
           <Button className="h-14 px-8 rounded-none font-black uppercase tracking-widest bg-primary text-primary-foreground border-none shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform" asChild>
@@ -502,7 +509,7 @@ export default function Marketplace() {
           <div className="col-span-4 tech-header">Industrial Asset / Identifier</div>
           <div className="col-span-3 tech-header">Technical Specifications</div>
           <div className="col-span-2 tech-header border-l border-border text-center">ESG Impact</div>
-          <div className="col-span-2 tech-header border-l border-border">Trading Value</div>
+          <div className="col-span-2 tech-header border-l border-border text-center">Trading Value</div>
           <div className="col-span-1 tech-header border-l border-border">Action</div>
         </div>
 
@@ -614,7 +621,7 @@ export default function Marketplace() {
                   {/* Price & Action integrated on mobile */}
                   <div className="col-span-1 md:col-span-3 border-t md:border-t-0 md:border-l border-border">
                     <div className="grid grid-cols-2 h-full">
-                      <div className="p-4 sm:p-6 flex flex-col justify-center border-r md:border-r-0 border-border">
+                      <div className="p-4 sm:p-6 flex flex-col items-center justify-center text-center border-r md:border-r-0 border-border">
                         <div className="text-xl sm:text-3xl font-black font-mono tracking-tighter text-foreground">
                           £{listing.price?.toLocaleString()}
                         </div>
@@ -779,18 +786,18 @@ export default function Marketplace() {
 
                   {/* Valuation & Impact Area */}
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                    <div className="flex-1 glass p-4 sm:p-6 rounded-xl border-primary/20 bg-white/[0.03] hover:bg-white/[0.05] transition-all">
+                    <div className="flex-1 glass p-4 sm:p-6 rounded-xl border-primary/20 bg-white/[0.03] hover:bg-white/[0.05] transition-all flex flex-col items-center justify-center text-center">
                       <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.3em] text-primary/70 mb-2 sm:mb-3">Asset Valuation</p>
-                      <div className="flex items-baseline gap-1.5 sm:gap-2">
+                      <div className="flex items-baseline justify-center gap-1.5 sm:gap-2">
                         <span className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono tracking-tighter text-foreground italic">£{selectedListingForQuickView.price?.toLocaleString()}</span>
                         <span className="text-[8px] sm:text-[9px] font-mono opacity-40 uppercase tracking-widest">GBP</span>
                       </div>
                     </div>
-                    <div className="flex-1 glass p-4 sm:p-6 rounded-xl border-primary/20 bg-primary/[0.03] hover:bg-primary/[0.06] transition-all">
+                    <div className="flex-1 glass p-4 sm:p-6 rounded-xl border-primary/20 bg-primary/[0.03] hover:bg-primary/[0.06] transition-all flex flex-col items-center justify-center text-center">
                       <p className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.3em] text-primary/70 mb-2 sm:mb-3 italic">CO2e Delta Offset</p>
-                      <div className="flex items-baseline gap-1.5 sm:gap-2">
+                      <div className="flex items-baseline justify-center gap-1.5 sm:gap-2">
                         <span className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-primary italic">-{selectedListingForQuickView.co2Savings}</span>
-                        <div className="flex flex-col">
+                        <div className="flex flex-col items-center">
                           <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tighter leading-none text-primary">kgCO2e</span>
                         </div>
                       </div>

@@ -53,9 +53,11 @@ import {
   Trash2,
   Pencil,
   Search,
-  BarChart3
+  BarChart3,
+  Zap,
+  Package
 } from "lucide-react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { 
   LineChart, 
   Line, 
@@ -82,6 +84,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [myListings, setMyListings] = useState<Listing[]>([]);
@@ -456,17 +459,24 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
+      <div className="mb-8 flex flex-col items-center text-center gap-4 md:flex-row md:items-center md:justify-between md:text-left">
+        <div className="flex flex-col items-center md:items-start">
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Manage your industrial exchange activities.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center md:justify-end gap-2">
           {!profile?.isVatVerified && (
             <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-3 py-1">
               Unverified VAT
             </Badge>
           )}
+          <Button variant="outline" className="rounded-full gap-2 border-primary/20 hover:bg-primary/5 flex" asChild>
+             <Link to="/request-asset">
+               <Zap className="h-4 w-4" />
+               <span className="hidden sm:inline">Request Asset</span>
+               <span className="sm:hidden">Request</span>
+             </Link>
+          </Button>
           <Button className="rounded-full gap-2 shadow-lg shadow-primary/20" asChild>
             <Link to="/create-listing">
               <Plus className="h-4 w-4" />
@@ -744,7 +754,7 @@ export default function Dashboard() {
                       <TableHeader className="bg-primary/5">
                         <TableRow className="hover:bg-transparent border-primary/20">
                           <TableHead className="tech-header px-6">Asset Specification</TableHead>
-                          <TableHead className="tech-header">Unit Valuation</TableHead>
+                          <TableHead className="tech-header text-center">Unit Valuation</TableHead>
                           <TableHead className="tech-header">Availability</TableHead>
                           <TableHead className="tech-header">Status Code</TableHead>
                           <TableHead className="text-right tech-header px-6">Administrative</TableHead>
@@ -762,7 +772,7 @@ export default function Dashboard() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="font-mono text-sm font-black italic">£{listing.price.toLocaleString()}</TableCell>
+                            <TableCell className="font-mono text-sm font-black italic text-center">£{listing.price.toLocaleString()}</TableCell>
                             <TableCell className="font-mono text-xs opacity-70">{listing.quantity} UNITS</TableCell>
                             <TableCell>
                               <Badge variant="outline" className={`text-[9px] uppercase font-black px-2 h-5 tracking-widest ${
@@ -813,8 +823,8 @@ export default function Dashboard() {
                                 <Badge variant="outline" className="text-[8px] h-4 px-1 leading-none uppercase tracking-widest">{listing.status}</Badge>
                              </div>
                              <p className="text-sm font-bold truncate pr-4">{listing.title}</p>
-                             <div className="flex justify-between items-center mt-2">
-                               <span className="text-lg font-black font-mono tracking-tighter italic">£{listing.price.toLocaleString()}</span>
+                             <div className="flex flex-col items-center mt-2 w-full text-center">
+                               <span className="text-xl font-black font-mono tracking-tighter italic">£{listing.price.toLocaleString()}</span>
                                <span className="text-[10px] font-mono opacity-60 uppercase">{listing.quantity} Units</span>
                              </div>
                           </div>
@@ -898,7 +908,7 @@ export default function Dashboard() {
                         <TableRow className="hover:bg-transparent border-primary/20">
                           <TableHead className="tech-header px-6 font-mono text-[10px] uppercase">Settlement Date</TableHead>
                           <TableHead className="tech-header font-mono text-[10px] uppercase">Log Reference</TableHead>
-                          <TableHead className="tech-header font-mono text-[10px] uppercase">Total Valuation</TableHead>
+                          <TableHead className="tech-header font-mono text-10px uppercase text-center">Total Valuation</TableHead>
                           <TableHead className="tech-header font-mono text-[10px] uppercase">Impact Metrics</TableHead>
                           <TableHead className="tech-header font-mono text-[10px] uppercase">Status Phase</TableHead>
                           <TableHead className="text-right tech-header px-6 font-mono text-[10px] uppercase">Relational Action</TableHead>
@@ -911,7 +921,7 @@ export default function Dashboard() {
                               {t.createdAt?.toDate ? format(t.createdAt.toDate(), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d, yyyy')}
                             </TableCell>
                             <TableCell className="font-mono text-[10px] font-bold text-primary">TRX_{t.id.slice(-12).toUpperCase()}</TableCell>
-                            <TableCell className="font-mono text-sm font-black italic">£{t.amount.toLocaleString()}</TableCell>
+                            <TableCell className="font-mono text-sm font-black italic text-center">£{t.amount.toLocaleString()}</TableCell>
                             <TableCell className="text-primary font-bold text-xs">
                                <div className="flex items-center gap-1.5">
                                   <Leaf className="h-3 w-3" />
@@ -979,8 +989,8 @@ export default function Dashboard() {
                               </Badge>
                           </div>
                           
-                          <div className="flex justify-between items-end">
-                             <div className="flex flex-col">
+                          <div className="flex flex-col items-center w-full text-center">
+                             <div className="flex flex-col items-center">
                                 <span className="text-[8px] uppercase font-bold text-muted-foreground tracking-[0.2em] mb-1 leading-none">Valuation</span>
                                 <span className="text-xl font-black font-mono tracking-tighter italic leading-none">£{t.amount.toLocaleString()}</span>
                              </div>

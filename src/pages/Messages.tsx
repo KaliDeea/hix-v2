@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 export default function Messages() {
   const { user, profile } = useAuth();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);

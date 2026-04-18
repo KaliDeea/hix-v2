@@ -44,14 +44,14 @@ export default function Sustainability() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-center md:text-left">
       {/* Hero Section */}
       <section className="relative py-24 overflow-hidden">
         <div className="absolute inset-0 bg-primary/5 -z-10" />
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent -z-10" />
         
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl">
+        <div className="container mx-auto px-4 flex flex-col items-center md:items-start">
+          <div className="max-w-3xl flex flex-col items-center md:items-start text-center md:text-left">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -65,7 +65,7 @@ export default function Sustainability() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-5xl md:text-7xl font-black tracking-tighter mb-8 leading-none"
+              className="text-5xl md:text-7xl font-black tracking-tighter mb-8 leading-none uppercase"
             >
               Trading for a <span className="text-primary">Greener</span> Industrial Future.
             </motion.h1>
@@ -74,7 +74,7 @@ export default function Sustainability() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-xl text-muted-foreground leading-relaxed mb-10"
+              className="text-xl text-muted-foreground leading-relaxed mb-10 max-w-2xl"
             >
               HiX is more than a marketplace. We are a platform dedicated to reducing industrial waste and helping businesses achieve their Net Zero targets through the circular economy.
             </motion.p>
@@ -83,7 +83,7 @@ export default function Sustainability() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-wrap gap-4"
+              className="flex flex-wrap justify-center md:justify-start gap-4"
             >
               <Button size="lg" className="rounded-full px-8" asChild>
                 <Link to="/marketplace">Explore Green Assets</Link>
@@ -196,9 +196,9 @@ export default function Sustainability() {
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="relative"
+              className="relative overflow-hidden"
             >
-              <div className="glass p-8 rounded-[2.5rem] border-primary/20 shadow-xl relative z-10">
+              <div className="glass p-8 rounded-[2.5rem] border-primary/20 shadow-xl relative z-10 overflow-hidden">
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
