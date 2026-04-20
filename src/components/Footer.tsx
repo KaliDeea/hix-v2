@@ -20,30 +20,29 @@ export function Footer() {
   return (
     <footer className="border-t border-primary/20 bg-muted/30 py-12">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-4 text-center md:text-left">
-          <div className="space-y-4 flex flex-col items-center md:items-start">
-            <Link to="/" className="flex items-center gap-4 group mb-6">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
+          <div className="space-y-4">
+            <Link to="/" className="flex items-center gap-4 group mb-10">
               {platformLogo ? (
                 <img 
                   src={platformLogo} 
                   alt="Logo" 
-                  className="h-16 w-16 md:h-20 md:w-20 rounded-full object-cover border-4 border-primary/30 transition-all group-hover:scale-110 logo-reflection logo-primary-glow" 
-                  referrerPolicy="no-referrer"
+                  className="h-20 w-20 rounded-full object-cover border-4 border-primary/30 transition-all group-hover:scale-110 logo-reflection logo-primary-glow" 
                 />
               ) : (
                 <>
-                  <div className="flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-2xl md:text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-xl shadow-primary/30 logo-reflection logo-primary-glow">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary font-black text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-xl shadow-primary/30 logo-reflection logo-primary-glow">
                     H
                   </div>
-                  <span className="text-3xl md:text-4xl font-black tracking-tighter uppercase text-primary drop-shadow-md">HiX</span>
+                  <span className="text-4xl font-black tracking-tighter uppercase text-primary drop-shadow-md">HiX</span>
                 </>
               )}
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs pt-4">
               Hartlepool Industrial Exchange. The UK's leading B2B marketplace for sustainable industrial trading.
             </p>
           </div>
-          <div className="flex flex-col items-center md:items-start">
+          <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider">Platform</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/marketplace" className="hover:text-primary transition-colors">Marketplace</Link></li>
@@ -51,7 +50,7 @@ export function Footer() {
               <li><Link to="/sustainability" className="hover:text-primary transition-colors">Sustainability</Link></li>
             </ul>
           </div>
-          <div className="flex flex-col items-center md:items-start">
+          <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider">Company</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/about" className="hover:text-primary transition-colors">About Us</Link></li>
@@ -59,9 +58,9 @@ export function Footer() {
               <li><Link to="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
             </ul>
           </div>
-          <div className="flex flex-col items-center md:items-start">
+          <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider">Legal</h3>
-            <p className="text-xs text-muted-foreground max-w-xs">
+            <p className="text-xs text-muted-foreground">
               HiX is a registered trademark of Hartlepool Industrial Exchange LTD. 
               VAT Registration: GB 123 4567 89
             </p>

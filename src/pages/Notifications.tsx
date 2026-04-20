@@ -107,16 +107,10 @@ export default function Notifications() {
         </div>
 
         {notifications.length === 0 ? (
-          <Card className="glass border-primary/20 py-24 text-center space-y-4">
-            <div className="mx-auto w-20 h-20 rounded-full bg-primary/5 flex items-center justify-center border border-primary/20 shadow-[0_0_20px_rgba(0,0,0,0.1)]">
-              <Bell className="h-10 w-10 text-primary/30" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-xl font-black uppercase tracking-tighter">System Quiet</h2>
-              <p className="text-muted-foreground font-mono text-[10px] uppercase opacity-60 max-w-xs mx-auto italic">
-                No active relational alerts detected in your local synchronization buffer.
-              </p>
-            </div>
+          <Card className="glass p-12 text-center">
+            <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+            <h2 className="text-xl font-semibold mb-2">No notifications yet</h2>
+            <p className="text-muted-foreground">We'll notify you when something important happens.</p>
           </Card>
         ) : (
           <div className="space-y-4">

@@ -99,22 +99,16 @@ export default function Wishlist() {
       </div>
 
       {listings.length === 0 ? (
-        <Card className="glass border-primary/20 py-24 text-center space-y-6">
-          <div className="mx-auto w-24 h-24 rounded-full bg-primary/5 flex items-center justify-center border border-primary/20 shadow-[0_0_30px_rgba(0,0,0,0.1)]">
-            <Heart className="h-12 w-12 text-primary/30" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-black uppercase tracking-tighter">Wishlist Buffer Empty</h2>
-            <p className="text-muted-foreground font-mono text-xs uppercase opacity-70 max-w-md mx-auto leading-relaxed">
-              You haven't flagged any technical assets for your secure wishlist yet. Explore our marketplace to curate your industrial collection.
-            </p>
-          </div>
-          <Button asChild className="rounded-full h-12 px-8 font-black uppercase tracking-widest shadow-lg shadow-primary/20">
-            <Link to="/marketplace">Enter Marketplace</Link>
+        <Card className="glass p-12 text-center">
+          <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+          <h2 className="text-xl font-semibold mb-2">Your wishlist is empty</h2>
+          <p className="text-muted-foreground mb-8">Start exploring the marketplace to save assets you like.</p>
+          <Button asChild className="rounded-full">
+            <Link to="/marketplace">Explore Marketplace</Link>
           </Button>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {listings.map((listing) => {
             const wishlistItem = wishlistItems.find(item => item.listingId === listing.id);
             return (

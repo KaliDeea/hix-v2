@@ -242,23 +242,23 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/90 backdrop-blur-md">
-      <div className="container flex h-20 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 sm:gap-4 group shrink-0 py-2 sm:py-4">
+      <div className="container flex h-24 items-center justify-between">
+        <Link to="/" className="flex items-center gap-4 group shrink-0 py-4">
           {platformLogo ? (
             <div className="relative">
               <img 
                 src={platformLogo} 
                 alt="HiX Logo" 
-                className="h-12 w-12 sm:h-16 w-16 md:h-20 md:w-20 rounded-full object-cover border-2 border-primary/40 transition-all group-hover:scale-110 logo-reflection logo-primary-glow" 
+                className="h-16 w-16 md:h-20 md:w-20 rounded-full object-cover border-2 border-primary/40 transition-all group-hover:scale-110 logo-reflection logo-primary-glow" 
                 referrerPolicy="no-referrer"
               />
             </div>
           ) : (
             <>
-              <div className="flex h-12 w-12 sm:h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-xl sm:text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-lg shadow-primary/30 logo-reflection logo-primary-glow">
+              <div className="flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-lg shadow-primary/30 logo-reflection logo-primary-glow">
                 H
               </div>
-              <span className="text-2xl sm:text-4xl font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-1 sm:ml-2">HiX</span>
+              <span className="text-4xl font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-2">HiX</span>
             </>
           )}
         </Link>
@@ -354,14 +354,6 @@ export function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Marketplace
-                </Link>
-                <Link 
-                  to="/request-asset" 
-                  className="text-lg font-medium px-4 py-3 rounded-lg border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Procurement
-                  <Badge variant="outline" className="text-[10px] h-5 border-primary/30 text-primary">AI PROTOCOL</Badge>
                 </Link>
                 <Link 
                   to="/messages" 

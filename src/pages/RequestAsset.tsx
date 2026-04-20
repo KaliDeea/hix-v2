@@ -149,7 +149,7 @@ export default function RequestAsset() {
       <div className="container mx-auto px-4 py-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="mb-12 border-l-4 border-primary pl-6 flex flex-col items-center text-center md:items-start md:text-left">
+          <div className="mb-12 border-l-4 border-primary pl-6">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -158,10 +158,10 @@ export default function RequestAsset() {
               <Building2 className="h-3 w-3" />
               Procurement Protocol v3.1
             </motion.div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic mb-4 font-serif">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic serif mb-4 font-serif">
               Request for <span className="text-primary not-italic">Asset</span>
             </h1>
-            <p className="text-muted-foreground font-mono text-xs uppercase tracking-wider max-w-xl">
+            <p className="text-muted-foreground font-mono text-xs uppercase tracking-wider">
               Define your project requirements. Our AI Agent will scan the global buffer for technical compatibility.
             </p>
           </div>
@@ -297,7 +297,7 @@ export default function RequestAsset() {
                               </div>
                               <p className="text-[10px] font-mono text-muted-foreground uppercase">{match.reasoning}</p>
                             </div>
-                            <div className="flex flex-col items-center gap-2 w-full md:w-auto shrink-0 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6 text-center">
+                            <div className="flex items-center gap-4 w-full md:w-auto shrink-0 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6">
                               <div className="font-mono text-sm font-bold">£{match.price?.toLocaleString()}</div>
                               <Button size="sm" variant="outline" className="font-mono text-[10px] uppercase" asChild>
                                 <Link to={`/listing/${match.id}`}>View Unit</Link>

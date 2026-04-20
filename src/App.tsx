@@ -1,4 +1,3 @@
-import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/lib/firebase";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -7,47 +6,31 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { SystemBanner } from "@/components/SystemBanner";
 import { Footer } from "@/components/Footer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import Home from "@/pages/Home";
+import Marketplace from "@/pages/Marketplace";
+import Dashboard from "@/pages/Dashboard";
+import Profile from "@/pages/Profile";
+import ListingDetail from "@/pages/ListingDetail";
+import CreateListing from "@/pages/CreateListing";
+import EditListing from "@/pages/EditListing";
+import Messages from "@/pages/Messages";
+import Admin from "@/pages/Admin";
+import AdminUserTransactions from "@/pages/AdminUserTransactions";
+import Hauling from "@/pages/Hauling";
+import Wishlist from "@/pages/Wishlist";
+import Notifications from "@/pages/Notifications";
+import About from "@/pages/About";
+import Sustainability from "@/pages/Sustainability";
+import Contact from "@/pages/Contact";
+import Terms from "@/pages/Terms";
+import Auth from "@/pages/Auth";
+import PublicProfile from "@/pages/PublicProfile";
+import RequestAsset from "@/pages/RequestAsset";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/firebase";
-import { AlertTriangle, LogOut, Loader2 } from "lucide-react";
+import { AlertTriangle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// Lazy load pages
-const Home = lazy(() => import("@/pages/Home"));
-const Marketplace = lazy(() => import("@/pages/Marketplace"));
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Profile = lazy(() => import("@/pages/Profile"));
-const ListingDetail = lazy(() => import("@/pages/ListingDetail"));
-const CreateListing = lazy(() => import("@/pages/CreateListing"));
-const EditListing = lazy(() => import("@/pages/EditListing"));
-const Messages = lazy(() => import("@/pages/Messages"));
-const Admin = lazy(() => import("@/pages/Admin"));
-const AdminUserTransactions = lazy(() => import("@/pages/AdminUserTransactions"));
-const Hauling = lazy(() => import("@/pages/Hauling"));
-const Wishlist = lazy(() => import("@/pages/Wishlist"));
-const Notifications = lazy(() => import("@/pages/Notifications"));
-const About = lazy(() => import("@/pages/About"));
-const Sustainability = lazy(() => import("@/pages/Sustainability"));
-const Contact = lazy(() => import("@/pages/Contact"));
-const Terms = lazy(() => import("@/pages/Terms"));
-const Auth = lazy(() => import("@/pages/Auth"));
-const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
-const RequestAsset = lazy(() => import("@/pages/RequestAsset"));
-
-function PageLoader() {
-  return (
-    <div className="w-full h-[60vh] flex flex-col items-center justify-center gap-4">
-      <div className="relative">
-        <Loader2 className="h-12 w-12 text-primary animate-spin opacity-20" />
-        <Loader2 className="absolute inset-0 h-12 w-12 text-primary animate-spin [animation-duration:3s]" />
-      </div>
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">
-        Initializing Ledger Data
-      </p>
-    </div>
-  );
-}
 
 function SuspendedOverlay() {
   const { profile, logout } = useAuth();
@@ -92,35 +75,33 @@ export default function App() {
             <SuspendedOverlay />
             <Router>
               <ScrollToTop />
-              <div className="flex min-h-screen flex-col overflow-x-hidden">
+              <div className="flex min-h-screen flex-col">
                 <SystemBanner />
                 <Navbar />
-                <main className="flex-1 w-full flex flex-col">
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/marketplace" element={<Marketplace />} />
-                      <Route path="/create-listing" element={<CreateListing />} />
-                      <Route path="/post-asset" element={<CreateListing />} />
-                      <Route path="/edit-listing/:id" element={<EditListing />} />
-                      <Route path="/listing/:id" element={<ListingDetail />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/messages" element={<Messages />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/profile/:uid" element={<PublicProfile />} />
-                      <Route path="/admin" element={<Admin />} />
-                      <Route path="/admin/transactions" element={<AdminUserTransactions />} />
-                      <Route path="/hauling" element={<Hauling />} />
-                      <Route path="/wishlist" element={<Wishlist />} />
-                      <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/sustainability" element={<Sustainability />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/terms" element={<Terms />} />
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/request-asset" element={<RequestAsset />} />
-                    </Routes>
-                  </Suspense>
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/marketplace" element={<Marketplace />} />
+                    <Route path="/create-listing" element={<CreateListing />} />
+                    <Route path="/post-asset" element={<CreateListing />} />
+                    <Route path="/edit-listing/:id" element={<EditListing />} />
+                    <Route path="/listing/:id" element={<ListingDetail />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/profile/:uid" element={<PublicProfile />} />
+                    <Route path="/admin" element={<Admin />} />
+                    <Route path="/admin/transactions" element={<AdminUserTransactions />} />
+                    <Route path="/hauling" element={<Hauling />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/sustainability" element={<Sustainability />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/request-asset" element={<RequestAsset />} />
+                  </Routes>
                 </main>
                 <Footer />
               </div>

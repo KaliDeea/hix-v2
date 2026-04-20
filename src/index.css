@@ -1,6 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:ital,wght@1,300;1,400;1,900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:ital,wght@1,300;1,400;1,900&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -128,20 +129,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    box-sizing: border-box;
-  }
-  html, body, #root {
-    width: 100%;
-    min-height: 100vh;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #root {
-    display: flex;
-    flex-direction: column;
-  }
+    }
   body {
     @apply bg-background text-foreground antialiased transition-colors duration-300;
     position: relative;
@@ -178,26 +166,8 @@
 
 @layer components {
   .container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    @apply w-full max-w-[1400px] mx-auto px-4 md:px-8;
   }
-  
-  @media (min-width: 768px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .container {
-      max-width: 1400px;
-    }
-  }
-
   .glass {
     @apply bg-background/60 backdrop-blur-lg border border-primary/20 shadow-[0_2px_10px_-3px_var(--primary)];
   }
@@ -229,13 +199,13 @@
 
   /* Technical Grid Styles (Recipe 1) */
   .tech-row {
-    @apply grid border-b border-border transition-colors duration-200 cursor-pointer hover:bg-primary hover:text-primary-foreground;
+    @apply grid border-b border-border transition-all duration-300 cursor-pointer hover:bg-muted/30;
   }
   .tech-header {
-    @apply font-serif italic text-[10px] sm:text-[11px] opacity-85 uppercase tracking-widest py-2 sm:py-3 px-3 sm:px-4;
+    @apply font-serif italic text-[11px] opacity-85 uppercase tracking-widest py-3 px-4;
   }
   .tech-value {
-    @apply font-mono text-[11px] sm:text-xs tracking-tight py-3 sm:py-4 px-3 sm:px-4;
+    @apply font-mono text-xs tracking-tight py-4 px-4;
   }
 
   /* Hardware Surface (Recipe 3) */
@@ -248,11 +218,6 @@
   .glow-amber { @apply bg-amber-500 shadow-[0_0_8px_var(--color-amber-500)]; }
   .glow-green { @apply bg-green-500 shadow-[0_0_8px_var(--color-green-500)]; }
   .glow-blue { @apply bg-blue-500 shadow-[0_0_8px_var(--color-blue-500)]; }
-
-  /* Giant Typography (Recipe 11) */
-  .giant-header {
-    @apply font-display text-[clamp(3.5rem,12vw,9rem)] leading-[0.82] tracking-[-0.04em] font-extrabold uppercase;
-  }
 
   /* Kinetic Motion */
   .page-transition {
