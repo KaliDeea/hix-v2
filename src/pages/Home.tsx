@@ -15,8 +15,8 @@ export default function Home() {
       {/* Hero Section - Refined Professional Look */}
       <section className="relative pt-20 pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row items-center gap-16">
-            <div className="flex-1 space-y-8">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+            <div className="flex-1 space-y-8 text-center lg:text-left">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -28,19 +28,19 @@ export default function Home() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Vetted Industrial Exchange</span>
                 </div>
                 
-                <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1]">
-                  Infrastructure for <br />
+                <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight leading-[1.1]">
+                  Infrastructure for <br className="hidden sm:block" />
                   <span className="text-primary italic font-serif">Circular</span> Liquidity.
                 </h1>
                 
-                <p className="max-w-xl text-lg text-muted-foreground leading-relaxed">
+                <p className="max-w-xl mx-auto lg:mx-0 text-base sm:text-lg text-muted-foreground leading-relaxed">
                   The HiX network connects industrial clusters across the UK, allowing firms to trade surplus machinery with verified accuracy and secure settlement.
                 </p>
 
-                <div className="flex flex-wrap gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
                   <Button 
                     size="lg" 
-                    className="rounded-full px-10 h-14 font-semibold shadow-lg shadow-primary/20"
+                    className="w-full sm:w-auto rounded-full px-10 h-14 font-semibold shadow-lg shadow-primary/20"
                     onClick={() => navigate(user ? "/dashboard" : "/auth?tab=register")}
                   >
                     {user ? "View Dashboard" : "Get Started"}
@@ -50,14 +50,14 @@ export default function Home() {
                   <Button 
                     size="lg" 
                     variant="outline" 
-                    className="rounded-full px-10 h-14 font-semibold"
+                    className="w-full sm:w-auto rounded-full px-10 h-14 font-semibold"
                     onClick={() => navigate("/marketplace")}
                   >
                     Browse Assets
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-6 pt-8 border-t border-border mt-12 overflow-x-auto no-scrollbar whitespace-nowrap">
+                <div className="flex items-center justify-center lg:justify-start gap-6 pt-8 border-t border-border mt-12 overflow-x-auto no-scrollbar whitespace-nowrap">
                   <div className="text-xs font-bold uppercase tracking-widest opacity-40">Trusted by:</div>
                   <div className="flex gap-8 opacity-60 font-black text-sm uppercase tracking-tighter">
                     <span>Cluster-Tees</span>
@@ -98,10 +98,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trust & Stats Section */}
-      <section className="py-24 border-b border-border">
+      <section className="py-16 md:py-24 border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             {[
               { label: "Assets Verified", val: "12,400+", icon: <Zap className="h-5 w-5" /> },
               { label: "Carbon Offset", val: "1.2M kg", icon: <Leaf className="h-5 w-5" /> },
@@ -114,10 +113,10 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="text-center md:text-left space-y-2"
+                className="text-center md:text-left space-y-2 p-6 rounded-3xl bg-muted/20 md:bg-transparent"
               >
                 <div className="text-primary mb-4 flex justify-center md:justify-start">{stat.icon}</div>
-                <div className="text-3xl font-bold tracking-tighter">{stat.val}</div>
+                <div className="text-2xl md:text-3xl font-bold tracking-tighter">{stat.val}</div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</div>
               </motion.div>
             ))}
@@ -126,12 +125,12 @@ export default function Home() {
       </section>
 
       {/* Feature Section */}
-      <section className="py-32 bg-muted/20">
+      <section className="py-20 md:py-32 bg-muted/20">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row gap-16 items-start">
-            <div className="md:w-1/3 sticky top-32">
-              <h2 className="text-4xl font-bold tracking-tight mb-6">Designed for <br /><span className="text-primary">Professionals.</span></h2>
-              <p className="text-muted-foreground leading-relaxed mb-8">
+          <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-start">
+            <div className="lg:w-1/3 lg:sticky lg:top-32 text-center lg:text-left">
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">Designed for <br className="hidden md:block" /><span className="text-primary">Professionals.</span></h2>
+              <p className="text-muted-foreground leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
                 The HiX Dashboard provides the technical tools required for complex industrial inventory management and ESG reporting.
               </p>
               <Button variant="outline" className="rounded-full" asChild>
@@ -139,14 +138,14 @@ export default function Home() {
               </Button>
             </div>
             
-            <div className="md:w-2/3 grid sm:grid-cols-2 gap-6">
+            <div className="lg:w-2/3 grid sm:grid-cols-2 gap-6 w-full">
               {[
                 { title: "KYB Compliance", desc: "Rigorous manual vetting for all participating firms ensuring ecosystem integrity." },
                 { title: "Smart Logistics", desc: "Route optimization for industrial haulage minimizing cluster-to-cluster emissions." },
                 { title: "Asset Identity", desc: "Every piece of machinery is assigned a digital twin for lifecycle tracking." },
                 { title: "Stripe Settlement", desc: "Enterprise-grade financial routing with secure escrow and multi-party splits." }
               ].map(item => (
-                <div key={item.title} className="p-10 bg-background border border-border rounded-3xl hover:border-primary transition-all shadow-sm">
+                <div key={item.title} className="p-8 md:p-10 bg-background border border-border rounded-3xl hover:border-primary transition-all shadow-sm">
                   <h3 className="text-xl font-bold mb-4">{item.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
                 </div>

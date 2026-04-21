@@ -455,18 +455,18 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto px-4 py-12">
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Manage your industrial exchange activities.</p>
+      <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="text-center lg:text-left">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Manage your industrial exchange activities.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-end gap-3">
           {!profile?.isVatVerified && (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-3 py-1">
-              Unverified VAT
+            <Badge variant="outline" className="w-full sm:w-auto justify-center bg-amber-500/10 text-amber-500 border-amber-500/20 px-3 py-1 text-[10px]">
+              Unverified VAT Node
             </Badge>
           )}
-          <Button className="rounded-full gap-2 shadow-lg shadow-primary/20" asChild>
+          <Button className="w-full sm:w-auto rounded-full gap-2 shadow-lg shadow-primary/20 h-11" asChild>
             <Link to="/create-listing">
               <Plus className="h-4 w-4" />
               Post Asset
@@ -528,8 +528,8 @@ export default function Dashboard() {
           <TabsTrigger value="bulk" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Bulk Upload</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <TabsContent value="overview" className="space-y-6 mt-0">
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
             <Card className="glass lg:col-span-2 border-primary/20 overflow-hidden shadow-xl shadow-primary/10">
               <CardHeader className="border-b border-primary/20 bg-primary/10">
                 <div className="flex items-center justify-between">
@@ -676,29 +676,29 @@ export default function Dashboard() {
           </div>
         </TabsContent>
 
-        <TabsContent value="listings">
+        <TabsContent value="listings" className="mt-0">
           <Card className="glass">
-            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>My Listings</CardTitle>
-                <CardDescription>Manage your industrial assets listed on HiX.</CardDescription>
+            <CardHeader className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+              <div className="text-center md:text-left">
+                <CardTitle className="text-xl">My Listings</CardTitle>
+                <CardDescription className="text-xs">Manage your industrial assets listed on HiX.</CardDescription>
               </div>
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex gap-4 mr-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Available</span>
-                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'available').length}</span>
+              <div className="flex flex-col gap-6 items-center md:items-end">
+                <div className="flex gap-6 justify-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Available</span>
+                    <span className="text-lg font-black">{myListings.filter(l => l.status === 'available').length}</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Sold</span>
-                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'sold').length}</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Sold</span>
+                    <span className="text-lg font-black">{myListings.filter(l => l.status === 'sold').length}</span>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Draft</span>
-                    <span className="text-xl font-black">{myListings.filter(l => l.status === 'draft').length}</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Draft</span>
+                    <span className="text-lg font-black">{myListings.filter(l => l.status === 'draft').length}</span>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <div className="relative w-full sm:w-48">
                     <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                     <Input 
@@ -720,8 +720,8 @@ export default function Dashboard() {
                       <SelectItem value="pending">Pending</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="outline" size="sm" className="rounded-full h-9" asChild>
-                    <Link to="/marketplace">View Marketplace</Link>
+                  <Button variant="outline" size="sm" className="rounded-full h-9 whitespace-nowrap" asChild>
+                    <Link to="/marketplace">View Market</Link>
                   </Button>
                 </div>
               </div>
@@ -789,7 +789,7 @@ export default function Dashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="history">
+        <TabsContent value="history" className="mt-0">
           <Card className="glass">
             <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -889,7 +889,7 @@ export default function Dashboard() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="bulk">
+        <TabsContent value="bulk" className="mt-0">
           <Card className="glass">
             <CardHeader>
               <CardTitle>Bulk Asset Upload</CardTitle>

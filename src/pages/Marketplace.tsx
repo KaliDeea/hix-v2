@@ -429,18 +429,18 @@ export default function Marketplace() {
 
   return (
     <div className="container mx-auto px-4 py-20 page-transition">
-      <div className="mb-16 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between border-b border-border pb-12">
-        <div className="space-y-4">
+      <div className="mb-16 flex flex-col lg:flex-row lg:items-end lg:justify-between border-b border-border pb-12 gap-8">
+        <div className="space-y-4 text-center lg:text-left">
           <span className="text-xs font-bold uppercase tracking-[0.3em] text-primary">Live Asset Index</span>
-          <h1 className="text-6xl font-black font-display tracking-tighter">Marketplace</h1>
-          <p className="text-muted-foreground font-light max-w-xl">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black font-display tracking-tighter uppercase italic italic-caps">Marketplace</h1>
+          <p className="text-muted-foreground font-light max-w-xl mx-auto lg:mx-0 text-sm sm:text-base">
             Real-time industrial inventory across the UK cluster. 
             All listings are verified for technical specification accuracy.
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row items-center">
-          <div className="relative w-full sm:w-96 group">
+        <div className="flex flex-col gap-4 sm:flex-row items-center justify-center lg:justify-end w-full lg:w-auto">
+          <div className="relative w-full sm:w-80 lg:w-96 group">
             <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Search assets..." 
@@ -459,18 +459,20 @@ export default function Marketplace() {
             )}
           </div>
 
-          <Button 
-            className="h-14 px-8 rounded-full font-semibold transition-all hover:shadow-md"
-            onClick={() => setShowFilters(!showFilters)}
-            variant={showFilters ? "default" : "outline"}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
-          
-          <Button className="h-14 px-8 rounded-full font-bold bg-primary text-primary-foreground border-none shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all" asChild>
-            <Link to="/create-listing">Post Asset</Link>
-          </Button>
+          <div className="flex gap-2 sm:gap-4 w-full sm:w-auto">
+            <Button 
+              className="flex-1 sm:flex-none h-14 px-8 rounded-full font-semibold transition-all hover:shadow-md"
+              onClick={() => setShowFilters(!showFilters)}
+              variant={showFilters ? "default" : "outline"}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+            
+            <Button className="flex-1 sm:flex-none h-14 px-8 rounded-full font-bold bg-primary text-primary-foreground border-none shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all" asChild>
+              <Link to="/create-listing">Post Asset</Link>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -558,8 +560,8 @@ export default function Marketplace() {
         <div className="grid grid-cols-12 bg-white/40 dark:bg-black/20 border-b border-border hidden md:grid">
           <div className="col-span-4 py-4 px-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Industrial Asset / Identifier</div>
           <div className="col-span-3 py-4 px-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Specifications</div>
-          <div className="col-span-2 py-4 px-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground border-x border-border text-center">ESG Impact</div>
-          <div className="col-span-2 py-4 px-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Trading Value</div>
+          <div className="col-span-2 py-4 px-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground border-x border-border text-center">Buffer Stock</div>
+          <div className="col-span-2 py-4 px-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Unit Valuation</div>
           <div className="col-span-1 py-4 px-6 text-[10px] uppercase font-bold tracking-widest text-muted-foreground border-l border-border text-center">Action</div>
         </div>
 
@@ -593,11 +595,6 @@ export default function Marketplace() {
                   <div className="flex flex-col justify-center min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[10px] font-mono opacity-60 font-medium tracking-tight">ID: {listing.id.slice(-6).toUpperCase()}</span>
-                      {(sellerProfiles[listing.sellerId]?.isVetted || listing.isVetted) && (
-                        <Badge className="bg-primary/10 text-primary border-primary/20 text-[9px] h-5 rounded-full px-2 uppercase font-bold tracking-tight">
-                          Verified
-                        </Badge>
-                      )}
                     </div>
                     <Link to={`/listing/${listing.id}`} className="text-xl font-bold tracking-tight hover:text-primary transition-colors truncate">
                       {listing.title}
@@ -610,7 +607,7 @@ export default function Marketplace() {
                 </div>
 
                 {/* Specs */}
-                <div className="col-span-1 md:col-span-3 p-6 flex flex-col justify-center bg-muted/5">
+                <div className="col-span-1 md:col-span-3 p-6 flex flex-col justify-center bg-muted/5 border-y md:border-y-0 border-border md:border-none">
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tight">Condition</span>
@@ -628,15 +625,15 @@ export default function Marketplace() {
                 </div>
 
                 {/* ESG Impact */}
-                <div className="col-span-1 md:col-span-2 p-6 flex flex-col items-center justify-center border-x border-border bg-primary/5">
+                <div className="col-span-1 md:col-span-2 p-6 flex flex-col items-center justify-center border-x border-border bg-primary/5 md:bg-primary/5">
                   <div className="flex items-center gap-1.5 text-primary">
                     <Leaf className="h-3.5 w-3.5" />
-                    <span className="text-2xl font-black font-display tracking-tighter">
+                    <span className="text-xl font-black font-display tracking-tighter">
                       {listing.co2Savings}
                     </span>
                     <span className="text-[10px] font-bold uppercase opacity-60">kg</span>
                   </div>
-                  <span className="text-[9px] font-bold uppercase tracking-tight text-primary/60 mt-1">CO2 Offset</span>
+                  <span className="text-[9px] font-bold uppercase tracking-tight text-primary/60 mt-1">Buffer Stock</span>
                   
                   <div className="mt-4 w-full h-1.5 bg-primary/10 rounded-full overflow-hidden">
                     <motion.div 
@@ -648,15 +645,15 @@ export default function Marketplace() {
                 </div>
 
                 {/* Price */}
-                <div className="col-span-1 md:col-span-2 p-6 flex flex-col justify-center">
-                  <div className="text-3xl font-black tracking-tighter text-foreground">
+                <div className="col-span-1 md:col-span-2 p-6 flex flex-col items-center md:items-start justify-center border-t md:border-t-0 border-border">
+                  <div className="text-2xl md:text-xl font-black tracking-tighter text-foreground">
                     £{listing.price?.toLocaleString()}
                   </div>
-                  <span className="text-[9px] font-bold uppercase tracking-tight text-muted-foreground mt-1">Trading Value (GBP)</span>
+                  <span className="text-[9px] font-bold uppercase tracking-tight text-muted-foreground mt-1">Valuation (GBP)</span>
                 </div>
 
                 {/* Action */}
-                <div className="col-span-1 md:col-span-1 p-6 flex items-center justify-center border-l border-border md:bg-muted/5">
+                <div className="col-span-1 md:col-span-1 p-6 flex items-center justify-center border-t md:border-t-0 md:border-l border-border md:bg-muted/5">
                   <Button 
                     size="icon" 
                     className="h-12 w-12 rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-110 transition-all bg-primary text-primary-foreground group/btn" 
@@ -675,16 +672,16 @@ export default function Marketplace() {
 
       {/* Pagination - Unified Block */}
       {filteredListings.length > itemsPerPage && (
-        <div className="mt-12 flex justify-center items-center gap-6">
+        <div className="mt-12 flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6">
           <Button 
             variant="outline" 
-            className="rounded-full font-bold text-xs h-12 px-8 transition-all hover:bg-primary hover:text-white"
+            className="w-full sm:w-auto rounded-full font-bold text-xs h-12 px-8 transition-all hover:bg-primary hover:text-white order-2 sm:order-1"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(p => p - 1)}
           >
             ← Previous
           </Button>
-          <div className="flex items-center gap-3 px-6 py-2 rounded-full border border-border font-medium text-xs bg-muted/20 text-foreground">
+          <div className="flex items-center gap-3 px-6 py-2 rounded-full border border-border font-medium text-xs bg-muted/20 text-foreground order-1 sm:order-2">
             <span className="opacity-60 uppercase tracking-widest text-[10px]">Page</span>
             <span className="font-bold text-primary">{currentPage}</span>
             <span className="opacity-40">/</span>
@@ -692,7 +689,7 @@ export default function Marketplace() {
           </div>
           <Button 
             variant="outline" 
-            className="rounded-full font-bold text-xs h-12 px-8 transition-all hover:bg-primary hover:text-white"
+            className="w-full sm:w-auto rounded-full font-bold text-xs h-12 px-8 transition-all hover:bg-primary hover:text-white order-3"
             disabled={currentPage >= Math.ceil(filteredListings.length / itemsPerPage)}
             onClick={() => setCurrentPage(p => p + 1)}
           >

@@ -2268,7 +2268,7 @@ export default function Admin() {
                               <TableCell className="text-right pr-6 space-x-1">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Dialog>
-                                    <DialogTrigger asChild>
+                                    <DialogTrigger asChild nativeButton={false}>
                                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg" onClick={() => setSelectedReport(r)}>
                                         <Eye className="h-4 w-4" />
                                       </Button>

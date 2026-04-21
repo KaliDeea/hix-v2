@@ -401,13 +401,13 @@ export default function ListingDetail() {
         Back to Marketplace
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+      <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
         {/* Gallery Section */}
-        <div className="lg:col-span-7">
+        <div className="w-full lg:w-7/12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`p-6 rounded-3xl border-2 transition-colors ${getCategoryColor(listing.category)}`}
+            className={`p-4 md:p-6 rounded-3xl border-2 transition-colors ${getCategoryColor(listing.category)}`}
           >
             <div className="aspect-[16/10] overflow-hidden rounded-3xl glass border-white/10 shadow-xl relative group">
               <img 
@@ -419,9 +419,9 @@ export default function ListingDetail() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
-            <div className="mt-6 grid grid-cols-4 gap-4">
+            <div className="mt-4 md:mt-6 grid grid-cols-4 gap-2 md:gap-4 font-mono">
               {[1, 2, 3, 4].map((i) => (
-                <div key={`listing-thumb-${i}`} className="aspect-square rounded-2xl glass overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
+                <div key={`listing-thumb-${i}`} className="aspect-square rounded-xl md:rounded-2xl glass overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
                   <img src={`https://picsum.photos/seed/steel-${i}/200/200`} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
                 </div>
               ))}
@@ -430,133 +430,133 @@ export default function ListingDetail() {
         </div>
 
         {/* Sidebar: Actions & Seller Info (Sticky on Desktop) */}
-        <div className="lg:col-span-5 lg:row-span-2">
+        <div className="w-full lg:w-5/12">
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className={`flex flex-col lg:sticky lg:top-24 space-y-8 p-8 rounded-3xl border-2 transition-colors ${getCategoryColor(listing.category)}`}
+            className={`flex flex-col lg:sticky lg:top-24 space-y-6 md:space-y-8 p-6 md:p-8 rounded-3xl border-2 transition-colors ${getCategoryColor(listing.category)}`}
           >
             <div>
-              <div className="mb-6 flex flex-wrap items-center gap-3">
-                <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">
-                  {listing.category}
-                </Badge>
-                <Badge variant="outline" className="capitalize">
-                  {(listing.condition || 'used-good').replace('-', ' ')}
-                </Badge>
-                
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
-                  <div className={`h-2 w-2 rounded-full ${getQualityScoreColor(qualityScore)}`} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Quality: {getQualityScoreLabel(qualityScore)} ({qualityScore}%)</span>
-                </div>
-
-                <div className="flex flex-col items-end ml-auto">
+              <div className="flex flex-col items-center gap-4 mb-6 md:mb-8 text-center">
+                <div className="flex items-center justify-center gap-4 w-full">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 text-primary font-bold cursor-help">
-                          <Leaf className="h-5 w-5" />
-                          {listing.co2Savings}kg CO2
-                        </div>
+                        <Link 
+                          to={`/profile/${listing.sellerId}`}
+                          className="flex items-center justify-center gap-2 p-3 rounded-2xl glass-dark w-full cursor-pointer hover:border-primary/50 transition-all border border-transparent"
+                        >
+                          <ShieldCheck className={`h-4 w-4 ${(sellerProfile?.isVetted || listing.isVetted) ? 'text-primary' : 'text-muted-foreground/40'}`} />
+                          <span className="text-xs font-medium">{listing.sellerName}</span>
+                          {sellerProfile?.isVatVerified && (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 ml-2 text-[9px] h-4">VAT Verified</Badge>
+                          )}
+                        </Link>
                       </TooltipTrigger>
                       <TooltipContent className="glass border-primary/20">
-                        <p className="text-xs">Estimated CO2 emissions avoided by reusing this asset.</p>
+                        <p className="text-xs">{(sellerProfile?.isVetted || listing.isVetted) ? 'Verified Seller: This company has passed our vetting process.' : 'Unverified Seller: Exercise caution.'}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <div className="text-[10px] text-muted-foreground">
-                    ≈ {Math.round(listing.co2Savings / 20)} trees/yr
-                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-3 w-full px-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`flex-1 rounded-full h-7 glass border-white/10 transition-all duration-300 ${isWishlisted ? 'text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'text-muted-foreground'} hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/30`}
+                    onClick={toggleWishlist}
+                  >
+                    <Heart className={`h-3 w-3 mr-1.5 ${isWishlisted ? 'fill-current' : ''}`} />
+                    <span className="text-[8px] font-bold uppercase tracking-wider">Wishlist</span>
+                  </Button>
+                  
+                  <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
+                    <DialogTrigger asChild nativeButton={false}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 rounded-full h-7 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10"
+                      >
+                        <AlertTriangle className="h-3 w-3 mr-1.5" />
+                        <span className="text-[8px] font-bold uppercase tracking-wider">Report</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="glass sm:max-w-[425px]">
+                      <form onSubmit={handleReport}>
+                        <DialogHeader>
+                          <DialogTitle>Report Listing</DialogTitle>
+                          <DialogDescription>
+                            Report a violation of terms or inaccurate listing details.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="reason">Reason for Report</Label>
+                            <Input 
+                              id="reason" 
+                              placeholder="e.g., Inaccurate description, Counterfeit..." 
+                              value={reportData.reason}
+                              onChange={(e) => setReportData({...reportData, reason: e.target.value})}
+                              required
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="report-desc">Detailed Description</Label>
+                            <Textarea 
+                              id="report-desc" 
+                              placeholder="Provide more details about the violation..." 
+                              value={reportData.description}
+                              onChange={(e) => setReportData({...reportData, description: e.target.value})}
+                              className="h-32"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit" variant="destructive" className="w-full rounded-full" disabled={isReporting}>
+                            {isReporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Submit Report
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
 
-              <h1 className="text-3xl lg:text-4xl font-bold mb-4 tracking-tight leading-tight">{listing.title}</h1>
-              
-              <div className="flex items-center gap-4 mb-8">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link 
-                        to={`/profile/${listing.sellerId}`}
-                        className="flex items-center gap-2 p-3 rounded-2xl glass-dark inline-flex cursor-pointer hover:border-primary/50 transition-all border border-transparent"
-                      >
-                        <ShieldCheck className={`h-5 w-5 ${(sellerProfile?.isVetted || listing.isVetted) ? 'text-primary' : 'text-muted-foreground/40'}`} />
-                        <span className="text-sm font-medium">{listing.sellerName}</span>
-                        {(sellerProfile?.isVetted || listing.isVetted) && (
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 ml-2">ID Verified</Badge>
-                        )}
-                        {sellerProfile?.isVatVerified && (
-                          <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 ml-2">VAT Verified</Badge>
-                        )}
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent className="glass border-primary/20">
-                      <p className="text-xs">{(sellerProfile?.isVetted || listing.isVetted) ? 'Verified Seller: This company has passed our vetting process.' : 'Unverified Seller: Exercise caution.'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              <div>
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 text-[10px]">
+                    {listing.category}
+                  </Badge>
+                  <Badge variant="outline" className="capitalize text-[10px]">
+                    {(listing.condition || 'used-good').replace('-', ' ')}
+                  </Badge>
+                  
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                    <div className={`h-1.5 w-1.5 rounded-full ${getQualityScoreColor(qualityScore)}`} />
+                    <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">Q: {getQualityScoreLabel(qualityScore)} ({qualityScore}%)</span>
+                  </div>
 
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={`rounded-full h-11 w-11 glass border-white/10 transition-all duration-300 ${isWishlisted ? 'text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'text-muted-foreground'} hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]`}
-                  onClick={toggleWishlist}
-                  title="Add to Wishlist"
-                >
-                  <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
-                </Button>
-                
-                <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="ml-2 rounded-full h-11 w-11 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10 shadow-[0_0_10px_rgba(239,68,68,0.2)] hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]" 
-                      title="Report Listing"
-                    >
-                      <AlertTriangle className="h-5 w-5" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="glass sm:max-w-[425px]">
-                    <form onSubmit={handleReport}>
-                      <DialogHeader>
-                        <DialogTitle>Report Listing</DialogTitle>
-                        <DialogDescription>
-                          Report a violation of terms or inaccurate listing details.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="reason">Reason for Report</Label>
-                          <Input 
-                            id="reason" 
-                            placeholder="e.g., Inaccurate description, Counterfeit..." 
-                            value={reportData.reason}
-                            onChange={(e) => setReportData({...reportData, reason: e.target.value})}
-                            required
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="report-desc">Detailed Description</Label>
-                          <Textarea 
-                            id="report-desc" 
-                            placeholder="Provide more details about the violation..." 
-                            value={reportData.description}
-                            onChange={(e) => setReportData({...reportData, description: e.target.value})}
-                            className="h-32"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit" variant="destructive" className="w-full rounded-full" disabled={isReporting}>
-                          {isReporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Submit Report
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                  <div className="flex flex-col items-end ml-auto">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1.5 text-primary font-bold cursor-help text-sm">
+                            <Leaf className="h-4 w-4" />
+                            {listing.co2Savings}kg
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="glass border-primary/20">
+                          <p className="text-xs">CO2 avoided by reuse.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+
+                <h1 className="text-2xl lg:text-3xl font-bold mb-4 tracking-tight leading-tight text-center">{listing.title}</h1>
               </div>
             </div>
 
@@ -570,14 +570,14 @@ export default function ListingDetail() {
 
               {listing.listingType === 'auction' ? (
                 <div className="space-y-10">
-                  <div className="grid grid-cols-2 gap-px bg-primary/10 border border-primary/20">
-                    <div className="p-6 bg-background/40 backdrop-blur-md">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 text-center">
                       <p className="tech-header p-0 mb-2">Current Bid Floor</p>
-                      <p className="text-4xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
+                      <p className="text-2xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
                     </div>
-                    <div className="p-6 bg-background/40 backdrop-blur-md border-l border-primary/20">
+                    <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 text-center">
                       <p className="tech-header p-0 mb-2">Timer [UTC]</p>
-                      <div className="flex items-center gap-2 text-lg font-mono font-bold">
+                      <div className="flex items-center justify-center gap-2 text-md font-mono font-bold">
                         <Clock className="h-4 w-4 text-amber-600" />
                         {listing.auctionEndTime ? formatDistanceToNow(new Date(listing.auctionEndTime)) : "48:02:11"}
                       </div>
@@ -586,7 +586,7 @@ export default function ListingDetail() {
                   
                   <div className="flex flex-col gap-4">
                     {/* Quick Guide */}
-                    <div className="p-4 bg-primary/5 border border-primary/20 space-y-2 mb-2">
+                    <div className="p-4 bg-primary/5 border border-primary/20 space-y-2 mb-2 rounded-2xl">
                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
                           <Leaf className="h-3 w-3" />
                           Auction Quick Guide
@@ -611,13 +611,13 @@ export default function ListingDetail() {
                           />
                        </div>
                     </div>
-                    <motion.div whileHover={{ scale: 1.02, translateY: -4 }} whileTap={{ scale: 0.98 }}>
+                    <motion.div whileHover={{ scale: 1.02, translateY: -2 }} whileTap={{ scale: 0.98 }}>
                       <Button 
-                        className="rounded-2xl h-16 w-full text-xs font-black uppercase tracking-[0.3em] bg-primary text-primary-foreground hover:shadow-[0_0_30px_var(--primary)] transition-all shadow-[0_0_20px_var(--primary)] border-none" 
+                        className="rounded-2xl h-14 w-full text-[10px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground hover:shadow-[0_0_20px_var(--primary)] transition-all shadow-[0_0_15px_var(--primary)] border-none" 
                         onClick={handlePlaceBid} 
                         disabled={isBidding || platformSettings.maintenanceMode}
                       >
-                        {isBidding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gavel className="mr-3 h-4 w-4" />}
+                        {isBidding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
                         PLACE BID
                       </Button>
                     </motion.div>
@@ -625,14 +625,14 @@ export default function ListingDetail() {
                 </div>
               ) : (
                 <div className="space-y-10">
-                  <div className="grid grid-cols-2 gap-px bg-primary/10 border border-primary/20">
-                    <div className="p-6 bg-background/40 backdrop-blur-md">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 text-center">
                       <p className="tech-header p-0 mb-2">Unit Valuation</p>
-                      <p className="text-4xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
+                      <p className="text-2xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
                     </div>
-                    <div className="p-6 bg-background/40 backdrop-blur-md border-l border-primary/20">
+                    <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 text-center">
                       <p className="tech-header p-0 mb-2">Buffer Stock</p>
-                      <p className="text-xl font-mono font-bold">{listing.quantity} UNITS</p>
+                      <p className="text-lg font-mono font-bold">{listing.quantity} UNITS</p>
                     </div>
                   </div>
 
@@ -640,7 +640,7 @@ export default function ListingDetail() {
                     <div className="flex items-center justify-between px-1">
                       <Label className="tech-header p-0">Select Quantity</Label>
                     </div>
-                    <div className="flex items-center border border-primary/30 h-16 bg-background/60 overflow-hidden group">
+                    <div className="flex items-center border border-primary/30 h-16 bg-background/60 overflow-hidden group rounded-2xl">
                       <Button 
                         variant="ghost" 
                         className="h-full rounded-none px-6 border-r border-primary/20 hover:bg-primary/10"
@@ -673,7 +673,7 @@ export default function ListingDetail() {
 
                   <div className="flex flex-col gap-4">
                      {/* Quick Guide */}
-                     <div className="p-4 bg-primary/5 border border-primary/20 space-y-2 mb-2">
+                     <div className="p-4 bg-primary/5 border border-primary/20 space-y-2 mb-2 rounded-2xl">
                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
                          <Leaf className="h-3 w-3" />
                          Trading Quick Guide
@@ -686,41 +686,41 @@ export default function ListingDetail() {
                      </div>
 
                      <motion.div
-                       whileHover={{ scale: 1.02, translateY: -4 }}
-                       whileTap={{ scale: 0.98 }}
+                       whileHover={{ scale: 1.01, translateY: -1 }}
+                       whileTap={{ scale: 0.99 }}
                        className="w-full"
                      >
                        <Button 
                           size="lg" 
-                          className="w-full rounded-2xl h-20 text-[11px] font-black uppercase tracking-[0.4em] bg-primary text-primary-foreground shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:shadow-[0_0_40px_rgba(var(--primary),0.5)] transition-all border-none" 
+                          className="w-full rounded-2xl h-14 text-[9px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.2)] hover:shadow-[0_0_25px_rgba(var(--primary),0.3)] transition-all border-none" 
                           onClick={handleBuy}
                           disabled={platformSettings.maintenanceMode}
                         >
-                          <ShoppingCart className="mr-4 h-5 w-5" />
-                          BUY
+                          <ShoppingCart className="mr-2 h-3.5 w-3.5" />
+                          BUY NOW
                         </Button>
                      </motion.div>
                       
-                      <div className="grid grid-cols-2 gap-4">
-                        <motion.div whileHover={{ scale: 1.05, translateY: -2 }} whileTap={{ scale: 0.95 }}>
+                      <div className="grid grid-cols-2 gap-3">
+                        <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
                            <Button 
                               variant="outline" 
-                              className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+                              className="w-full h-11 rounded-xl font-bold text-[8px] uppercase tracking-widest border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all"
                               onClick={handleMessageSeller}
                            >
-                              <MessageSquare className="h-4 w-4 mr-2" />
-                              Message Seller
+                              <MessageSquare className="h-3 w-3 mr-1.5" />
+                              Message
                            </Button>
                         </motion.div>
                         <Dialog>
-                           <DialogTrigger asChild>
-                              <motion.div whileHover={{ scale: 1.05, translateY: -2 }} whileTap={{ scale: 0.95 }}>
+                           <DialogTrigger asChild nativeButton={false}>
+                              <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
                                  <Button 
                                     variant="outline" 
-                                    className="w-full h-16 rounded-2xl font-black text-[10px] uppercase tracking-widest border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all"
+                                    className="w-full h-11 rounded-xl font-bold text-[8px] uppercase tracking-widest border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all"
                                  >
-                                    <Send className="h-4 w-4 mr-2" />
-                                    Counter Offer
+                                    <Send className="h-3 w-3 mr-1.5" />
+                                    Offer
                                  </Button>
                               </motion.div>
                            </DialogTrigger>
@@ -837,7 +837,6 @@ export default function ListingDetail() {
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl font-black uppercase tracking-tighter text-primary italic">Technical Specifications</h2>
                 <div className="h-px flex-1 bg-primary/20 mx-6 hidden sm:block" />
-                <Badge variant="outline" className="border-primary/40 text-[10px] font-mono tracking-widest uppercase">Verified_Data_v2.1</Badge>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
