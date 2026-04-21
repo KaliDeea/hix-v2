@@ -66,27 +66,30 @@ function NotificationDropdown({ notifications, unreadCount, markAsRead, markAllA
             </Button>
           )}
         </div>
-        <div className="max-h-[400px] overflow-y-auto">
+        <div className="max-h-[400px] overflow-y-auto scrollbar-hide">
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground text-sm">
               No notifications yet.
             </div>
           ) : (
             notifications.map((n) => (
-              <div 
+              <DropdownMenuItem 
                 key={`nav-notif-${n.id}`} 
-                className={`p-4 border-b border-white/5 hover:bg-white/5 border-l-2 border-l-transparent hover:border-l-primary cursor-pointer transition-all ${!n.read ? 'bg-primary/5' : ''}`}
-                onClick={() => {
+                className={`flex flex-col items-start p-4 border-b border-white/5 cursor-pointer transition-all focus:bg-white/5 outline-none ${!n.read ? 'bg-primary/5' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent menu from closing before navigate if needed, though items usually close
                   if (!n.read) markAsRead(n.id);
-                  if (n.link) navigate(n.link);
+                  if (n.link) {
+                    navigate(n.link);
+                  }
                 }}
               >
-                <div className="flex justify-between items-start gap-2">
+                <div className="flex justify-between items-start gap-2 w-full">
                   <p className={`text-sm ${!n.read ? 'font-semibold' : ''}`}>{n.title}</p>
                   {!n.read && <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{n.message}</p>
-              </div>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 w-full">{n.message}</p>
+              </DropdownMenuItem>
             ))
           )}
         </div>

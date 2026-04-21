@@ -158,6 +158,14 @@ service cloud.firestore {
              data.amount is number && data.amount > 0;
     }
 
+    function isValidOffer(data) {
+      return hasOnlyAllowedFields(['listingId', 'listingTitle', 'buyerId', 'buyerName', 'sellerId', 'amount', 'quantity', 'reason', 'status', 'createdAt']) &&
+             data.buyerId == request.auth.uid &&
+             data.amount is number && data.amount > 0 &&
+             data.quantity is number && data.quantity > 0 &&
+             data.status in ['pending', 'accepted', 'rejected', 'countered'];
+    }
+
     function isValidHaulingPartner(data) {
       return hasOnlyAllowedFields(['name', 'location', 'rating', 'specializations', 'fleetSize', 'status', 'createdAt']) &&
              data.name is string && data.name.size() > 0 &&
@@ -254,6 +262,22 @@ service cloud.firestore {
       allow read: if true;
       // Vetted users can place bids
       allow create: if isVetted() && isNotSuspended() && isValidBid(request.resource.data);
+    }
+
+    match /offers/{offerId} {
+      // Only parties involved or admin can read
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.buyerId || 
+        request.auth.uid == resource.data.sellerId || 
+        isAdmin()
+      );
+      // Vetted non-suspended users can submit offers
+      allow create: if isVetted() && isNotSuspended() && isValidOffer(request.resource.data);
+      // Parties can update status or amount (for countering)
+      allow update: if isNotSuspended() && (
+        (request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.sellerId) || 
+        isAdmin()
+      );
     }
 
     match /hauling_partners/{partnerId} {

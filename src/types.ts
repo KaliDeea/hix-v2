@@ -181,3 +181,16 @@ export interface AuditLog {
   details: string;
   createdAt: any;
 }
+
+export interface Offer {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  buyerName: string;
+  sellerId: string;
+  amount: number;
+  quantity: number;
+  reason: string;
+  status: 'pending' | 'accepted' | 'rejected' | 'countered';
+  createdAt: any;
+}

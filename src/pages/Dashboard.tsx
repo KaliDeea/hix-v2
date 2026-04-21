@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAuth, db, onSnapshot, collection, query, where, handleFirestoreError, OperationType, deleteDoc, doc, updateDoc, increment } from "@/lib/firebase";
-import { Listing, Transaction, Report } from "@/types";
+import { useAuth, db, onSnapshot, collection, query, where, handleFirestoreError, OperationType, deleteDoc, doc, updateDoc, increment, getDoc, serverTimestamp, setDoc, addDoc } from "@/lib/firebase";
+import { Listing, Transaction, Report, Offer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -75,16 +75,17 @@ import {
 import { format, subDays } from "date-fns";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { addDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import Papa from "papaparse";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "overview");
+  const [activeSubTab, setActiveSubTab] = useState(searchParams.get("subtab") || "received");
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [listingSearch, setListingSearch] = useState("");
@@ -101,6 +102,26 @@ export default function Dashboard() {
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const subtab = searchParams.get("subtab");
+    
+    if (tab) {
+      const validTabs = ["overview", "listings", "history", "offers", "bulk"];
+      if (validTabs.includes(tab)) {
+        setActiveTab(tab);
+      } else if (tab === "sales") {
+        setActiveTab("offers"); // Legacy fallback
+      } else {
+        setActiveTab("overview");
+      }
+    }
+
+    if (subtab) {
+      setActiveSubTab(subtab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
@@ -212,10 +233,41 @@ export default function Dashboard() {
       setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.LIST, transPath));
 
+    // Fetch Offers
+    const offersPath = "offers";
+    const unsubOffersReceived = onSnapshot(query(collection(db, offersPath), where("sellerId", "==", user.uid)), (snapshot) => {
+      const received = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Offer[];
+      setOffers(prev => {
+        const sent = prev.filter(o => o.buyerId === user.uid && o.sellerId !== user.uid);
+        const combined = [...received, ...sent];
+        return combined.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+      });
+    });
+
+    const unsubOffersSent = onSnapshot(query(collection(db, offersPath), where("buyerId", "==", user.uid)), (snapshot) => {
+      const sent = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Offer[];
+      setOffers(prev => {
+        const received = prev.filter(o => o.sellerId === user.uid);
+        const uniqueSent = sent.filter(s => !received.find(r => r.id === s.id));
+        const combined = [...received, ...uniqueSent];
+        return combined.sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+      });
+    });
+
     return () => {
       unsubListings();
       unsubBuyer();
       unsubSeller();
+      unsubOffersReceived();
+      unsubOffersSent();
     };
   }, [user]);
 
@@ -334,6 +386,30 @@ export default function Dashboard() {
         setIsBulkUploading(false);
       }
     });
+  };
+
+  const handleUpdateOfferStatus = async (offerId: string, newStatus: 'accepted' | 'rejected') => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, "offers", offerId), { status: newStatus });
+      
+      const offer = offers.find(o => o.id === offerId);
+      if (offer) {
+        await addDoc(collection(db, "notifications"), {
+          userId: offer.buyerId,
+          title: `Offer ${newStatus === 'accepted' ? 'Accepted' : 'Rejected'}`,
+          message: `Your offer of £${offer.amount.toLocaleString()} for ${offer.listingTitle || offer.listingId} has been ${newStatus}.`,
+          type: "bid",
+          link: "/dashboard?tab=offers&subtab=sent",
+          read: false,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      toast.success(`Offer marked as ${newStatus}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `offers/${offerId}`);
+    }
   };
 
   const downloadTemplate = () => {
@@ -525,6 +601,7 @@ export default function Dashboard() {
           <TabsTrigger value="overview" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Overview</TabsTrigger>
           <TabsTrigger value="listings" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">My Listings</TabsTrigger>
           <TabsTrigger value="history" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Trade History</TabsTrigger>
+          <TabsTrigger value="offers" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Offers {offers.filter(o => o.sellerId === user.uid && o.status === 'pending').length > 0 && `(${offers.filter(o => o.sellerId === user.uid && o.status === 'pending').length})`}</TabsTrigger>
           <TabsTrigger value="bulk" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Bulk Upload</TabsTrigger>
         </TabsList>
 
@@ -885,6 +962,105 @@ export default function Dashboard() {
                   </TableBody>
                 </Table>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="offers" className="mt-0">
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle>Counter-Offers</CardTitle>
+              <CardDescription>Manage incoming and outgoing offers.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
+                <TabsList className="mb-4">
+                  <TabsTrigger value="received">Received</TabsTrigger>
+                  <TabsTrigger value="sent">Sent</TabsTrigger>
+                </TabsList>
+                <TabsContent value="received">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Buyer</TableHead>
+                          <TableHead>Asset</TableHead>
+                          <TableHead>Offer Unit Price</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {offers.filter(o => o.sellerId === user.uid).map((offer) => (
+                          <TableRow key={`offer-received-${offer.id}`}>
+                            <TableCell className="font-medium">{offer.buyerName}</TableCell>
+                            <TableCell>{offer.listingTitle || offer.listingId}</TableCell>
+                            <TableCell className="font-mono">£{offer.amount.toLocaleString()}</TableCell>
+                            <TableCell>{offer.quantity}</TableCell>
+                            <TableCell>
+                              <Badge className="capitalize">{offer.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              {offer.status === 'pending' && (
+                                <>
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'accepted')}>Accept</Button>
+                                  <Button size="sm" variant="destructive" className="h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'rejected')}>Reject</Button>
+                                </>
+                              )}
+                              <Button variant="ghost" size="sm" className="h-8" asChild>
+                                <Link to={`/listing/${offer.listingId}`}>View</Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {offers.filter(o => o.sellerId === user.uid).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No offers received yet.</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+                <TabsContent value="sent">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Asset</TableHead>
+                          <TableHead>Offer Unit Price</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {offers.filter(o => o.buyerId === user.uid).map((offer) => (
+                          <TableRow key={`offer-sent-${offer.id}`}>
+                            <TableCell className="font-medium">{offer.listingTitle || offer.listingId}</TableCell>
+                            <TableCell className="font-mono">£{offer.amount.toLocaleString()}</TableCell>
+                            <TableCell>{offer.quantity}</TableCell>
+                            <TableCell>
+                              <Badge className="capitalize">{offer.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" className="h-8" asChild>
+                                <Link to={`/listing/${offer.listingId}`}>View Listing</Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {offers.filter(o => o.buyerId === user.uid).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">You haven't submitted any offers yet.</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </TabsContent>

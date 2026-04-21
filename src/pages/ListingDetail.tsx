@@ -78,6 +78,10 @@ export default function ListingDetail() {
   const [isReporting, setIsReporting] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
   const [isBidding, setIsBidding] = useState(false);
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
+  const [offerAmount, setOfferAmount] = useState("");
+  const [offerReason, setOfferReason] = useState("");
+  const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
   const [isStartingChat, setIsStartingChat] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
@@ -354,6 +358,17 @@ export default function ListingDetail() {
         amount,
         createdAt: serverTimestamp()
       });
+
+      // Notify Seller
+      await addDoc(collection(db, "notifications"), {
+        userId: listing.sellerId,
+        title: "New Bid Placed",
+        message: `${profile.companyName} has placed a bid of £${amount.toLocaleString()} on your listing: ${listing.title}`,
+        type: "bid",
+        link: `/listing/${listing.id}`,
+        read: false,
+        createdAt: serverTimestamp()
+      });
       
       toast.success("Bid placed successfully!");
       setBidAmount("");
@@ -361,6 +376,72 @@ export default function ListingDetail() {
       handleFirestoreError(error, OperationType.CREATE, "bids");
     } finally {
       setIsBidding(false);
+    }
+  };
+
+  const handleSubmitOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !profile || !listing || !offerAmount) return;
+
+    if (!profile.isVetted && profile.role !== 'superadmin') {
+      toast.error("Your account must be vetted before submitting offers");
+      return;
+    }
+
+    const amount = parseFloat(offerAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid offer amount");
+      return;
+    }
+
+    setIsSubmittingOffer(true);
+    try {
+      // 1. Create Offer document
+      const offerData = {
+        listingId: listing.id,
+        listingTitle: listing.title,
+        buyerId: user.uid,
+        buyerName: profile.companyName,
+        sellerId: listing.sellerId,
+        amount: amount,
+        quantity: quantity,
+        reason: offerReason,
+        status: 'pending',
+        createdAt: serverTimestamp()
+      };
+      
+      const offerRef = await addDoc(collection(db, "offers"), offerData);
+
+      // 2. Notify Seller
+      await addDoc(collection(db, "notifications"), {
+        userId: listing.sellerId,
+        title: "New Counter-Offer Received",
+        message: `${profile.companyName} has submitted an offer of £${amount.toLocaleString()} for ${listing.title}.`,
+        type: "bid",
+        link: `/dashboard?tab=offers&subtab=received`, 
+        read: false,
+        createdAt: serverTimestamp()
+      });
+
+      // 3. Log to Audit
+      await addDoc(collection(db, "audit_logs"), {
+        adminId: "system",
+        adminName: "System",
+        action: "OFFER_SUBMITTED",
+        details: `Buyer ${profile.companyName} submitted offer of £${amount} (Qty: ${quantity}) for Listing ${listing.id}`,
+        targetId: offerRef.id,
+        targetType: 'system',
+        createdAt: serverTimestamp()
+      }).catch(e => console.error("Error logging offer:", e));
+
+      toast.success("Offer submitted successfully! The seller has been notified.");
+      setIsOfferModalOpen(false);
+      setOfferAmount("");
+      setOfferReason("");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "offers");
+    } finally {
+      setIsSubmittingOffer(false);
     }
   };
 
@@ -725,7 +806,7 @@ export default function ListingDetail() {
                            </Button>
                         </motion.div>
                         <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
-                           <Dialog>
+                           <Dialog open={isOfferModalOpen} onOpenChange={setIsOfferModalOpen}>
                               <DialogTrigger asChild nativeButton={true}>
                                  <Button 
                                     variant="outline" 
@@ -736,34 +817,53 @@ export default function ListingDetail() {
                                  </Button>
                               </DialogTrigger>
                               <DialogContent className="glass border-primary/40 rounded-none sm:max-w-md p-10">
-                              <DialogHeader className="mb-8">
-                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="glow-indicator glow-amber" />
-                                    <span className="text-[10px] font-mono tracking-widest uppercase opacity-80">Offer_Terminal_v1</span>
-                                 </div>
-                                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic font-serif text-primary">Submit Counter-Offer</DialogTitle>
-                                 <DialogDescription className="font-mono text-xs opacity-70 uppercase mt-2">
-                                    Offers below 85% of valuation are statistically less likely to resolve.
-                                 </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-6">
-                                 <div className="space-y-2">
-                                    <Label className="tech-header p-0">Proposed Unit Value</Label>
-                                    <div className="flex items-center bg-background/40 border border-primary/20 h-14">
-                                       <span className="px-4 font-mono text-primary/70">£</span>
-                                       <Input className="bg-transparent border-none rounded-none font-mono font-bold" placeholder="0.00" />
-                                    </div>
-                                 </div>
-                                 <div className="space-y-2">
-                                    <Label className="tech-header p-0">Tactical Reasoning</Label>
-                                    <Textarea className="bg-background/40 border-primary/20 rounded-none h-24 font-mono text-xs resize-none" placeholder="Provide justification for deviation from valuation..." />
-                                 </div>
-                              </div>
-                              <DialogFooter className="mt-8">
-                                 <Button className="w-full rounded-none h-14 bg-primary text-primary-foreground font-black tracking-widest text-[10px] uppercase border-none">
-                                    Submit Offer
-                                 </Button>
-                              </DialogFooter>
+                                <form onSubmit={handleSubmitOffer}>
+                                  <DialogHeader className="mb-8">
+                                     <div className="flex items-center gap-3 mb-2">
+                                        <div className="glow-indicator glow-amber" />
+                                        <span className="text-[10px] font-mono tracking-widest uppercase opacity-80">Offer_Terminal_v1</span>
+                                     </div>
+                                     <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic font-serif text-primary">Submit Counter-Offer</DialogTitle>
+                                     <DialogDescription className="font-mono text-xs opacity-70 uppercase mt-2">
+                                        Offers below 85% of valuation are statistically less likely to resolve.
+                                     </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="space-y-6">
+                                     <div className="space-y-2">
+                                        <Label className="tech-header p-0">Proposed Unit Value</Label>
+                                        <div className="flex items-center bg-background/40 border border-primary/20 h-14">
+                                           <span className="px-4 font-mono text-primary/70">£</span>
+                                           <Input 
+                                              type="number"
+                                              className="bg-transparent border-none rounded-none font-mono font-bold" 
+                                              placeholder="0.00" 
+                                              value={offerAmount}
+                                              onChange={(e) => setOfferAmount(e.target.value)}
+                                              required
+                                           />
+                                        </div>
+                                     </div>
+                                     <div className="space-y-2">
+                                        <Label className="tech-header p-0">Tactical Reasoning</Label>
+                                        <Textarea 
+                                          className="bg-background/40 border-primary/20 rounded-none h-24 font-mono text-xs resize-none" 
+                                          placeholder="Provide justification for deviation from valuation..." 
+                                          value={offerReason}
+                                          onChange={(e) => setOfferReason(e.target.value)}
+                                          required
+                                        />
+                                     </div>
+                                  </div>
+                                  <DialogFooter className="mt-8">
+                                     <Button 
+                                      type="submit"
+                                      className="w-full rounded-none h-14 bg-primary text-primary-foreground font-black tracking-widest text-[10px] uppercase border-none"
+                                      disabled={isSubmittingOffer}
+                                    >
+                                        {isSubmittingOffer ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Submit Offer"}
+                                     </Button>
+                                  </DialogFooter>
+                                </form>
                            </DialogContent>
                         </Dialog>
                         </motion.div>

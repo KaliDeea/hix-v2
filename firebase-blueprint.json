@@ -166,6 +166,24 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "title", "description", "status"]
+    },
+    "Offer": {
+      "title": "Offer",
+      "description": "Counter-offers submitted by buyers for fixed-price listings.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "listingId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "amount": { "type": "number" },
+        "quantity": { "type": "number" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected", "countered"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["listingId", "buyerId", "sellerId", "amount", "quantity", "status"]
     }
   },
   "firestore": {
@@ -204,6 +222,10 @@
     "/asset_requests/{requestId}": {
       "schema": "AssetRequest",
       "description": "Buyer asset requests"
+    },
+    "/offers/{offerId}": {
+      "schema": "Offer",
+      "description": "Buyer counter-offers"
     }
   }
 }

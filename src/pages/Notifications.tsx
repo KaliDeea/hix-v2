@@ -25,7 +25,11 @@ export default function Notifications() {
         id: doc.id,
         ...doc.data()
       })) as Notification[];
-      setNotifications(data.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds));
+      setNotifications(data.sort((a, b) => {
+        const dateA = b.createdAt?.seconds || b.createdAt?.toMillis?.() / 1000 || Date.now() / 1000;
+        const dateB = a.createdAt?.seconds || a.createdAt?.toMillis?.() / 1000 || Date.now() / 1000;
+        return dateA - dateB;
+      }));
       setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, "notifications");
