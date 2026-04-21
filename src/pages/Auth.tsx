@@ -118,7 +118,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="container mx-auto flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-12">
+    <div className="container mx-auto flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center py-12">
       <div className="mb-12 text-center flex flex-col items-center">
         {platformLogo ? (
           <img 
@@ -131,7 +131,7 @@ export default function Auth() {
             H
           </div>
         )}
-        <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-tighter text-primary">Hartlepool Industrial Exchange</h1>
+        <h1 className="text-xl sm:text-4xl font-black uppercase tracking-tighter text-primary">Hartlepool Industrial Exchange</h1>
       </div>
 
       <Card className="w-full max-w-md glass">

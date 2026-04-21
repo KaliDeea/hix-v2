@@ -530,7 +530,7 @@ export default function Dashboard() {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container py-12">
       <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="text-center lg:text-left">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Dashboard</h1>

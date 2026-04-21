@@ -11,10 +11,10 @@ export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-5rem)] page-transition bg-background text-foreground overflow-x-hidden">
+    <div className="flex flex-col min-h-screen page-transition bg-background text-foreground">
       {/* Hero Section - Refined Professional Look */}
-      <section className="relative pt-20 pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background w-full">
-        <div className="container mx-auto px-4">
+      <section className="relative pt-20 pb-24 sm:pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background w-full">
+        <div className="container mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
             <div className="flex-1 space-y-8 text-center lg:text-left">
               <motion.div
@@ -57,7 +57,7 @@ export default function Home() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-start lg:justify-start gap-6 pt-8 border-t border-border mt-12 overflow-x-auto no-scrollbar whitespace-nowrap">
+                <div className="flex items-center justify-start lg:justify-start gap-6 pt-8 border-t border-border mt-12 overflow-x-auto no-scrollbar whitespace-nowrap w-full max-w-full">
                   <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 shrink-0">Trusted by:</div>
                   <div className="flex gap-8 opacity-60 font-black text-sm uppercase tracking-tighter shrink-0 pr-4">
                     <span>Cluster-Tees</span>
@@ -99,7 +99,7 @@ export default function Home() {
       </section>
 
       <section className="py-16 md:py-24 border-b border-border">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             {[
               { label: "Assets Verified", val: "12,400+", icon: <Zap className="h-5 w-5" /> },
@@ -126,7 +126,7 @@ export default function Home() {
 
       {/* Feature Section */}
       <section className="py-20 md:py-32 bg-muted/20">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto">
           <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-start">
             <div className="lg:w-1/3 lg:sticky lg:top-32 text-center lg:text-left">
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">Designed for <br className="hidden md:block" /><span className="text-primary">Professionals.</span></h2>

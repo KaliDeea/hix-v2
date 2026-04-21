@@ -50,7 +50,7 @@ export default function Sustainability() {
         <div className="absolute inset-0 bg-primary/5 -z-10" />
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent -z-10" />
         
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto">
           <div className="max-w-3xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -98,7 +98,7 @@ export default function Sustainability() {
 
       {/* Impact Stats */}
       <section className="py-20 border-y border-primary/10 bg-white/5 backdrop-blur-sm">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {impactStats.map((stat, i) => (
               <motion.div
@@ -122,7 +122,7 @@ export default function Sustainability() {
 
       {/* Core Principles */}
       <section className="py-24">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl md:text-5xl font-black tracking-tighter mb-4 uppercase">The HiX Sustainability Framework</h2>
             <p className="text-muted-foreground">How we integrate environmental responsibility into every industrial transaction.</p>
@@ -155,8 +155,8 @@ export default function Sustainability() {
       </section>
 
       {/* CO2 Calculation Section */}
-      <section className="py-24 bg-muted/30">
-        <div className="container mx-auto px-4">
+      <section className="py-24 bg-muted/30 overflow-hidden">
+        <div className="container mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -247,7 +247,7 @@ export default function Sustainability() {
 
       {/* Call to Action */}
       <section className="py-24">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto">
           <div className="glass p-12 md:p-20 rounded-[3rem] border-primary/20 bg-primary/5 text-center relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-blue-500/10" />
             
