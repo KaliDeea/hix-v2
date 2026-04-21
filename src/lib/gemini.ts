@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+const apiKey = typeof process !== 'undefined' && process.env ? process.env.GEMINI_API_KEY : undefined;
+const ai = apiKey ? new GoogleGenAI({ apiKey : apiKey as string }) : null;
 
 export interface ModerationResult {
   flagged: boolean;
@@ -9,6 +10,10 @@ export interface ModerationResult {
 }
 
 export async function analyzeMessage(text: string): Promise<ModerationResult> {
+  if (!ai) {
+    console.warn("Gemini AI not initialized: Missing API Key. Moderation skipped.");
+    return { flagged: false, action: "allow" };
+  }
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",

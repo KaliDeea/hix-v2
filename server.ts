@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
 import admin from "firebase-admin";
@@ -158,10 +159,21 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        const indexPath = path.join(distPath, 'index.html');
+        if (fs.existsSync(indexPath)) {
+          res.sendFile(indexPath);
+        } else {
+          res.status(404).send("Production build found but index.html is missing. Please run npm run build.");
+        }
+      });
+    } else {
+      app.get('*', (req, res) => {
+        res.status(500).send("Production mode enabled but 'dist' directory is missing. Please run npm run build or set NODE_ENV=development.");
+      });
+    }
   }
 
   app.listen(PORT, "0.0.0.0", () => {
