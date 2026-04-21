@@ -124,10 +124,10 @@ export default function Auth() {
           <img 
             src={platformLogo} 
             alt="Logo" 
-            className="h-24 w-24 rounded-full object-cover border-4 border-primary/30 logo-reflection logo-primary-glow mb-8" 
+            className="h-24 w-24 rounded-full object-cover border-4 border-primary/30 logo-primary-glow mb-8" 
           />
         ) : (
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary font-black text-4xl text-primary-foreground shadow-2xl shadow-primary/30 logo-reflection logo-primary-glow mb-8">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary font-black text-4xl text-primary-foreground shadow-2xl shadow-primary/30 logo-primary-glow mb-8">
             H
           </div>
         )}

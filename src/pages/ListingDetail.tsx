@@ -82,6 +82,7 @@ export default function ListingDetail() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [platformSettings, setPlatformSettings] = useState({
     buyerCommission: 3,
     maintenanceMode: false
@@ -411,7 +412,7 @@ export default function ListingDetail() {
           >
             <div className="aspect-[16/10] overflow-hidden rounded-3xl glass border-white/10 shadow-xl relative group">
               <img 
-                src={listing.images?.[0] || "https://picsum.photos/seed/industrial/1200/800"} 
+                src={listing.images?.[selectedImageIndex] || "https://picsum.photos/seed/industrial/1200/800"} 
                 alt={listing.title} 
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 referrerPolicy="no-referrer"
@@ -420,9 +421,19 @@ export default function ListingDetail() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
             <div className="mt-4 md:mt-6 grid grid-cols-4 gap-2 md:gap-4 font-mono">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={`listing-thumb-${i}`} className="aspect-square rounded-xl md:rounded-2xl glass overflow-hidden cursor-pointer hover:border-primary/50 transition-colors">
-                  <img src={`https://picsum.photos/seed/steel-${i}/200/200`} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
+              {(listing.images && listing.images.length > 0 ? listing.images : [0, 1, 2, 3]).map((img, i) => (
+                <div 
+                  key={`listing-thumb-${i}`} 
+                  className={`aspect-square rounded-xl md:rounded-2xl glass overflow-hidden cursor-pointer transition-all ${selectedImageIndex === i ? 'border-primary ring-2 ring-primary/20' : 'opacity-60 hover:opacity-100 hover:border-primary/50'}`}
+                  onClick={() => setSelectedImageIndex(i)}
+                >
+                  <img 
+                    src={typeof img === 'string' ? img : `https://picsum.photos/seed/steel-${i + 1}/200/200`} 
+                    alt="" 
+                    className="h-full w-full object-cover" 
+                    referrerPolicy="no-referrer" 
+                    loading="lazy" 
+                  />
                 </div>
               ))}
             </div>

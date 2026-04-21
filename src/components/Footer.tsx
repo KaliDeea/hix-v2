@@ -27,11 +27,11 @@ export function Footer() {
                 <img 
                   src={platformLogo} 
                   alt="Logo" 
-                  className="h-20 w-20 rounded-full object-cover border-4 border-primary/30 transition-all group-hover:scale-110 logo-reflection logo-primary-glow" 
+                  className="h-20 w-20 rounded-full object-cover border-4 border-primary/30 transition-all group-hover:scale-110 logo-primary-glow" 
                 />
               ) : (
                 <>
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary font-black text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-xl shadow-primary/30 logo-reflection logo-primary-glow">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary font-black text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-xl shadow-primary/30 logo-primary-glow">
                     H
                   </div>
                   <span className="text-4xl font-black tracking-tighter uppercase text-primary drop-shadow-md">HiX</span>

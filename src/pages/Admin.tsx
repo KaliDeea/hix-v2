@@ -2905,7 +2905,7 @@ export default function Admin() {
                             <label className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Live Preview</label>
                             <div className="h-24 w-24 rounded-full bg-muted/30 flex items-center justify-center overflow-visible border border-primary/20 shadow-inner group-hover:border-primary/50 transition-colors">
                               {platformSettings.hixLogoUrl ? (
-                                <img src={platformSettings.hixLogoUrl} alt="Logo" className="h-full w-full rounded-full object-cover logo-reflection logo-primary-glow" />
+                                <img src={platformSettings.hixLogoUrl} alt="Logo" className="h-full w-full rounded-full object-cover logo-primary-glow" />
                               ) : (
                                 <div className="flex flex-col items-center gap-1 opacity-30">
                                   <Upload className="h-6 w-6" />
