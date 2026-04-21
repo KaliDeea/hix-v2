@@ -374,18 +374,16 @@ export default function ListingDetail() {
         <div className="h-6 w-32 bg-white/5 rounded mb-8" />
         <div className="grid gap-12 lg:grid-cols-2">
           <div className="space-y-6">
-            <div className="aspect-[4/3] bg-white/5 rounded-3xl" />
-            <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map(i => <div key={`listing-skeleton-img-${i}`} className="aspect-square bg-white/5 rounded-xl" />)}
+            <div className="aspect-[16/10] bg-white/5 rounded-3xl" />
+            <div className="flex flex-wrap gap-4">
+              {[1, 2, 3, 4].map(i => <div key={`listing-skeleton-img-${i}`} className="h-24 w-24 bg-white/5 rounded-2xl" />)}
             </div>
           </div>
           <div className="space-y-6">
             <div className="h-6 w-1/4 bg-white/5 rounded" />
             <div className="h-12 w-3/4 bg-white/5 rounded" />
-            <div className="h-10 w-1/2 bg-white/5 rounded-2xl" />
-            <div className="grid grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map(i => <div key={`listing-skeleton-info-${i}`} className="h-20 bg-white/5 rounded-2xl" />)}
-            </div>
+            <div className="h-32 w-full bg-white/5 rounded-2xl" />
+            <div className="h-32 w-full bg-white/5 rounded-2xl" />
             <div className="h-40 w-full bg-white/5 rounded-2xl" />
           </div>
         </div>
@@ -420,20 +418,23 @@ export default function ListingDetail() {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
-            <div className="mt-4 md:mt-6 grid grid-cols-4 gap-2 md:gap-4 font-mono">
+            <div className="mt-6 flex flex-wrap gap-4 font-mono">
               {(listing.images && listing.images.length > 0 ? listing.images : [0, 1, 2, 3]).map((img, i) => (
                 <div 
                   key={`listing-thumb-${i}`} 
-                  className={`aspect-square rounded-xl md:rounded-2xl glass overflow-hidden cursor-pointer transition-all ${selectedImageIndex === i ? 'border-primary ring-2 ring-primary/20' : 'opacity-60 hover:opacity-100 hover:border-primary/50'}`}
+                  className={`h-24 w-24 rounded-2xl glass overflow-hidden cursor-pointer transition-all duration-300 relative group/thumb ${selectedImageIndex === i ? 'ring-2 ring-primary border-primary shadow-[0_0_15px_rgba(var(--primary),0.3)]' : 'opacity-50 hover:opacity-100 hover:border-primary/50'}`}
                   onClick={() => setSelectedImageIndex(i)}
                 >
                   <img 
                     src={typeof img === 'string' ? img : `https://picsum.photos/seed/steel-${i + 1}/200/200`} 
                     alt="" 
-                    className="h-full w-full object-cover" 
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover/thumb:scale-110" 
                     referrerPolicy="no-referrer" 
                     loading="lazy" 
                   />
+                  {selectedImageIndex === i && (
+                    <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
+                  )}
                 </div>
               ))}
             </div>
@@ -483,7 +484,7 @@ export default function ListingDetail() {
                   </Button>
                   
                   <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
-                    <DialogTrigger asChild nativeButton={false}>
+                    <DialogTrigger asChild nativeButton={true}>
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -581,15 +582,15 @@ export default function ListingDetail() {
 
               {listing.listingType === 'auction' ? (
                 <div className="space-y-10">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 text-center">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="p-8 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 flex flex-col items-center justify-center text-center">
                       <p className="tech-header p-0 mb-2">Current Bid Floor</p>
-                      <p className="text-2xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
+                      <p className="text-3xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
                     </div>
-                    <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 text-center">
+                    <div className="p-8 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 flex flex-col items-center justify-center text-center">
                       <p className="tech-header p-0 mb-2">Timer [UTC]</p>
-                      <div className="flex items-center justify-center gap-2 text-md font-mono font-bold">
-                        <Clock className="h-4 w-4 text-amber-600" />
+                      <div className="flex items-center justify-center gap-3 text-xl font-mono font-bold text-primary">
+                        <Clock className="h-5 w-5 text-amber-600" />
                         {listing.auctionEndTime ? formatDistanceToNow(new Date(listing.auctionEndTime)) : "48:02:11"}
                       </div>
                     </div>
@@ -636,14 +637,14 @@ export default function ListingDetail() {
                 </div>
               ) : (
                 <div className="space-y-10">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 text-center">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="p-8 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 flex flex-col items-center justify-center text-center">
                       <p className="tech-header p-0 mb-2">Unit Valuation</p>
-                      <p className="text-2xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
+                      <p className="text-3xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
                     </div>
-                    <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 text-center">
+                    <div className="p-8 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 flex flex-col items-center justify-center text-center">
                       <p className="tech-header p-0 mb-2">Buffer Stock</p>
-                      <p className="text-lg font-mono font-bold">{listing.quantity} UNITS</p>
+                      <p className="text-xl font-mono font-bold">{listing.quantity} UNITS</p>
                     </div>
                   </div>
 
@@ -723,9 +724,9 @@ export default function ListingDetail() {
                               Message
                            </Button>
                         </motion.div>
-                        <Dialog>
-                           <DialogTrigger asChild nativeButton={false}>
-                              <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
+                        <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
+                           <Dialog>
+                              <DialogTrigger asChild nativeButton={true}>
                                  <Button 
                                     variant="outline" 
                                     className="w-full h-11 rounded-xl font-bold text-[8px] uppercase tracking-widest border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all"
@@ -733,9 +734,8 @@ export default function ListingDetail() {
                                     <Send className="h-3 w-3 mr-1.5" />
                                     Offer
                                  </Button>
-                              </motion.div>
-                           </DialogTrigger>
-                           <DialogContent className="glass border-primary/40 rounded-none sm:max-w-md p-10">
+                              </DialogTrigger>
+                              <DialogContent className="glass border-primary/40 rounded-none sm:max-w-md p-10">
                               <DialogHeader className="mb-8">
                                  <div className="flex items-center gap-3 mb-2">
                                     <div className="glow-indicator glow-amber" />
@@ -766,6 +766,7 @@ export default function ListingDetail() {
                               </DialogFooter>
                            </DialogContent>
                         </Dialog>
+                        </motion.div>
                       </div>
                   </div>
                 </div>

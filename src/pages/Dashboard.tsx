@@ -530,7 +530,7 @@ export default function Dashboard() {
 
         <TabsContent value="overview" className="space-y-6 mt-0">
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-            <Card className="glass lg:col-span-2 border-primary/20 overflow-hidden shadow-xl shadow-primary/10">
+            <Card className="glass lg:col-span-2 border-primary/20 overflow-hidden shadow-xl shadow-primary/10 pt-0">
               <CardHeader className="border-b border-primary/20 bg-primary/10">
                 <div className="flex items-center justify-between">
                   <div>
@@ -601,7 +601,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="glass border-primary/20 shadow-xl shadow-primary/10">
+            <Card className="glass border-primary/20 shadow-xl shadow-primary/10 pt-0">
               <CardHeader className="border-b border-primary/20 bg-primary/10">
                 <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Impact Density Map</CardTitle>
                 <CardDescription className="font-mono text-[10px] uppercase opacity-90 text-primary/70 italic tracking-wider">Visual Verification Protocol</CardDescription>

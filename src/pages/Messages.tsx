@@ -9,6 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Search, Building2, Image as ImageIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "motion/react";
+import { analyzeMessage } from "@/lib/gemini";
+import { toast } from "sonner";
+import { ShieldAlert, Info } from "lucide-react";
 
 export default function Messages() {
   const { user, profile } = useAuth();
@@ -89,6 +92,27 @@ export default function Messages() {
 
     setSending(true);
     const text = newMessage.trim();
+
+    // AI Moderation Analysis
+    const moderation = await analyzeMessage(text);
+    
+    if (moderation.flagged && moderation.action === 'block') {
+      toast.error("Message Blocked", {
+        description: moderation.reason || "External trading attempts are not permitted for security reasons.",
+        icon: <ShieldAlert className="h-4 w-4 text-destructive" />,
+        duration: 5000,
+      });
+      setSending(false);
+      return;
+    }
+
+    if (moderation.action === 'warn') {
+      toast.warning("Heads up", {
+        description: "Please remember that all trades must happen through our secure platform.",
+        icon: <Info className="h-4 w-4 text-amber-500" />
+      });
+    }
+
     setNewMessage("");
 
     try {
