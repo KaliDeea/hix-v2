@@ -758,7 +758,7 @@ export default function ListingDetail() {
                         <span className="text-xl">+</span>
                       </Button>
                     </div>
-                    <div className="flex justify-between items-center px-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 px-1">
                        <span className="text-[10px] font-mono opacity-70 lowercase italic">Total Commitment [ex. vat]</span>
                        <span className="text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
                     </div>

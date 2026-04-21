@@ -131,7 +131,7 @@ export default function Auth() {
             H
           </div>
         )}
-        <h1 className="text-4xl font-black uppercase tracking-tighter text-primary">Hartlepool Industrial Exchange</h1>
+        <h1 className="text-2xl sm:text-4xl font-black uppercase tracking-tighter text-primary">Hartlepool Industrial Exchange</h1>
       </div>
 
       <Card className="w-full max-w-md glass">

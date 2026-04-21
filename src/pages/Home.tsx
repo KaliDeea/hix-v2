@@ -28,7 +28,7 @@ export default function Home() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Vetted Industrial Exchange</span>
                 </div>
                 
-                <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight leading-[1.1]">
+                <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
                   Infrastructure for <br className="hidden sm:block" />
                   <span className="text-primary italic font-serif">Circular</span> Liquidity.
                 </h1>
@@ -57,9 +57,9 @@ export default function Home() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-center lg:justify-start gap-6 pt-8 border-t border-border mt-12 overflow-x-auto no-scrollbar whitespace-nowrap">
-                  <div className="text-xs font-bold uppercase tracking-widest opacity-40">Trusted by:</div>
-                  <div className="flex gap-8 opacity-60 font-black text-sm uppercase tracking-tighter">
+                <div className="flex items-center justify-start lg:justify-start gap-6 pt-8 border-t border-border mt-12 overflow-x-auto no-scrollbar whitespace-nowrap">
+                  <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 shrink-0">Trusted by:</div>
+                  <div className="flex gap-8 opacity-60 font-black text-sm uppercase tracking-tighter shrink-0 pr-4">
                     <span>Cluster-Tees</span>
                     <span>H-Energy</span>
                     <span>UK-Steel</span>

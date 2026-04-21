@@ -229,7 +229,7 @@ export default function EditListing() {
           Back to Dashboard
         </Button>
 
-        <h1 className="text-3xl font-bold mb-8">Edit Listing</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-8">Edit Listing</h1>
         
         <form onSubmit={handleSubmit} className="space-y-8">
           <Card className="glass">

@@ -380,7 +380,7 @@ export default function CreateListing() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Create New Listing</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-8">Create New Listing</h1>
         
         <form onSubmit={handleSubmit} className="space-y-8">
           <Card className="glass">
