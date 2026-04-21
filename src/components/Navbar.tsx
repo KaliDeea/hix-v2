@@ -29,7 +29,8 @@ import {
   Search,
   Settings,
   Plus,
-  X
+  X,
+  ArrowRight
 } from "lucide-react";
 import { onSnapshot, collection, query, where, db, doc, updateDoc, handleFirestoreError, OperationType, writeBatch } from "@/lib/firebase";
 import { Notification, UserProfile } from "@/types";
@@ -258,7 +259,7 @@ export function Navbar() {
               <div className="flex h-16 w-16 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-lg shadow-primary/30 logo-primary-glow">
                 H
               </div>
-              <span className="text-4xl font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-2">HiX</span>
+              <span className="text-2xl sm:text-4xl font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-2">HiX</span>
             </>
           )}
         </Link>
@@ -298,10 +299,10 @@ export function Navbar() {
           <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors mr-2">About</Link>
         </div>
 
-        <div className="flex items-center gap-4 sm:gap-6 ml-6 pl-6 border-l border-primary/20">
+        <div className="flex items-center gap-2 sm:gap-4 ml-2 sm:ml-6 pl-2 sm:pl-6 border-l border-primary/20">
           <ThemeToggle />
           {user && (
-            <>
+            <div className="hidden sm:flex items-center gap-2">
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -317,13 +318,13 @@ export function Navbar() {
                 markAsRead={markAsRead}
                 markAllAsRead={markAllAsRead}
               />
-            </>
+            </div>
           )}
 
           {user ? (
             <UserDropdown user={user} profile={profile} logout={logout} />
           ) : (
-            <Button asChild className="rounded-full px-6">
+            <Button asChild className="rounded-full px-4 sm:px-6 h-9 sm:h-10 text-xs sm:text-sm">
               <Link to="/auth">Get Started</Link>
             </Button>
           )}
@@ -337,9 +338,34 @@ export function Navbar() {
                 <SheetTitle className="text-left">Menu</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-2 mt-8">
+                {user && (
+                  <div className="flex md:hidden items-center gap-4 border-b border-primary/10 pb-6 mb-4">
+                     <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex-1 rounded-2xl h-14 glass-dark hover:bg-primary/10 transition-all font-bold text-[10px] uppercase tracking-widest flex flex-col items-center justify-center gap-2"
+                      onClick={() => { navigate("/wishlist"); setIsMobileMenuOpen(false); }}
+                    >
+                      <Heart className="h-5 w-5 text-primary" />
+                      Wishlist
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="flex-1 rounded-2xl h-14 glass-dark hover:bg-primary/10 transition-all font-bold text-[10px] uppercase tracking-widest relative flex flex-col items-center justify-center gap-2"
+                      onClick={() => { navigate("/notifications"); setIsMobileMenuOpen(false); }}
+                    >
+                      <Bell className="h-5 w-5 text-primary" />
+                      Alerts
+                      {unreadCount > 0 && (
+                        <span className="absolute top-3 right-8 h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                      )}
+                    </Button>
+                  </div>
+                )}
                 <div className="lg:hidden mb-4">
-                  <form onSubmit={(e) => { handleSearch(e); setIsMobileMenuOpen(false); }} className="relative w-full">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <form onSubmit={(e) => { handleSearch(e); setIsMobileMenuOpen(false); }} className="relative w-full group">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <Input 
                       placeholder="Search..." 
                       className="pl-10 rounded-xl bg-white/5 border-white/10"
@@ -350,31 +376,35 @@ export function Navbar() {
                 </div>
                 <Link 
                   to="/marketplace" 
-                  className="text-lg font-medium px-4 py-3 rounded-lg border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all"
+                  className="text-lg font-medium px-4 py-3 rounded-xl border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between group"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Marketplace
+                  <ArrowRight className="h-4 w-4 opacity-0 -translate-x-4 group-hover:opacity-50 group-hover:translate-x-0 transition-all" />
                 </Link>
                 <Link 
                   to="/messages" 
-                  className="text-lg font-medium px-4 py-3 rounded-lg border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all"
+                  className="text-lg font-medium px-4 py-3 rounded-xl border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between group"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Messages
+                  <ArrowRight className="h-4 w-4 opacity-0 -translate-x-4 group-hover:opacity-50 group-hover:translate-x-0 transition-all" />
                 </Link>
                 <Link 
                   to="/hauling" 
-                  className="text-lg font-medium px-4 py-3 rounded-lg border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all"
+                  className="text-lg font-medium px-4 py-3 rounded-xl border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between group"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Hauling
+                  <ArrowRight className="h-4 w-4 opacity-0 -translate-x-4 group-hover:opacity-50 group-hover:translate-x-0 transition-all" />
                 </Link>
                 <Link 
                   to="/about" 
-                  className="text-lg font-medium px-4 py-3 rounded-lg border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all"
+                  className="text-lg font-medium px-4 py-3 rounded-xl border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between group"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   About
+                  <ArrowRight className="h-4 w-4 opacity-0 -translate-x-4 group-hover:opacity-50 group-hover:translate-x-0 transition-all" />
                 </Link>
                 {!user && (
                   <Button asChild className="rounded-full mt-4" onClick={() => setIsMobileMenuOpen(false)}>

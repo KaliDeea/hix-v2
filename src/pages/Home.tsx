@@ -11,9 +11,9 @@ export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-5rem)] page-transition bg-background text-foreground">
+    <div className="flex flex-col min-h-[calc(100vh-5rem)] page-transition bg-background text-foreground overflow-x-hidden">
       {/* Hero Section - Refined Professional Look */}
-      <section className="relative pt-20 pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background">
+      <section className="relative pt-20 pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background w-full">
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
             <div className="flex-1 space-y-8 text-center lg:text-left">
