@@ -76,8 +76,6 @@ export default function ListingDetail() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportData, setReportData] = useState({ reason: "", description: "" });
   const [isReporting, setIsReporting] = useState(false);
-  const [bidAmount, setBidAmount] = useState("");
-  const [isBidding, setIsBidding] = useState(false);
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [offerAmount, setOfferAmount] = useState("");
   const [offerReason, setOfferReason] = useState("");
@@ -340,45 +338,6 @@ export default function ListingDetail() {
     toast.success("Document request sent to seller. You will be notified when they are shared.");
   };
 
-  const handlePlaceBid = async () => {
-    if (!user || !profile || !listing || !bidAmount) return;
-    const amount = parseFloat(bidAmount);
-    
-    if (amount <= (listing.currentBid || listing.price)) {
-      toast.error("Bid must be higher than the current price");
-      return;
-    }
-
-    setIsBidding(true);
-    try {
-      await addDoc(collection(db, "bids"), {
-        listingId: listing.id,
-        bidderId: user.uid,
-        bidderName: profile.companyName,
-        amount,
-        createdAt: serverTimestamp()
-      });
-
-      // Notify Seller
-      await addDoc(collection(db, "notifications"), {
-        userId: listing.sellerId,
-        title: "New Bid Placed",
-        message: `${profile.companyName} has placed a bid of £${amount.toLocaleString()} on your listing: ${listing.title}`,
-        type: "bid",
-        link: `/listing/${listing.id}`,
-        read: false,
-        createdAt: serverTimestamp()
-      });
-      
-      toast.success("Bid placed successfully!");
-      setBidAmount("");
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, "bids");
-    } finally {
-      setIsBidding(false);
-    }
-  };
-
   const handleSubmitOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !profile || !listing || !offerAmount) return;
@@ -520,6 +479,80 @@ export default function ListingDetail() {
               ))}
             </div>
           </motion.div>
+
+          <div className="mt-8 space-y-8">
+            <div className="glass p-8 rounded-3xl">
+              <h2 className="text-xl font-bold mb-4">Description</h2>
+              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                {listing.description}
+              </p>
+            </div>
+
+            <div className="glass p-8 rounded-3xl border-primary/20 shadow-lg shadow-primary/5">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-black uppercase tracking-tighter text-primary italic">Technical Specifications</h2>
+                <div className="h-px flex-1 bg-primary/20 mx-6 hidden sm:block" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Condition</p>
+                  <p className="font-mono text-sm font-black uppercase truncate">{listing.condition?.replace('-', ' ') || 'Refurbished'}</p>
+                </div>
+                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Sector</p>
+                  <p className="font-mono text-sm font-black uppercase truncate">{listing.category}</p>
+                </div>
+                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Staging Area</p>
+                  <p className="font-mono text-sm font-black uppercase truncate">{listing.location}</p>
+                </div>
+                {listing.brand && (
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Manufacturer</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.brand}</p>
+                  </div>
+                )}
+                {listing.model && (
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Model Type</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.model}</p>
+                  </div>
+                )}
+                {listing.year && (
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Release Cycle</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.year}</p>
+                  </div>
+                )}
+                {listing.weight && (
+                  <TooltipProvider delay={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors cursor-help outline-none focus:ring-1 focus:ring-primary/20"
+                          tabIndex={0}
+                          role="button"
+                          aria-label="Net mass information"
+                        >
+                          <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Net Mass</p>
+                          <p className="font-mono text-sm font-black uppercase truncate">{listing.weight} kg</p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="glass border-primary/20">
+                        <p className="text-xs">Physical weight of the asset.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {listing.dimensions && (
+                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
+                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Dimensions</p>
+                    <p className="font-mono text-sm font-black uppercase truncate">{listing.dimensions}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Sidebar: Actions & Seller Info (Sticky on Desktop) */}
@@ -619,7 +652,7 @@ export default function ListingDetail() {
               </div>
 
               <div>
-                <div className="mb-4 flex flex-wrap items-center gap-3">
+                <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
                   <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 text-[10px]">
                     {listing.category}
                   </Badge>
@@ -632,11 +665,16 @@ export default function ListingDetail() {
                     <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">Q: {getQualityScoreLabel(qualityScore)} ({qualityScore}%)</span>
                   </div>
 
-                  <div className="flex flex-col items-end ml-auto">
-                    <TooltipProvider>
+                  <div className="flex flex-col items-center">
+                    <TooltipProvider delay={100}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="flex items-center gap-1.5 text-primary font-bold cursor-help text-sm">
+                          <div 
+                            className="flex items-center gap-1.5 text-primary font-bold cursor-help text-sm outline-none focus:ring-1 focus:ring-primary/20 rounded-md px-1"
+                            tabIndex={0}
+                            role="button"
+                            aria-label="Environmental impact information"
+                          >
                             <Leaf className="h-4 w-4" />
                             {listing.co2Savings}kg
                           </div>
@@ -653,224 +691,165 @@ export default function ListingDetail() {
               </div>
             </div>
 
-            <div className="glass p-10 relative overflow-hidden bg-primary/[0.02] rounded-xl">
+            <div className="glass p-8 relative overflow-hidden bg-primary/[0.02] rounded-3xl border border-primary/10">
               <div className="absolute top-0 right-0 p-4">
                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold font-sans tracking-tight text-primary">Trading System Active</span>
-                    <div className="glow-indicator glow-green" />
+                    <span className="text-[10px] font-bold font-sans tracking-tight text-primary uppercase">Direct Trade Active</span>
+                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_var(--primary)]" />
                  </div>
               </div>
 
-              {listing.listingType === 'auction' ? (
-                <div className="space-y-10">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="p-8 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 flex flex-col items-center justify-center text-center">
-                      <p className="tech-header p-0 mb-2">Current Bid Floor</p>
-                      <p className="text-3xl font-black font-mono tracking-tighter text-primary">£{(listing.currentBid || listing.price).toLocaleString()}</p>
-                    </div>
-                    <div className="p-8 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 flex flex-col items-center justify-center text-center">
-                      <p className="tech-header p-0 mb-2">Timer [UTC]</p>
-                      <div className="flex items-center justify-center gap-3 text-xl font-mono font-bold text-primary">
-                        <Clock className="h-5 w-5 text-amber-600" />
-                        {listing.auctionEndTime ? formatDistanceToNow(new Date(listing.auctionEndTime)) : "48:02:11"}
-                      </div>
-                    </div>
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/10 flex flex-col items-center justify-center text-center">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Unit Valuation</p>
+                    <p className="text-3xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
                   </div>
-                  
-                  <div className="flex flex-col gap-4">
-                    {/* Quick Guide */}
-                    <div className="p-4 bg-primary/5 border border-primary/20 space-y-2 mb-2 rounded-2xl">
-                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
-                          <Leaf className="h-3 w-3" />
-                          Auction Quick Guide
-                       </div>
-                       <p className="text-[10px] text-muted-foreground leading-relaxed">
-                          1. Enter Bid Amount (above current floor) <br />
-                          2. Review Auction Timer <br />
-                          3. <span className="font-medium text-foreground">PLACE BID</span> to enter the cycle. Top bidder at timer expiration wins the procurement right.
-                       </p>
-                    </div>
-
-                    <div className="relative group">
-                       <div className="absolute -inset-0.5 bg-primary/20 blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                       <div className="relative flex items-center bg-background/60 border border-primary/30">
-                          <span className="pl-6 pr-4 font-mono text-primary/70">GBP_AMT:</span>
-                          <Input 
-                            type="number" 
-                            placeholder="000,000.00" 
-                            className="bg-transparent border-none h-16 rounded-none focus-visible:ring-0 font-mono text-xl font-black placeholder:text-muted-foreground/50"
-                            value={bidAmount}
-                            onChange={(e) => setBidAmount(e.target.value)}
-                          />
-                       </div>
-                    </div>
-                    <motion.div whileHover={{ scale: 1.02, translateY: -2 }} whileTap={{ scale: 0.98 }}>
-                      <Button 
-                        className="rounded-2xl h-14 w-full text-[10px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground hover:shadow-[0_0_20px_var(--primary)] transition-all shadow-[0_0_15px_var(--primary)] border-none" 
-                        onClick={handlePlaceBid} 
-                        disabled={isBidding || platformSettings.maintenanceMode}
-                      >
-                        {isBidding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gavel className="mr-2 h-4 w-4" />}
-                        PLACE BID
-                      </Button>
-                    </motion.div>
+                  <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/10 flex flex-col items-center justify-center text-center">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Buffer Stock</p>
+                    <p className="text-xl font-mono font-bold">{listing.quantity} UNITS</p>
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-10">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="p-8 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 flex flex-col items-center justify-center text-center">
-                      <p className="tech-header p-0 mb-2">Unit Valuation</p>
-                      <p className="text-3xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
-                    </div>
-                    <div className="p-8 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/20 flex flex-col items-center justify-center text-center">
-                      <p className="tech-header p-0 mb-2">Buffer Stock</p>
-                      <p className="text-xl font-mono font-bold">{listing.quantity} UNITS</p>
-                    </div>
-                  </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between px-1">
-                      <Label className="tech-header p-0">Select Quantity</Label>
-                    </div>
-                    <div className="flex items-center border border-primary/30 h-16 bg-background/60 overflow-hidden group rounded-2xl">
-                      <Button 
-                        variant="ghost" 
-                        className="h-full rounded-none px-6 border-r border-primary/20 hover:bg-primary/10"
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        disabled={quantity <= 1}
-                      >
-                        <span className="text-xl">-</span>
-                      </Button>
-                      <Input 
-                        id="quantity"
-                        type="number" 
-                        className="h-full text-center font-black font-mono text-xl bg-transparent border-none focus-visible:ring-0 rounded-none w-full"
-                        value={quantity}
-                        onChange={(e) => setQuantity(Math.min(listing.quantity || 1, Math.max(1, parseInt(e.target.value) || 1)))}
-                      />
-                      <Button 
-                        variant="ghost" 
-                        className="h-full rounded-none px-6 border-l border-primary/20 hover:bg-primary/10"
-                        onClick={() => setQuantity(Math.min(listing.quantity || 1, quantity + 1))}
-                        disabled={quantity >= (listing.quantity || 1)}
-                      >
-                        <span className="text-xl">+</span>
-                      </Button>
-                    </div>
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 px-1">
-                       <span className="text-[10px] font-mono opacity-70 lowercase italic">Total Commitment [ex. vat]</span>
-                       <span className="text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
-                    </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <Label className="text-[10px] font-black uppercase tracking-widest opacity-70">Select Quantity</Label>
                   </div>
+                  <div className="flex items-center border border-primary/20 h-14 bg-background/60 overflow-hidden group rounded-xl">
+                    <Button 
+                      variant="ghost" 
+                      className="h-full rounded-none px-4 border-r border-primary/10 hover:bg-primary/5"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={quantity <= 1}
+                    >
+                      <span className="text-lg">-</span>
+                    </Button>
+                    <Input 
+                      id="quantity"
+                      type="number" 
+                      className="h-full text-center font-black font-mono text-lg bg-transparent border-none focus-visible:ring-0 rounded-none w-full"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Math.min(listing.quantity || 1, Math.max(1, parseInt(e.target.value) || 1)))}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      className="h-full rounded-none px-4 border-l border-primary/10 hover:bg-primary/5"
+                      onClick={() => setQuantity(Math.min(listing.quantity || 1, quantity + 1))}
+                      disabled={quantity >= (listing.quantity || 1)}
+                    >
+                      <span className="text-lg">+</span>
+                    </Button>
+                  </div>
+                  <div className="flex justify-between items-center px-1">
+                     <span className="text-[10px] font-mono opacity-70 uppercase tracking-tight">Total Commitment</span>
+                     <span className="text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
+                  </div>
+                </div>
 
-                  <div className="flex flex-col gap-4">
-                     {/* Quick Guide */}
-                     <div className="p-4 bg-primary/5 border border-primary/20 space-y-2 mb-2 rounded-2xl">
-                       <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
-                         <Leaf className="h-3 w-3" />
-                         Trading Quick Guide
-                       </div>
-                       <p className="text-[10px] text-muted-foreground leading-relaxed">
-                         1. Select Required Quantity <br />
-                         2. Review Total Commitment <br />
-                         3. Choose Action: Instantly <span className="font-medium text-foreground">BUY</span>, <span className="font-medium text-foreground">Message</span> for inquiry, or submit a <span className="font-medium text-foreground">Counter Offer</span>.
-                       </p>
+                <div className="flex flex-col gap-3">
+                   <div className="p-4 bg-primary/5 border border-primary/10 space-y-2 mb-2 rounded-xl">
+                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary">
+                       <Leaf className="h-3 w-3" />
+                       Trading Guide
                      </div>
+                     <p className="text-[10px] text-muted-foreground leading-relaxed">
+                       Prices are negotiable. You can <span className="font-semibold text-foreground">BUY NOW</span> at the listed price or submit a <span className="font-semibold text-foreground">Counter Offer</span> for seller review.
+                     </p>
+                   </div>
 
-                     <motion.div
-                       whileHover={{ scale: 1.01, translateY: -1 }}
-                       whileTap={{ scale: 0.99 }}
-                       className="w-full"
-                     >
-                       <Button 
-                          size="lg" 
-                          className="w-full rounded-2xl h-14 text-[9px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.2)] hover:shadow-[0_0_25px_rgba(var(--primary),0.3)] transition-all border-none" 
-                          onClick={handleBuy}
-                          disabled={platformSettings.maintenanceMode}
-                        >
-                          <ShoppingCart className="mr-2 h-3.5 w-3.5" />
-                          BUY NOW
-                        </Button>
-                     </motion.div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
-                           <Button 
-                              variant="outline" 
-                              className="w-full h-11 rounded-xl font-bold text-[8px] uppercase tracking-widest border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all"
-                              onClick={handleMessageSeller}
-                           >
-                              <MessageSquare className="h-3 w-3 mr-1.5" />
-                              Message
-                           </Button>
-                        </motion.div>
-                        <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
-                           <Dialog open={isOfferModalOpen} onOpenChange={setIsOfferModalOpen}>
-                              <DialogTrigger asChild nativeButton={true}>
-                                 <Button 
-                                    variant="outline" 
-                                    className="w-full h-11 rounded-xl font-bold text-[8px] uppercase tracking-widest border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all"
-                                 >
-                                    <Send className="h-3 w-3 mr-1.5" />
-                                    Offer
-                                 </Button>
-                              </DialogTrigger>
-                              <DialogContent className="glass border-primary/40 rounded-none sm:max-w-md p-10">
-                                <form onSubmit={handleSubmitOffer}>
-                                  <DialogHeader className="mb-8">
-                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="glow-indicator glow-amber" />
-                                        <span className="text-[10px] font-mono tracking-widest uppercase opacity-80">Offer_Terminal_v1</span>
-                                     </div>
-                                     <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic font-serif text-primary">Submit Counter-Offer</DialogTitle>
-                                     <DialogDescription className="font-mono text-xs opacity-70 uppercase mt-2">
-                                        Offers below 85% of valuation are statistically less likely to resolve.
-                                     </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="space-y-6">
-                                     <div className="space-y-2">
-                                        <Label className="tech-header p-0">Proposed Unit Value</Label>
-                                        <div className="flex items-center bg-background/40 border border-primary/20 h-14">
-                                           <span className="px-4 font-mono text-primary/70">£</span>
-                                           <Input 
-                                              type="number"
-                                              className="bg-transparent border-none rounded-none font-mono font-bold" 
-                                              placeholder="0.00" 
-                                              value={offerAmount}
-                                              onChange={(e) => setOfferAmount(e.target.value)}
-                                              required
-                                           />
-                                        </div>
-                                     </div>
-                                     <div className="space-y-2">
-                                        <Label className="tech-header p-0">Tactical Reasoning</Label>
-                                        <Textarea 
-                                          className="bg-background/40 border-primary/20 rounded-none h-24 font-mono text-xs resize-none" 
-                                          placeholder="Provide justification for deviation from valuation..." 
-                                          value={offerReason}
-                                          onChange={(e) => setOfferReason(e.target.value)}
-                                          required
-                                        />
-                                     </div>
-                                  </div>
-                                  <DialogFooter className="mt-8">
-                                     <Button 
-                                      type="submit"
-                                      className="w-full rounded-none h-14 bg-primary text-primary-foreground font-black tracking-widest text-[10px] uppercase border-none"
-                                      disabled={isSubmittingOffer}
-                                    >
-                                        {isSubmittingOffer ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Submit Offer"}
-                                     </Button>
-                                  </DialogFooter>
-                                </form>
-                           </DialogContent>
-                        </Dialog>
-                        </motion.div>
-                      </div>
-                  </div>
+                   <motion.div
+                     whileHover={{ scale: 1.01, translateY: -1 }}
+                     whileTap={{ scale: 0.99 }}
+                     className="w-full"
+                   >
+                     <Button 
+                        size="lg" 
+                        className="w-full rounded-xl h-14 text-[9px] font-black uppercase tracking-[0.2em] bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-all border-none" 
+                        onClick={handleBuy}
+                        disabled={platformSettings.maintenanceMode}
+                      >
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        INSTANT PROCUREMENT
+                      </Button>
+                   </motion.div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
+                         <Button 
+                            variant="outline" 
+                            className="w-full h-11 rounded-xl font-bold text-[8px] uppercase tracking-widest border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all"
+                            onClick={handleMessageSeller}
+                         >
+                            <MessageSquare className="h-3 w-3 mr-1.5" />
+                            Message
+                         </Button>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.02, translateY: -1 }} whileTap={{ scale: 0.98 }}>
+                         <Dialog open={isOfferModalOpen} onOpenChange={setIsOfferModalOpen}>
+                            <DialogTrigger asChild nativeButton={true}>
+                               <Button 
+                                  variant="outline" 
+                                  className="w-full h-11 rounded-xl font-bold text-[8px] uppercase tracking-widest border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all shadow-sm"
+                               >
+                                  <Send className="h-3 w-3 mr-1.5" />
+                                  Make Offer
+                               </Button>
+                            </DialogTrigger>
+                            <DialogContent className="glass border-primary/20 rounded-3xl sm:max-w-md p-8">
+                               <form onSubmit={handleSubmitOffer}>
+                                 <DialogHeader className="mb-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                       <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                                       <span className="text-[10px] font-mono tracking-widest uppercase opacity-70">Price Negotiation Node</span>
+                                    </div>
+                                    <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Submit Counter-Offer</DialogTitle>
+                                    <DialogDescription className="text-xs opacity-70 mt-2">
+                                       Propose a custom price for {listing.title}. The seller will be notified to review.
+                                    </DialogDescription>
+                                 </DialogHeader>
+                                 <div className="space-y-6">
+                                    <div className="space-y-2">
+                                       <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Proposed Unit Value</Label>
+                                       <div className="flex items-center bg-background/40 border border-primary/10 h-14 rounded-xl overflow-hidden px-4">
+                                          <span className="font-mono text-primary/70 mr-2">£</span>
+                                          <Input 
+                                             type="number"
+                                             className="bg-transparent border-none focus-visible:ring-0 font-mono font-bold text-lg" 
+                                             placeholder="0.00" 
+                                             value={offerAmount}
+                                             onChange={(e) => setOfferAmount(e.target.value)}
+                                             required
+                                          />
+                                       </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                       <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Offer Context</Label>
+                                       <Textarea 
+                                         className="bg-background/40 border-primary/10 rounded-xl h-24 text-sm resize-none focus-visible:ring-primary/20" 
+                                         placeholder="e.g. Volume discount request, timing constraints..." 
+                                         value={offerReason}
+                                         onChange={(e) => setOfferReason(e.target.value)}
+                                         required
+                                       />
+                                    </div>
+                                 </div>
+                                 <DialogFooter className="mt-8">
+                                    <Button 
+                                     type="submit"
+                                     className="w-full rounded-xl h-14 bg-primary text-primary-foreground font-black tracking-widest text-[10px] uppercase border-none shadow-lg shadow-primary/20"
+                                     disabled={isSubmittingOffer}
+                                   >
+                                       {isSubmittingOffer ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "PROPOSE TERMS"}
+                                    </Button>
+                                 </DialogFooter>
+                               </form>
+                            </DialogContent>
+                         </Dialog>
+                      </motion.div>
+                    </div>
                 </div>
-              )}
+              </div>
+            </div>
               
               <div className="mt-8 pt-6 border-t border-primary/10 flex items-center justify-between">
                  <div className="flex flex-col">
@@ -881,7 +860,6 @@ export default function ListingDetail() {
                     Verified_Transaction
                  </Badge>
               </div>
-            </div>
 
             <div className="flex flex-col gap-4">
               <Card className="glass border-border hover:border-primary/20 transition-colors">
@@ -934,70 +912,13 @@ export default function ListingDetail() {
             </div>
           </motion.div>
         </div>
+      </div>
 
-        {/* Main Content: Description & Specs */}
-        <div className="lg:col-span-7 space-y-12">
-          <div className="space-y-8">
-            <div className="glass p-8 rounded-3xl">
-              <h2 className="text-xl font-bold mb-4">Description</h2>
-              <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {listing.description}
-              </p>
-            </div>
-
-            <div className="glass p-8 rounded-3xl border-primary/20 shadow-lg shadow-primary/5">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-black uppercase tracking-tighter text-primary italic">Technical Specifications</h2>
-                <div className="h-px flex-1 bg-primary/20 mx-6 hidden sm:block" />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Condition</p>
-                  <p className="font-mono text-sm font-black uppercase truncate">{listing.condition?.replace('-', ' ') || 'Refurbished'}</p>
-                </div>
-                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Sector</p>
-                  <p className="font-mono text-sm font-black uppercase truncate">{listing.category}</p>
-                </div>
-                <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                  <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Staging Area</p>
-                  <p className="font-mono text-sm font-black uppercase truncate">{listing.location}</p>
-                </div>
-                {listing.brand && (
-                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Manufacturer</p>
-                    <p className="font-mono text-sm font-black uppercase truncate">{listing.brand}</p>
-                  </div>
-                )}
-                {listing.model && (
-                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Model Type</p>
-                    <p className="font-mono text-sm font-black uppercase truncate">{listing.model}</p>
-                  </div>
-                )}
-                {listing.year && (
-                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Release Cycle</p>
-                    <p className="font-mono text-sm font-black uppercase truncate">{listing.year}</p>
-                  </div>
-                )}
-                {listing.weight && (
-                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Net Mass</p>
-                    <p className="font-mono text-sm font-black uppercase truncate">{listing.weight} kg</p>
-                  </div>
-                )}
-                {listing.dimensions && (
-                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Dimensions</p>
-                    <p className="font-mono text-sm font-black uppercase truncate">{listing.dimensions}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="glass p-8 rounded-3xl border-primary/20 bg-primary/5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10">
+      <div className="mt-12 lg:mt-16 space-y-12">
+        <div className="grid lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-12 space-y-12">
+            <div className="space-y-8">
+              <div className="glass p-8 rounded-3xl border-primary/20 bg-primary/5 relative overflow-hidden">              <div className="absolute top-0 right-0 p-4 opacity-10">
                 <Leaf className="h-24 w-24 text-primary" />
               </div>
               <div className="relative z-10">
@@ -1095,5 +1016,6 @@ export default function ListingDetail() {
         </div>
       </div>
     </div>
+  </div>
   );
 }

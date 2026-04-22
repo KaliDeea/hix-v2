@@ -63,9 +63,7 @@ export default function CreateListing() {
     weight: "",
     dimensions: "",
     voltage: "",
-    listingType: "fixed" as 'fixed' | 'auction',
-    reservePrice: "",
-    auctionEndTime: "",
+    listingType: "fixed" as 'fixed',
     shippingOptions: ['collection'] as ('collection' | 'standard' | 'express' | 'international')[],
     shippingCost: ""
   });
@@ -98,11 +96,6 @@ export default function CreateListing() {
 
     if (!formData.category) newErrors.category = "Category is required";
     if (!formData.location) newErrors.location = "Location is required";
-
-    if (formData.listingType === 'auction') {
-      if (!formData.auctionEndTime) newErrors.auctionEndTime = "Auction end time is required";
-      else if (new Date(formData.auctionEndTime) <= new Date()) newErrors.auctionEndTime = "End time must be in the future";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -360,11 +353,9 @@ export default function CreateListing() {
         co2Savings: parseFloat(formData.co2Savings) || 0,
         images: images.length > 0 ? images : ["https://picsum.photos/seed/" + listingId + "/800/600"],
         status: status,
-        listingType: formData.listingType,
+        listingType: 'fixed',
         shippingOptions: formData.shippingOptions,
         shippingCost: formData.shippingCost ? parseFloat(formData.shippingCost) : 0,
-        reservePrice: formData.reservePrice ? parseFloat(formData.reservePrice) : null,
-        auctionEndTime: formData.auctionEndTime || null,
         createdAt: new Date().toISOString()
       });
       
@@ -447,19 +438,23 @@ export default function CreateListing() {
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="listingType">Listing Type *</Label>
-                  <Select 
-                    defaultValue="fixed" 
-                    onValueChange={(v) => setFormData({...formData, listingType: v as any})}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder="Select type" />
+                   <Label htmlFor="category" className={errors.category ? "text-destructive" : ""}>
+                    Category *
+                  </Label>
+                  <Select onValueChange={(v) => {
+                    setFormData({...formData, category: v});
+                    if (errors.category) setErrors({...errors, category: ""});
+                  }}>
+                    <SelectTrigger className={`rounded-xl ${errors.category ? "border-destructive focus-visible:ring-destructive" : ""}`}>
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fixed">Fixed Price</SelectItem>
-                      <SelectItem value="auction">Auction</SelectItem>
+                      {CATEGORIES.map(c => (
+                        <SelectItem key={`create-cat-${c}`} value={c}>{c}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {errors.category && <p className="text-[10px] text-destructive font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.category}</p>}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="condition">Condition *</Label>
@@ -479,32 +474,6 @@ export default function CreateListing() {
                   </Select>
                 </div>
               </div>
-
-              {formData.listingType === 'auction' && (
-                <div className="grid gap-6 md:grid-cols-2 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                  <div className="grid gap-2">
-                    <Label htmlFor="reservePrice">Reserve Price (£)</Label>
-                    <Input 
-                      id="reservePrice" 
-                      type="number" 
-                      placeholder="Minimum price to sell" 
-                      className="rounded-xl"
-                      value={formData.reservePrice}
-                      onChange={(e) => setFormData({...formData, reservePrice: e.target.value})}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="auctionEndTime">Auction End Date/Time</Label>
-                    <Input 
-                      id="auctionEndTime" 
-                      type="datetime-local" 
-                      className="rounded-xl"
-                      value={formData.auctionEndTime}
-                      onChange={(e) => setFormData({...formData, auctionEndTime: e.target.value})}
-                    />
-                  </div>
-                </div>
-              )}
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="grid gap-2">
                   <Label htmlFor="brand">Brand / Manufacturer</Label>

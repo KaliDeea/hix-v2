@@ -13,31 +13,31 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen page-transition bg-background text-foreground overflow-x-hidden">
       {/* Hero Section - Refined Professional Look */}
-      <section className="relative pt-20 pb-24 sm:pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background w-full max-w-full">
+      <section className="relative pt-20 pb-24 sm:pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background max-w-full px-4 sm:px-8">
         <div className="container mx-auto">
-          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
-            <div className="flex-1 space-y-8 text-center lg:text-left">
+          <div className="flex flex-col items-center gap-12 lg:gap-16 max-w-4xl mx-auto">
+            <div className="space-y-8 text-center w-full">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="space-y-6"
+                className="space-y-6 flex flex-col items-center"
               >
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
                   <ShieldCheck className="h-4 w-4 text-primary" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Vetted Industrial Exchange</span>
                 </div>
                 
-                <h1 className="text-2xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] break-words">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] max-w-3xl mx-auto">
                   Infrastructure for <br className="hidden sm:block" />
                   <span className="text-primary italic font-serif">Circular</span> Liquidity.
                 </h1>
                 
-                <p className="max-w-xl mx-auto lg:mx-0 text-base sm:text-lg text-muted-foreground leading-relaxed">
+                <p className="max-w-2xl mx-auto text-base sm:text-lg text-muted-foreground leading-relaxed px-4">
                   The HiX network connects industrial clusters across the UK, allowing firms to trade surplus machinery with verified accuracy and secure settlement.
                 </p>
 
-                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 w-full">
                   <Button 
                     size="lg" 
                     className="w-full sm:w-auto rounded-full px-10 h-14 font-semibold shadow-lg shadow-primary/20"
@@ -57,19 +57,21 @@ export default function Home() {
                   </Button>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-8 pt-8 border-t border-border mt-12 w-full max-w-full overflow-hidden">
-                  <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 shrink-0 w-full lg:w-auto text-center lg:text-left mb-2 lg:mb-0">Trusted by:</div>
-                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-8 gap-y-4 opacity-60 font-black text-sm uppercase tracking-tighter">
-                    <span>Cluster-Tees</span>
-                    <span>H-Energy</span>
-                    <span>UK-Steel</span>
-                    <span>Marine-Procure</span>
+                <div className="pt-12 border-t border-border mt-12 w-full max-w-2xl mx-auto">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
+                    <div className="text-[10px] font-bold uppercase tracking-widest opacity-40">Trusted by:</div>
+                    <div className="flex flex-wrap justify-center gap-6 sm:gap-8 opacity-60 font-black text-sm uppercase tracking-tighter">
+                      <span>Cluster-Tees</span>
+                      <span>H-Energy</span>
+                      <span>UK-Steel</span>
+                      <span>Marine-Procure</span>
+                    </div>
                   </div>
                 </div>
               </motion.div>
             </div>
 
-            <div className="flex-1 relative">
+            <div className="w-full max-w-4xl relative">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -79,7 +81,7 @@ export default function Home() {
                 <img 
                   src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=2070" 
                   alt="Industrial Precision"
-                  className="w-full aspect-[4/3] object-cover"
+                  className="w-full aspect-[21/9] object-cover"
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -113,9 +115,9 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="text-center md:text-left space-y-2 p-6 rounded-3xl bg-muted/20 md:bg-transparent"
+                className="text-center space-y-2 p-6 rounded-3xl bg-muted/20 md:bg-transparent"
               >
-                <div className="text-primary mb-4 flex justify-center md:justify-start">{stat.icon}</div>
+                <div className="text-primary mb-4 flex justify-center">{stat.icon}</div>
                 <div className="text-2xl md:text-3xl font-bold tracking-tighter">{stat.val}</div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</div>
               </motion.div>
@@ -127,18 +129,18 @@ export default function Home() {
       {/* Feature Section */}
       <section className="py-20 md:py-32 bg-muted/20">
         <div className="container mx-auto">
-          <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 items-start">
-            <div className="lg:w-1/3 lg:sticky lg:top-32 text-center lg:text-left">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">Designed for <br className="hidden md:block" /><span className="text-primary">Professionals.</span></h2>
-              <p className="text-muted-foreground leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
+          <div className="flex flex-col gap-12 lg:gap-16 items-center">
+            <div className="w-full flex flex-col items-center text-center">
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">Designed for <span className="text-primary italic font-serif">Professionals.</span></h2>
+              <p className="text-muted-foreground text-lg leading-relaxed mb-8 max-w-2xl mx-auto">
                 The HiX Dashboard provides the technical tools required for complex industrial inventory management and ESG reporting.
               </p>
-              <Button variant="outline" className="rounded-full" asChild>
+              <Button variant="outline" className="rounded-full mb-16" asChild>
                 <Link to="/about">Our Protocol v4.0</Link>
               </Button>
             </div>
             
-            <div className="lg:w-2/3 grid sm:grid-cols-2 gap-6 w-full">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full mt-8">
               {[
                 { title: "KYB Compliance", desc: "Rigorous manual vetting for all participating firms ensuring ecosystem integrity." },
                 { title: "Smart Logistics", desc: "Route optimization for industrial haulage minimizing cluster-to-cluster emissions." },

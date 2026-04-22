@@ -61,13 +61,9 @@ export interface Listing {
   documents?: { name: string; url: string; type: string }[];
   co2Savings: number; // in kg
   status: 'available' | 'sold' | 'draft';
-  listingType: 'fixed' | 'auction';
+  listingType: 'fixed';
   shippingOptions: ('collection' | 'standard' | 'express' | 'international')[];
   shippingCost?: number;
-  reservePrice?: number;
-  auctionEndTime?: string;
-  currentBid?: number;
-  bidCount?: number;
   createdAt: any;
   updatedAt?: any;
 }

@@ -52,7 +52,12 @@ import {
   Loader2,
   Trash2,
   Pencil,
-  Search
+  Search,
+  Clock,
+  Package,
+  History,
+  MessageSquare,
+  Upload
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
 import { 
@@ -98,6 +103,7 @@ export default function Dashboard() {
   const [reportData, setReportData] = useState({ reason: "", description: "" });
   const [isReporting, setIsReporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState<string | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -388,6 +394,19 @@ export default function Dashboard() {
     });
   };
 
+  const handleUpdatePrice = async (listingId: string, newPrice: number) => {
+    if (!user) return;
+    setIsUpdatingPrice(listingId);
+    try {
+      await updateDoc(doc(db, "listings", listingId), { price: newPrice });
+      toast.success(`Listing price updated to £${newPrice.toLocaleString()}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `listings/${listingId}`);
+    } finally {
+      setIsUpdatingPrice(null);
+    }
+  };
+
   const handleUpdateOfferStatus = async (offerId: string, newStatus: 'accepted' | 'rejected') => {
     if (!user) return;
     try {
@@ -597,13 +616,50 @@ export default function Dashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="glass p-1 rounded-xl sm:rounded-full w-full flex overflow-x-auto no-scrollbar justify-start sm:justify-center">
-          <TabsTrigger value="overview" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Overview</TabsTrigger>
-          <TabsTrigger value="listings" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">My Listings</TabsTrigger>
-          <TabsTrigger value="history" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Trade History</TabsTrigger>
-          <TabsTrigger value="offers" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Offers {offers.filter(o => o.sellerId === user.uid && o.status === 'pending').length > 0 && `(${offers.filter(o => o.sellerId === user.uid && o.status === 'pending').length})`}</TabsTrigger>
-          <TabsTrigger value="bulk" className="rounded-lg sm:rounded-full px-4 sm:px-6 whitespace-nowrap">Bulk Upload</TabsTrigger>
-        </TabsList>
+        <div className="sticky top-[104px] z-30 -mx-4 px-4 py-2 bg-background/80 backdrop-blur-md sm:relative sm:top-0 sm:mx-0 sm:px-0 sm:bg-transparent sm:backdrop-blur-none">
+          <TabsList className="h-auto p-1.5 rounded-2xl sm:rounded-full w-full flex items-center justify-start sm:justify-center overflow-x-auto no-scrollbar gap-1 sm:gap-2 bg-background/50 border border-white/10 backdrop-blur-md">
+            <TabsTrigger 
+              value="overview" 
+              className="group flex-shrink-0 h-10 w-10 sm:h-11 sm:w-auto rounded-xl sm:rounded-full px-0 sm:px-6 flex items-center justify-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all data-[state=active]:bg-primary/20 data-[state=active]:border-primary data-[state=active]:shadow-[0_0_10px_rgba(var(--primary),0.3)] border border-transparent hover:border-primary/50"
+            >
+              <LayoutDashboard className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="listings" 
+              className="group flex-shrink-0 h-10 w-10 sm:h-11 sm:w-auto rounded-xl sm:rounded-full px-0 sm:px-6 flex items-center justify-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all data-[state=active]:bg-primary/20 data-[state=active]:border-primary data-[state=active]:shadow-[0_0_10px_rgba(var(--primary),0.3)] border border-transparent hover:border-primary/50"
+            >
+              <Package className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">My Listings</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="history" 
+              className="group flex-shrink-0 h-10 w-10 sm:h-11 sm:w-auto rounded-xl sm:rounded-full px-0 sm:px-6 flex items-center justify-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all data-[state=active]:bg-primary/20 data-[state=active]:border-primary data-[state=active]:shadow-[0_0_10px_rgba(var(--primary),0.3)] border border-transparent hover:border-primary/50"
+            >
+              <History className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Trade History</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="offers" 
+              className="group flex-shrink-0 h-10 w-10 sm:h-11 sm:w-auto rounded-xl sm:rounded-full px-0 sm:px-6 flex items-center justify-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all data-[state=active]:bg-primary/20 data-[state=active]:border-primary data-[state=active]:shadow-[0_0_10px_rgba(var(--primary),0.3)] border border-transparent hover:border-primary/50 relative"
+            >
+              <MessageSquare className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Offers</span>
+              {offers.filter(o => o.sellerId === user.uid && o.status === 'pending').length > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 sm:static h-4 min-w-4 p-0 px-1 text-[8px] flex items-center justify-center rounded-full">
+                  {offers.filter(o => o.sellerId === user.uid && o.status === 'pending').length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="bulk" 
+              className="group flex-shrink-0 h-10 w-10 sm:h-11 sm:w-auto rounded-xl sm:rounded-full px-0 sm:px-6 flex items-center justify-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all data-[state=active]:bg-primary/20 data-[state=active]:border-primary data-[state=active]:shadow-[0_0_10px_rgba(var(--primary),0.3)] border border-transparent hover:border-primary/50"
+            >
+              <Upload className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Bulk Upload</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6 mt-0">
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
@@ -1002,6 +1058,18 @@ export default function Dashboard() {
                               <Badge className="capitalize">{offer.status}</Badge>
                             </TableCell>
                             <TableCell className="text-right space-x-2">
+                              {offer.status === 'accepted' && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-8 border-primary/20 hover:bg-primary/5 text-primary"
+                                  onClick={() => handleUpdatePrice(offer.listingId, offer.amount)}
+                                  disabled={isUpdatingPrice === offer.listingId}
+                                >
+                                  {isUpdatingPrice === offer.listingId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <DollarSign className="h-3 w-3 mr-1" />}
+                                  Update Listing Price to £{offer.amount.toLocaleString()}
+                                </Button>
+                              )}
                               {offer.status === 'pending' && (
                                 <>
                                   <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'accepted')}>Accept</Button>

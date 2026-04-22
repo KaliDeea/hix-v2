@@ -35,12 +35,12 @@ export function SystemBanner() {
           className="relative z-[60]"
         >
           {settings.maintenanceMode ? (
-            <div className="bg-destructive text-destructive-foreground py-2 px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-[10px] sm:text-sm font-bold animate-pulse text-center">
+            <div className="bg-destructive text-destructive-foreground py-2 px-4 flex items-center justify-center gap-3 text-xs sm:text-sm font-bold animate-pulse text-center">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>SYSTEM MAINTENANCE: Trading and bidding are currently disabled.</span>
             </div>
           ) : settings.announcementBanner ? (
-            <div className="bg-primary text-primary-foreground py-2 px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-[10px] sm:text-sm font-medium relative text-center">
+            <div className="bg-primary text-primary-foreground py-2 px-4 flex items-center justify-center gap-3 text-xs sm:text-sm font-medium relative text-center">
               <Megaphone className="h-4 w-4 shrink-0" />
               <span className="pr-6">{settings.announcementBanner}</span>
               <button 

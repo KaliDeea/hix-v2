@@ -30,7 +30,8 @@ import {
   Settings,
   Plus,
   X,
-  ArrowRight
+  ArrowRight,
+  ChevronDown
 } from "lucide-react";
 import { onSnapshot, collection, query, where, db, doc, updateDoc, handleFirestoreError, OperationType, writeBatch } from "@/lib/firebase";
 import { Notification, UserProfile } from "@/types";
@@ -246,7 +247,7 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/90 backdrop-blur-md">
-      <div className="container flex h-16 sm:h-24 items-center justify-between">
+      <div className="container mx-auto flex h-16 sm:h-24 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group shrink-0 py-1">
           {platformLogo ? (
             <div className="relative">
@@ -262,7 +263,7 @@ export function Navbar() {
               <div className="flex h-10 w-10 sm:h-14 sm:w-14 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-lg sm:text-2xl md:text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-lg shadow-primary/30 logo-primary-glow">
                 H
               </div>
-              <span className="text-lg sm:text-2xl md:text-4xl hidden sm:block font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-1 sm:ml-2">HiX</span>
+              <span className="text-lg sm:text-2xl md:text-4xl hidden min-[400px]:block font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-1 sm:ml-2">HiX</span>
             </>
           )}
         </Link>
@@ -292,11 +293,22 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-6">
-          <Link to="/marketplace" className="text-sm font-medium hover:text-primary transition-colors">Marketplace</Link>
-          <Link to="/request-asset" className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1.5">
-            Procurement
-            <Badge variant="outline" className="text-[8px] h-4 border-primary/30 text-primary">AI</Badge>
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-1 outline-none">
+              Marketplace
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="glass border-primary/20 p-2 z-[100] w-48">
+              <DropdownMenuItem onClick={() => navigate("/marketplace")} className="cursor-pointer">
+                Browse Marketplace
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/request-asset")} className="cursor-pointer flex items-center justify-between">
+                Procurement
+                <Badge variant="outline" className="text-[8px] h-4 border-primary/30 text-primary ml-2 italic">AI</Badge>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Link to="/messages" className="text-sm font-medium hover:text-primary transition-colors">Messages</Link>
           <Link to="/hauling" className="text-sm font-medium hover:text-primary transition-colors">Hauling</Link>
           <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors mr-2">About</Link>
@@ -384,6 +396,17 @@ export function Navbar() {
                 >
                   Marketplace
                   <ArrowRight className="h-4 w-4 opacity-0 -translate-x-4 group-hover:opacity-50 group-hover:translate-x-0 transition-all" />
+                </Link>
+                <Link 
+                  to="/request-asset" 
+                  className="text-sm font-medium px-8 py-2 rounded-xl border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between group opacity-80"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <span className="flex items-center gap-2">
+                    Procurement
+                    <Badge variant="outline" className="text-[8px] h-4 border-primary/30 text-primary italic">AI</Badge>
+                  </span>
+                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-4 group-hover:opacity-50 group-hover:translate-x-0 transition-all" />
                 </Link>
                 <Link 
                   to="/messages" 
