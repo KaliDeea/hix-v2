@@ -181,6 +181,7 @@ export interface AuditLog {
 export interface Offer {
   id: string;
   listingId: string;
+  listingTitle: string;
   buyerId: string;
   buyerName: string;
   sellerId: string;
@@ -188,5 +189,18 @@ export interface Offer {
   quantity: number;
   reason: string;
   status: 'pending' | 'accepted' | 'rejected' | 'countered';
+  createdAt: any;
+}
+
+export interface AssetRequest {
+  id: string;
+  userId: string;
+  companyName: string;
+  title: string;
+  description: string;
+  budget: number;
+  deadline: string;
+  technicalSpecs: string;
+  status: 'active' | 'matched' | 'closed';
   createdAt: any;
 }

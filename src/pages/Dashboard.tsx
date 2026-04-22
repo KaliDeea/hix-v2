@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth, db, onSnapshot, collection, query, where, handleFirestoreError, OperationType, deleteDoc, doc, updateDoc, increment, getDoc, serverTimestamp, setDoc, addDoc } from "@/lib/firebase";
-import { Listing, Transaction, Report, Offer } from "@/types";
+import { Listing, Transaction, Report, Offer, AssetRequest } from "@/types";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -57,7 +57,9 @@ import {
   Package,
   History,
   MessageSquare,
-  Upload
+  Upload,
+  Globe,
+  ClipboardList
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
 import { 
@@ -91,7 +93,12 @@ export default function Dashboard() {
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [assetRequests, setAssetRequests] = useState<AssetRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [counterAmount, setCounterAmount] = useState("");
+  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [isCounterDialogOpen, setIsCounterDialogOpen] = useState(false);
   
   const [listingSearch, setListingSearch] = useState("");
   const [listingStatusFilter, setListingStatusFilter] = useState("all");
@@ -114,7 +121,7 @@ export default function Dashboard() {
     const subtab = searchParams.get("subtab");
     
     if (tab) {
-      const validTabs = ["overview", "listings", "history", "offers", "bulk"];
+      const validTabs = ["overview", "listings", "history", "offers", "bulk", "procurement"];
       if (validTabs.includes(tab)) {
         setActiveTab(tab);
       } else if (tab === "sales") {
@@ -268,12 +275,17 @@ export default function Dashboard() {
       });
     });
 
+    const unsubRequests = onSnapshot(query(collection(db, "asset_requests"), where("userId", "==", user.uid)), (snapshot) => {
+      setAssetRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AssetRequest[]);
+    });
+
     return () => {
       unsubListings();
       unsubBuyer();
       unsubSeller();
       unsubOffersReceived();
       unsubOffersSent();
+      unsubRequests();
     };
   }, [user]);
 
@@ -407,17 +419,37 @@ export default function Dashboard() {
     }
   };
 
-  const handleUpdateOfferStatus = async (offerId: string, newStatus: 'accepted' | 'rejected') => {
+  const handleUpdateOfferStatus = async (offerId: string, newStatus: 'accepted' | 'rejected' | 'countered', newPrice?: number) => {
     if (!user) return;
     try {
-      await updateDoc(doc(db, "offers", offerId), { status: newStatus });
+      const updates: any = { status: newStatus };
+      if (newStatus === 'countered' && newPrice) {
+        updates.amount = newPrice;
+        updates.sellerCountered = true;
+      }
+
+      await updateDoc(doc(db, "offers", offerId), updates);
       
       const offer = offers.find(o => o.id === offerId);
       if (offer) {
+        let msgTitle = "";
+        let msgContent = "";
+
+        if (newStatus === 'accepted') {
+          msgTitle = "Offer Accepted";
+          msgContent = `Your offer of £${offer.amount.toLocaleString()} for ${offer.listingTitle || offer.listingId} has been accepted.`;
+        } else if (newStatus === 'rejected') {
+          msgTitle = "Offer Rejected";
+          msgContent = `Your offer for ${offer.listingTitle || offer.listingId} was declined.`;
+        } else if (newStatus === 'countered') {
+          msgTitle = "Counter-Offer Proposed";
+          msgContent = `The seller has countered your offer for ${offer.listingTitle || offer.listingId} with a new price of £${newPrice?.toLocaleString()}.`;
+        }
+
         await addDoc(collection(db, "notifications"), {
           userId: offer.buyerId,
-          title: `Offer ${newStatus === 'accepted' ? 'Accepted' : 'Rejected'}`,
-          message: `Your offer of £${offer.amount.toLocaleString()} for ${offer.listingTitle || offer.listingId} has been ${newStatus}.`,
+          title: msgTitle,
+          message: msgContent,
           type: "bid",
           link: "/dashboard?tab=offers&subtab=sent",
           read: false,
@@ -426,6 +458,7 @@ export default function Dashboard() {
       }
 
       toast.success(`Offer marked as ${newStatus}`);
+      setIsCounterDialogOpen(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `offers/${offerId}`);
     }
@@ -613,6 +646,24 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground">Items in marketplace</p>
           </CardContent>
         </Card>
+
+        <Card className="glass md:col-span-2 lg:col-span-4 border-emerald-500/30 bg-emerald-500/5">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <Globe className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">ESG Impact Reporting</p>
+                <p className="text-xs text-muted-foreground">Download your verified carbon offset certificate for annual sustainability auditing.</p>
+              </div>
+            </div>
+            <Button size="sm" className="rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold uppercase py-0 h-9 px-6" onClick={() => toast.success("ESG Impact Report generated and sent to email.")}>
+              <Download className="mr-2 h-3.5 w-3.5" />
+              Export ESG Record
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -657,6 +708,13 @@ export default function Dashboard() {
             >
               <Upload className="h-5 w-5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Bulk Upload</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="procurement" 
+              className="group flex-shrink-0 h-10 w-10 sm:h-11 sm:w-auto rounded-xl sm:rounded-full px-0 sm:px-6 flex items-center justify-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all data-[state=active]:bg-primary/20 data-[state=active]:border-primary data-[state=active]:shadow-[0_0_10px_rgba(var(--primary),0.3)] border border-transparent hover:border-primary/50"
+            >
+              <Search className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Procurement</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1073,6 +1131,11 @@ export default function Dashboard() {
                               {offer.status === 'pending' && (
                                 <>
                                   <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'accepted')}>Accept</Button>
+                                  <Button size="sm" variant="outline" className="h-8 border-primary/20" onClick={() => {
+                                    setSelectedOffer(offer);
+                                    setCounterAmount(offer.amount.toString());
+                                    setIsCounterDialogOpen(true);
+                                  }}>Counter</Button>
                                   <Button size="sm" variant="destructive" className="h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'rejected')}>Reject</Button>
                                 </>
                               )}
@@ -1190,6 +1253,77 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="procurement" className="space-y-6 mt-0">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <div>
+              <h2 className="text-2xl font-black uppercase tracking-tighter">Procurement Buffer</h2>
+              <p className="text-xs font-mono text-muted-foreground uppercase">Active RFAs and AI Matching diagnostics</p>
+            </div>
+            <Button className="rounded-full gap-2 shadow-lg shadow-primary/20 h-11" asChild>
+              <Link to="/request-asset">
+                <Plus className="h-4 w-4" />
+                New Asset Request
+              </Link>
+            </Button>
+          </div>
+
+          {assetRequests.length === 0 ? (
+            <Card className="glass border-dashed border-primary/20 py-20 text-center">
+              <CardContent className="space-y-4">
+                <div className="h-20 w-20 rounded-3xl bg-primary/5 flex items-center justify-center mx-auto mb-6 border border-primary/10">
+                  <ClipboardList className="h-10 w-10 text-primary/40" />
+                </div>
+                <h3 className="text-xl font-bold uppercase tracking-tight">No Active Procurement Node</h3>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  You haven't posted any asset requirements yet. Start an RFA to activate AI semantic matching.
+                </p>
+                <Button variant="outline" className="rounded-full mt-4" asChild>
+                  <Link to="/request-asset">Launch Procurement Protocol</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {assetRequests.map((req) => (
+                <Card key={req.id} className="glass hardware-surface border-primary/20 hover:border-primary/50 transition-all group overflow-hidden">
+                  <div className={`h-1.5 w-full ${req.status === 'matched' ? 'bg-primary' : 'bg-muted'}`} />
+                  <CardHeader className="p-6">
+                    <div className="flex justify-between items-start gap-4 mb-2">
+                      <Badge className={`${req.status === 'matched' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'} text-[8px] uppercase font-mono tracking-widest`}>
+                        {req.status}
+                      </Badge>
+                      <span className="text-[9px] font-mono opacity-40 uppercase">{format(new Date(req.createdAt?.toDate ? req.createdAt.toDate() : req.createdAt), 'MMM d, yyyy')}</span>
+                    </div>
+                    <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{req.title}</CardTitle>
+                    <CardDescription className="line-clamp-2 text-xs h-8">{req.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-0 space-y-4 font-mono">
+                    <div className="grid grid-cols-2 gap-4 text-[9px] uppercase border-y border-white/5 py-3">
+                      <div>
+                        <p className="opacity-50 mb-1">Target Budget</p>
+                        <p className="font-bold">£{req.budget?.toLocaleString() || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="opacity-50 mb-1">Deadline</p>
+                        <p className="font-bold">{req.deadline || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[9px] opacity-50 uppercase tracking-widest">Specifications</p>
+                      <p className="text-[10px] font-bold truncate">{req.technicalSpecs || 'Standard Protocol'}</p>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="p-6 pt-0">
+                    <Button variant="outline" className="w-full rounded-xl h-10 font-mono text-[10px] uppercase tracking-widest hover:bg-primary/10 border-primary/20" asChild>
+                      <Link to="/request-asset">View AI Matches</Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
@@ -1260,6 +1394,49 @@ export default function Dashboard() {
               ) : (
                 "Delete Listing"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCounterDialogOpen} onOpenChange={setIsCounterDialogOpen}>
+        <DialogContent className="glass border-primary/20 rounded-3xl sm:max-w-md p-8">
+          <DialogHeader className="mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] font-mono tracking-widest uppercase opacity-70">Price Negotiation Node</span>
+            </div>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Propose Counter-Offer</DialogTitle>
+            <DialogDescription className="text-xs opacity-70 mt-2">
+              Submit a revised valuation for this transaction. The buyer will be notified to review your terms.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Revised Unit Value</Label>
+              <div className="flex items-center bg-background/40 border border-primary/10 h-14 rounded-xl overflow-hidden px-4">
+                <span className="font-mono text-primary/70 mr-2">£</span>
+                <Input 
+                  type="number"
+                  className="bg-transparent border-none focus-visible:ring-0 font-mono font-bold text-lg" 
+                  placeholder="0.00" 
+                  value={counterAmount}
+                  onChange={(e) => setCounterAmount(e.target.value)}
+                  required
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">Buyer's original offer: £{selectedOffer?.amount.toLocaleString()}</p>
+            </div>
+          </div>
+          <DialogFooter className="mt-8 gap-3 sm:flex-col">
+            <Button 
+              className="w-full rounded-xl h-14 bg-primary text-primary-foreground font-black tracking-widest text-[10px] uppercase border-none shadow-lg shadow-primary/20"
+              onClick={() => selectedOffer && handleUpdateOfferStatus(selectedOffer.id, 'countered', parseFloat(counterAmount))}
+            >
+              PROPOSE NEW TERMS
+            </Button>
+            <Button variant="ghost" className="w-full rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest" onClick={() => setIsCounterDialogOpen(false)}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>

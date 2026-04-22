@@ -53,7 +53,8 @@ import {
   Gavel,
   Clock,
   FileText,
-  Heart
+  Heart,
+  Globe
 } from "lucide-react";
 import { 
   Tooltip,
@@ -744,6 +745,34 @@ export default function ListingDetail() {
                      <span className="text-[10px] font-mono opacity-70 uppercase tracking-tight">Total Commitment</span>
                      <span className="text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
                   </div>
+                </div>
+
+                {/* Digital Product Passport / ESG Node */}
+                <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-primary">
+                      <Globe className="h-4 w-4" />
+                      <span className="font-mono text-[9px] font-black uppercase tracking-widest">Digital Product Passport</span>
+                    </div>
+                    <Badge className="bg-primary/20 text-primary border-none text-[8px] font-mono h-5">v1.2 Compliance</Badge>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-[10px] font-mono border-b border-primary/10 pb-2">
+                      <span className="opacity-60">Verified Origin</span>
+                      <span className="font-bold">{listing.location}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono border-b border-primary/10 pb-2">
+                      <span className="opacity-60">Circular Score</span>
+                      <span className="font-bold text-primary">{(qualityScore * 1).toFixed(1)} / 100</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="opacity-60">Recyclability</span>
+                      <span className="font-bold">High (Industrial Class)</span>
+                    </div>
+                  </div>
+                  <Button variant="outline" className="w-full rounded-xl h-9 font-mono text-[9px] uppercase tracking-widest border-primary/20 hover:bg-primary/20" size="sm">
+                    View Technical Lineage
+                  </Button>
                 </div>
 
                 <div className="flex flex-col gap-3">

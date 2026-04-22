@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, db, collection, setDoc, doc, handleFirestoreError, OperationType, onSnapshot } from "@/lib/firebase";
+import { useAuth, db, collection, setDoc, doc, handleFirestoreError, OperationType, onSnapshot, getDocs, addDoc, updateDoc, serverTimestamp } from "@/lib/firebase";
 import { CATEGORIES } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -360,6 +360,39 @@ export default function CreateListing() {
       });
       
       toast.success(status === 'draft' ? "Draft saved!" : "Listing created successfully!");
+      
+      // Smart Matching Node
+      if (status === 'available') {
+        try {
+          const requestsSnap = await getDocs(collection(db, "asset_requests"));
+          for (const reqDoc of requestsSnap.docs) {
+            const reqData = reqDoc.data();
+            if (reqData.status === 'active') {
+               // Semantic/Keyword detection
+               const isMatch = formData.title.toLowerCase().includes(reqData.title.toLowerCase()) || 
+                               formData.description.toLowerCase().includes(reqData.title.toLowerCase()) ||
+                               reqData.title.toLowerCase().includes(formData.title.toLowerCase());
+               
+               if (isMatch) {
+                 await addDoc(collection(db, "notifications"), {
+                   userId: reqData.userId,
+                   title: "📦 Smart Match Detected",
+                   message: `Automated scan found a new match for your RFA "${reqData.title}": ${formData.title}. Check technical compatibility now.`,
+                   type: "system",
+                   link: `/listing/${listingId}`,
+                   read: false,
+                   createdAt: serverTimestamp()
+                 });
+                 
+                 await updateDoc(doc(db, "asset_requests", reqDoc.id), { status: 'matched' });
+               }
+            }
+          }
+        } catch (matchErr) {
+          console.error("Smart Matcher Error:", matchErr);
+        }
+      }
+
       navigate(status === 'draft' ? "/dashboard" : "/marketplace");
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, path);

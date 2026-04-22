@@ -143,9 +143,9 @@ export default function Home() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full mt-8">
               {[
                 { title: "KYB Compliance", desc: "Rigorous manual vetting for all participating firms ensuring ecosystem integrity." },
-                { title: "Smart Logistics", desc: "Route optimization for industrial haulage minimizing cluster-to-cluster emissions." },
-                { title: "Asset Identity", desc: "Every piece of machinery is assigned a digital twin for lifecycle tracking." },
-                { title: "Stripe Settlement", desc: "Enterprise-grade financial routing with secure escrow and multi-party splits." }
+                { title: "AI Smart Match", desc: "Automated semantic matching engine connects RFAs with inventory in real-time." },
+                { title: "Digital Passport", desc: "Every asset includes a Digital Product Passport (DPP) for ESG and technical lineage." },
+                { title: "B2B Negotiation", desc: "Structured negotiation protocols built specifically for high-value industrial trades." }
               ].map(item => (
                 <div key={item.title} className="p-8 md:p-10 bg-background border border-border rounded-3xl hover:border-primary transition-all shadow-sm">
                   <h3 className="text-xl font-bold mb-4">{item.title}</h3>
