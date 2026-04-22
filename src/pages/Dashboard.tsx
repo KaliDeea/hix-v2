@@ -445,7 +445,7 @@ export default function Dashboard() {
   };
 
   const DashboardSkeleton = () => (
-    <div className="container mx-auto px-4 py-12">
+    <div className="container mx-auto py-12">
       <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-10 w-48" />

@@ -75,7 +75,7 @@ export default function App() {
             <SuspendedOverlay />
             <Router>
               <ScrollToTop />
-              <div className="flex min-h-screen flex-col">
+              <div className="flex min-h-screen flex-col overflow-x-hidden">
                 <SystemBanner />
                 <Navbar />
                 <main className="flex-1">

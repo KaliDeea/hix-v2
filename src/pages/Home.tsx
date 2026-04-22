@@ -11,9 +11,9 @@ export default function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col min-h-screen page-transition bg-background text-foreground">
+    <div className="flex flex-col min-h-screen page-transition bg-background text-foreground overflow-x-hidden">
       {/* Hero Section - Refined Professional Look */}
-      <section className="relative pt-20 pb-24 sm:pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background w-full">
+      <section className="relative pt-20 pb-24 sm:pb-32 overflow-hidden border-b border-border bg-gradient-to-b from-muted/30 to-background w-full max-w-full">
         <div className="container mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
             <div className="flex-1 space-y-8 text-center lg:text-left">
@@ -28,7 +28,7 @@ export default function Home() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Vetted Industrial Exchange</span>
                 </div>
                 
-                <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
+                <h1 className="text-2xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] break-words">
                   Infrastructure for <br className="hidden sm:block" />
                   <span className="text-primary italic font-serif">Circular</span> Liquidity.
                 </h1>
@@ -57,9 +57,9 @@ export default function Home() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-start lg:justify-start gap-6 pt-8 border-t border-border mt-12 overflow-x-auto no-scrollbar whitespace-nowrap w-full max-w-full">
-                  <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 shrink-0">Trusted by:</div>
-                  <div className="flex gap-8 opacity-60 font-black text-sm uppercase tracking-tighter shrink-0 pr-4">
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-8 pt-8 border-t border-border mt-12 w-full max-w-full overflow-hidden">
+                  <div className="text-[10px] font-bold uppercase tracking-widest opacity-40 shrink-0 w-full lg:w-auto text-center lg:text-left mb-2 lg:mb-0">Trusted by:</div>
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-8 gap-y-4 opacity-60 font-black text-sm uppercase tracking-tighter">
                     <span>Cluster-Tees</span>
                     <span>H-Energy</span>
                     <span>UK-Steel</span>
@@ -91,8 +91,8 @@ export default function Home() {
                   <p className="text-lg font-serif italic">"Decarbonizing industrial procurement through secondary market liquidity."</p>
                 </div>
               </motion.div>
-              {/* Decorative background element */}
-              <div className="absolute -z-10 -top-12 -right-12 w-64 h-64 bg-primary/10 blur-3xl rounded-full" />
+              {/* Decorative background element - positioned more safely */}
+              <div className="absolute -z-10 -top-12 right-0 w-64 h-64 bg-primary/10 blur-3xl rounded-full" />
             </div>
           </div>
         </div>

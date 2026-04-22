@@ -417,7 +417,7 @@ export default function Marketplace() {
 
   if (loading) {
     return (
-      <div className="container py-20 page-transition">
+      <div className="container mx-auto py-20 page-transition">
         <div className="mb-12 space-y-2">
           <div className="h-4 w-32 bg-white/5 animate-pulse rounded" />
           <div className="h-12 w-96 bg-white/5 animate-pulse rounded" />
@@ -428,7 +428,7 @@ export default function Marketplace() {
   }
 
   return (
-    <div className="container py-20 page-transition">
+    <div className="container mx-auto py-20 page-transition">
       <div className="mb-16 flex flex-col lg:flex-row lg:items-end lg:justify-between border-b border-border pb-12 gap-8">
         <div className="space-y-4 text-center lg:text-left">
           <span className="text-xs font-bold uppercase tracking-[0.3em] text-primary">Live Asset Index</span>

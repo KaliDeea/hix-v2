@@ -246,23 +246,23 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/90 backdrop-blur-md">
-      <div className="container flex h-20 sm:h-24 items-center justify-between px-2 sm:px-4">
-        <Link to="/" className="flex items-center gap-2 sm:gap-4 group shrink-0 py-2">
+      <div className="container flex h-16 sm:h-24 items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 group shrink-0 py-1">
           {platformLogo ? (
             <div className="relative">
               <img 
                 src={platformLogo} 
                 alt="HiX Logo" 
-                className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 rounded-full object-cover border-2 border-primary/40 transition-all group-hover:scale-110 logo-primary-glow" 
+                className="h-10 w-10 sm:h-14 sm:w-14 md:h-20 md:w-20 rounded-full object-cover border-2 border-primary/40 transition-all group-hover:scale-110 logo-primary-glow" 
                 referrerPolicy="no-referrer"
               />
             </div>
           ) : (
             <>
-              <div className="flex h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-xl sm:text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-lg shadow-primary/30 logo-primary-glow">
+              <div className="flex h-10 w-10 sm:h-14 sm:w-14 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-lg sm:text-2xl md:text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-lg shadow-primary/30 logo-primary-glow">
                 H
               </div>
-              <span className="text-xl sm:text-2xl md:text-4xl hidden min-[400px]:block font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-1 sm:ml-2">HiX</span>
+              <span className="text-lg sm:text-2xl md:text-4xl hidden sm:block font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-1 sm:ml-2">HiX</span>
             </>
           )}
         </Link>
@@ -302,7 +302,7 @@ export function Navbar() {
           <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors mr-2">About</Link>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 ml-2 sm:ml-6 pl-2 sm:pl-6 border-l border-primary/20">
+        <div className="flex items-center gap-1 sm:gap-4 ml-1 sm:ml-6 pl-1 sm:pl-6 border-l border-primary/20">
           <ThemeToggle />
           {user && (
             <div className="hidden sm:flex items-center gap-2">
