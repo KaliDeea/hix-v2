@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
   useAuth, 
   db, 
@@ -17,7 +17,15 @@ import {
   getDoc
 } from "@/lib/firebase";
 import { Listing, Chat, UserProfile } from "@/types";
-import { calculateListingQualityScore, getQualityScoreColor, getQualityScoreLabel } from "@/lib/qualityScore";
+import { 
+  calculateListingQualityScore, 
+  getQualityScoreColor, 
+  getQualityScoreLabel,
+  calculateESGImpactScore,
+  getESGImpactScoreColor,
+  getESGImpactScoreLabel,
+  getESGImpactColorBadge
+} from "@/lib/qualityScore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -63,7 +71,15 @@ import {
   Heart,
   Globe,
   ExternalLink,
-  Download
+  Download,
+  Settings,
+  FileCheck,
+  QrCode,
+  Scan,
+  ShieldAlert,
+  Sparkles,
+  Search,
+  ClipboardList
 } from "lucide-react";
 import { 
   Tooltip,
@@ -74,7 +90,6 @@ import {
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { useNavigate } from "react-router-dom";
 
 export default function ListingDetail() {
   const { id } = useParams();
@@ -448,8 +463,24 @@ export default function ListingDetail() {
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    return 'border-primary/20';
+  const getCategoryColor = (cat: string) => {
+    switch(cat.toLowerCase()) {
+      case 'heavy machinery': return 'border-orange-500/20 bg-orange-500/5';
+      case 'electronics': return 'border-blue-500/20 bg-blue-500/5';
+      case 'tools': return 'border-green-500/20 bg-green-500/5';
+      default: return 'border-primary/20 bg-primary/5';
+    }
+  };
+
+  const getLedgerIcon = (type: string) => {
+    switch(type) {
+      case 'audit': return <ShieldCheck className="h-3 w-3" />;
+      case 'maintenance': return <Settings className="h-3 w-3" />;
+      case 'certification': return <FileCheck className="h-3 w-3" />;
+      case 'transfer': return <Truck className="h-3 w-3" />;
+      case 'genesis': return <Send className="h-3 w-3" />;
+      default: return <Clock className="h-3 w-3" />;
+    }
   };
 
   if (loading) {
@@ -582,19 +613,108 @@ export default function ListingDetail() {
                           <p className="font-mono text-sm font-black uppercase truncate">{listing.weight} kg</p>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent className="glass border-primary/20">
-                        <p className="text-xs">Physical weight of the asset.</p>
+                      <TooltipContent className="glass border-primary/20 p-3 max-w-[200px]">
+                        <p className="text-xs">Physical weight of the asset. Critical for load-bearing and transportation logistics.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 )}
                 {listing.dimensions && (
-                  <div className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors">
-                    <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Dimensions</p>
-                    <p className="font-mono text-sm font-black uppercase truncate">{listing.dimensions}</p>
-                  </div>
+                  <TooltipProvider delay={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors cursor-help outline-none focus:ring-1 focus:ring-primary/20"
+                          tabIndex={0}
+                          role="button"
+                        >
+                          <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Dimensions</p>
+                          <p className="font-mono text-sm font-black uppercase truncate">{listing.dimensions}</p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="glass border-primary/20 p-3 max-w-[200px]">
+                        <p className="text-xs">Physical size (L x W x H). Essential for site integration and clearance verification.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
+                {(() => {
+                  const voltage = listing.description?.match(/(\d+)\s*v/i)?.[0] || listing.description?.match(/(\d+)\s*volt/i)?.[0];
+                  if (!voltage) return null;
+                  return (
+                    <TooltipProvider delay={100}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="glass p-5 rounded-2xl border-primary/20 bg-primary/5 space-y-1 group hover:border-primary/40 transition-colors cursor-help outline-none focus:ring-1 focus:ring-primary/20"
+                            tabIndex={0}
+                            role="button"
+                          >
+                            <p className="text-[9px] text-primary font-black uppercase tracking-[0.2em] opacity-70">Voltage</p>
+                            <p className="font-mono text-sm font-black uppercase truncate">{voltage.toUpperCase()}</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="glass border-primary/20 p-3 max-w-[200px]">
+                          <p className="text-xs">Required electrical potential. Verify against local site power specifications.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )
+                })()}
               </div>
+
+              {/* AI Verification Report Node */}
+              {listing.verificationData && (
+                <div className="mt-8 p-8 rounded-3xl bg-emerald-500/5 border-2 border-emerald-500/20 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <QrCode className="h-24 w-24 text-emerald-500" />
+                  </div>
+                  
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                      <Scan className="h-6 w-6 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black uppercase tracking-tight text-emerald-500 italic">Technical Audit (HiX-AI)</h3>
+                      <div className="flex items-center gap-2">
+                         <Badge className="bg-emerald-500 text-white border-none rounded-none text-[9px] font-black uppercase tracking-widest px-2 h-5">
+                           Trust Score: {listing.verificationData.score}%
+                         </Badge>
+                         <span className="text-[10px] text-emerald-500/60 font-mono uppercase">Verified: {new Date(listing.verificationData.verifiedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-8 relative z-10">
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/70">Intelligence Summary</p>
+                        <p className="text-sm font-light leading-relaxed text-emerald-950/80 dark:text-emerald-50/80">
+                          {listing.verificationData.analysis}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 border-none rounded-none text-[8px] font-bold uppercase">Spec Extraction Active</Badge>
+                        <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 border-none rounded-none text-[8px] font-bold uppercase">Nameplate Verified</Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-black rounded-3xl border-2 border-emerald-500/10 shadow-inner">
+                      <div className="relative">
+                         <div className="relative z-10 p-3 bg-white rounded-xl">
+                            <QrCode className="h-24 w-24 text-black" />
+                         </div>
+                         <div className="absolute inset-0 bg-emerald-500 blur-2xl opacity-10" />
+                      </div>
+                      <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-emerald-500 text-center">Scan for Digital Product Passport</p>
+                      <Button variant="ghost" className="mt-2 h-7 text-[9px] font-black uppercase tracking-tighter text-emerald-500 hover:bg-emerald-500/10 whitespace-nowrap">
+                        Download DPP Certificate
+                        <Download className="ml-2 h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Visual Asset Timeline - Recipe 1/3 Style */}
@@ -616,12 +736,12 @@ export default function ListingDetail() {
               </div>
 
               <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[1.25rem] before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary/40 before:via-white/5 before:to-transparent">
-                {[
-                  { date: "MAR 2026", event: "Industrial Health Audit", desc: "Passed internal maintenance sweep. New hydraulic seals installed.", status: "Verified", icon: <ShieldCheck className="h-3 w-3" /> },
-                  { date: "JAN 2026", event: "Safety Certification", desc: "BS EN ISO 12100:2010 compliance renewed for 12 months.", status: "Active", icon: <FileText className="h-3 w-3" /> },
-                  { date: "SEP 2025", event: "Ownership Transfer", desc: "Relocated from Teesport Terminal 4 to current staging facility.", status: "Logged", icon: <Truck className="h-3 w-3" /> },
-                  { date: "MAY 2025", event: "Asset Commissioning", desc: "Initial entry into regional industrial directory.", status: "Genesis", icon: <Send className="h-3 w-3" /> }
-                ].map((item, i) => (
+                {(listing.ledger || [
+                  { date: "MAR 2026", event: "Industrial Health Audit", desc: "Passed internal maintenance sweep. New hydraulic seals installed.", status: "Verified", type: "audit" },
+                  { date: "JAN 2026", event: "Safety Certification", desc: "BS EN ISO 12100:2010 compliance renewed for 12 months.", status: "Active", type: "certification" },
+                  { date: "SEP 2025", event: "Ownership Transfer", desc: "Relocated from Teesport Terminal 4 to current staging facility.", status: "Logged", type: "transfer" },
+                  { date: "MAY 2025", event: "Asset Commissioning", desc: "Initial entry into regional industrial directory.", status: "Genesis", type: "genesis" }
+                ]).map((item, i) => (
                   <div key={i} className="relative flex items-center justify-between group">
                     <div className="flex items-center w-full">
                       <div className="absolute left-0 mt-0.5 h-6 w-6 flex items-center justify-center rounded-none bg-black border border-primary/50 group-hover:scale-125 transition-transform z-10">
@@ -631,7 +751,7 @@ export default function ListingDetail() {
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[10px] font-mono font-black text-primary/60">{item.date}</span>
                           <Badge variant="outline" className="text-[8px] h-4 border-white/10 uppercase tracking-widest font-bold rounded-none">
-                             {item.icon}
+                             {getLedgerIcon(item.type)}
                              <span className="ml-1">{item.status}</span>
                           </Badge>
                         </div>
@@ -641,6 +761,55 @@ export default function ListingDetail() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="glass p-8 rounded-3xl border-primary/20 bg-primary/5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Leaf className="h-24 w-24 text-primary" />
+              </div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 rounded-xl bg-primary/20">
+                    <Leaf className="h-6 w-6 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-bold">Sustainability Impact</h2>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-4xl font-bold text-primary">{listing.co2Savings}kg</p>
+                      <p className="text-sm text-muted-foreground font-medium">CO2 Emissions Avoided</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
+                        <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 20)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Trees/Yr</p>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
+                        <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 0.4).toLocaleString()}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Car Miles</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                     <div className="flex items-center justify-between mb-2">
+                         <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Circular Economy Efficiency</span>
+                         <span className="text-xs font-bold text-primary">85% Reduced Footprint</span>
+                     </div>
+                     <div className="h-3 w-full bg-muted border border-border p-[2px]">
+                         <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: "85%" }}
+                            transition={{ duration: 1.5, ease: "circOut" }}
+                            className="h-full bg-primary shadow-[0_0_10px_var(--primary)]" 
+                         />
+                     </div>
+                     <p className="text-xs text-muted-foreground leading-relaxed font-light italic">
+                        Selecting this industrial asset prevents the high-intensity manufacturing emissions related to new machinery production.
+                     </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -738,6 +907,9 @@ export default function ListingDetail() {
 
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
+                  <Badge className={`${listing.status === 'available' ? 'bg-emerald-500' : 'bg-rose-500'} text-white border-none uppercase tracking-widest text-[10px] px-3`}>
+                    {listing.status === 'available' ? 'Available' : 'Sold Out'}
+                  </Badge>
                   <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 text-[10px]">
                     {listing.category}
                   </Badge>
@@ -750,26 +922,40 @@ export default function ListingDetail() {
                     <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">Q: {getQualityScoreLabel(qualityScore)} ({qualityScore}%)</span>
                   </div>
 
-                  <div className="flex flex-col items-center">
-                    <TooltipProvider delay={100}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div 
-                            className="flex items-center gap-1.5 text-primary font-bold cursor-help text-sm outline-none focus:ring-1 focus:ring-primary/20 rounded-md px-1"
-                            tabIndex={0}
-                            role="button"
-                            aria-label="Environmental impact information"
-                          >
-                            <Leaf className="h-4 w-4" />
-                            {listing.co2Savings}kg
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="glass border-primary/20">
-                          <p className="text-xs">CO2 avoided by reuse.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                  {listing.verificationData && (
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                      <ShieldCheck className="h-3 w-3" />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Registry Verified</span>
+                    </div>
+                  )}
+
+                  {(() => {
+                    const esgScore = calculateESGImpactScore(listing, sellerProfile);
+                    return (
+                      <TooltipProvider delay={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div 
+                              className={`flex items-center gap-1.5 font-black cursor-help text-[10px] uppercase tracking-widest outline-none focus:ring-1 focus:ring-primary/20 rounded-full px-3 py-1 border transition-all ${getESGImpactColorBadge(esgScore)}`}
+                              tabIndex={0}
+                              role="button"
+                              aria-label="ESG Impact Score"
+                            >
+                              <Leaf className="h-3 w-3" />
+                              ESG: {esgScore} ({getESGImpactScoreLabel(esgScore)})
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="glass border-primary/20 p-4 max-w-[200px]">
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">ESG Impact Analysis</p>
+                              <p className="text-xs">This asset avoids <span className="font-bold text-primary">{listing.co2Savings}kg</span> of embodied CO2 emissions.</p>
+                              <p className="text-[9px] text-muted-foreground italic">Score based on circular benefit and seller verification status.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })()}
                 </div>
 
                 <h1 className="text-2xl lg:text-3xl font-bold mb-4 tracking-tight leading-tight text-center">{listing.title}</h1>
@@ -846,6 +1032,12 @@ export default function ListingDetail() {
                       <span className="font-bold">{listing.location}</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] font-mono border-b border-primary/10 pb-2">
+                      <span className="opacity-60 text-primary">ESG Impact Score</span>
+                      <span className={`font-bold ${getESGImpactScoreColor(calculateESGImpactScore(listing, sellerProfile))}`}>
+                        {calculateESGImpactScore(listing, sellerProfile)} / 100
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono border-b border-primary/10 pb-2">
                       <span className="opacity-60">Circular Score</span>
                       <span className="font-bold text-primary">{(qualityScore * 1).toFixed(1)} / 100</span>
                     </div>
@@ -918,20 +1110,59 @@ export default function ListingDetail() {
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mb-6 md:mb-0">
                             {listing.documents && listing.documents.length > 0 ? (
                               listing.documents.map((doc, idx) => (
-                                <a 
-                                  key={`doc-${idx}`} 
-                                  href={doc.url} 
-                                  download={doc.name}
-                                  className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10 group cursor-pointer hover:bg-primary/10 transition-colors h-full"
-                                >
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <FileText className="h-3 w-3 text-primary shrink-0" />
-                                    <span className="text-[8px] font-bold font-mono truncate">{doc.name}</span>
-                                  </div>
-                                  <div className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                                    <Download className="h-2.5 w-2.5 text-primary" />
-                                  </div>
-                                </a>
+                                <div key={`doc-${idx}`} className="flex flex-col rounded-xl bg-primary/5 border border-primary/10 overflow-hidden group transition-all h-full">
+                                  <a 
+                                    href={doc.url} 
+                                    download={doc.name}
+                                    className="flex items-center justify-between p-3 hover:bg-primary/10 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="text-[10px] font-bold font-mono truncate">{doc.name}</span>
+                                        <span className="text-[7px] uppercase font-black opacity-50">{doc.type.split('/')[1] || 'FILE'}</span>
+                                      </div>
+                                    </div>
+                                    <div className="h-6 w-6 rounded-full flex items-center justify-center shrink-0 bg-primary/10 group-hover:bg-primary py-2 transition-all">
+                                      <Download className="h-3 w-3 text-primary group-hover:text-white" />
+                                    </div>
+                                  </a>
+                                  
+                                  {doc.extractedData && (
+                                    <div className="p-3 bg-white/40 border-t border-primary/10 flex flex-col gap-2">
+                                      <div className="flex items-center gap-1.5 text-emerald-600">
+                                        <Sparkles className="h-2.5 w-2.5" />
+                                        <span className="text-[7px] font-black uppercase tracking-widest leading-none">HiX-AI Technical Extract</span>
+                                      </div>
+                                      <p className="text-[9px] leading-relaxed text-muted-foreground line-clamp-3">"{doc.extractedData.summary}"</p>
+                                      
+                                      <div className="grid grid-cols-2 gap-2 mt-1">
+                                        {(doc.extractedData.calibrationDate || doc.extractedData.expiryDate) && (
+                                          <div className="col-span-2 flex gap-4">
+                                            {doc.extractedData.calibrationDate && (
+                                              <div className="space-y-0.5">
+                                                <p className="text-[6px] font-black uppercase opacity-40">LAST CALIBRATION</p>
+                                                <p className="text-[8px] font-mono font-bold leading-none">{doc.extractedData.calibrationDate}</p>
+                                              </div>
+                                            )}
+                                            {doc.extractedData.expiryDate && (
+                                              <div className="space-y-0.5">
+                                                <p className="text-[6px] font-black uppercase opacity-40">EXPIRY</p>
+                                                <p className="text-[8px] font-mono font-bold leading-none text-rose-500">{doc.extractedData.expiryDate}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                        {doc.extractedData.technicianNotes && (
+                                           <div className="col-span-2 space-y-0.5">
+                                              <p className="text-[6px] font-black uppercase opacity-40">ENG NOTES</p>
+                                              <p className="text-[8px] font-mono italic leading-tight text-muted-foreground">{doc.extractedData.technicianNotes}</p>
+                                           </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               ))
                             ) : (
                               <div className="col-span-full p-6 text-center rounded-xl border border-dashed border-primary/10 opacity-60">
@@ -1133,6 +1364,30 @@ export default function ListingDetail() {
                          </Dialog>
                       </motion.div>
                     </div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.01, translateY: -1 }}
+                      whileTap={{ scale: 0.99 }}
+                      className="w-full"
+                    >
+                      <Button 
+                        variant="outline" 
+                        size="lg"
+                        className="w-full rounded-xl h-12 text-[8px] font-black uppercase tracking-[0.1em] border-primary/20 hover:bg-primary/5 group"
+                        onClick={() => {
+                          navigate("/request-asset", { 
+                            state: { 
+                              title: `Asset similar to: ${listing.title}`,
+                              description: `Seeking industrial equipment equivalent to ${listing.title}. Brand: ${listing.brand || 'Any'}. Category: ${listing.category}. Needs to be verified.`,
+                              technicalSpecs: `Weight: ${listing.weight || 'N/A'}kg. Dimensions: ${listing.dimensions || 'N/A'}. Required for immediate operation.`
+                            } 
+                          });
+                        }}
+                      >
+                        <Search className="mr-2 h-3.5 w-3.5 text-primary group-hover:scale-110 transition-transform" />
+                        Procure Similar Asset
+                      </Button>
+                    </motion.div>
                 </div>
               </div>
             </div>
@@ -1199,62 +1454,6 @@ export default function ListingDetail() {
           </motion.div>
         </div>
       </div>
-
-      <div className="mt-12 lg:mt-16 space-y-12">
-        <div className="grid lg:grid-cols-12 gap-12">
-          <div className="lg:col-span-12 space-y-12">
-            <div className="space-y-8">
-              <div className="glass p-8 rounded-3xl border-primary/20 bg-primary/5 relative overflow-hidden">              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <Leaf className="h-24 w-24 text-primary" />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-xl bg-primary/20">
-                    <Leaf className="h-6 w-6 text-primary" />
-                  </div>
-                  <h2 className="text-xl font-bold">Sustainability Impact</h2>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <p className="text-4xl font-bold text-primary">{listing.co2Savings}kg</p>
-                      <p className="text-sm text-muted-foreground font-medium">CO2 Emissions Avoided</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                        <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 20)}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Trees/Yr</p>
-                      </div>
-                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                        <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 0.4).toLocaleString()}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Car Miles</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                     <div className="flex items-center justify-between mb-2">
-                         <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Circular Economy Efficiency</span>
-                         <span className="text-xs font-bold text-primary">85% Reduced Footprint</span>
-                     </div>
-                     <div className="h-3 w-full bg-muted border border-border p-[2px]">
-                         <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: "85%" }}
-                            transition={{ duration: 1.5, ease: "circOut" }}
-                            className="h-full bg-primary shadow-[0_0_10px_var(--primary)]" 
-                         />
-                     </div>
-                     <p className="text-xs text-muted-foreground leading-relaxed font-light italic">
-                        Selecting this industrial asset prevents the high-intensity manufacturing emissions related to new machinery production.
-                     </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
   );
 }

@@ -18,6 +18,11 @@ import {
 } from "@/lib/firebase";
 import { Listing, Chat, UserProfile } from "@/types";
 import { CATEGORIES } from "@/constants";
+import { 
+  calculateESGImpactScore, 
+  getESGImpactColorBadge, 
+  getESGImpactScoreLabel 
+} from "@/lib/qualityScore";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -431,11 +436,11 @@ export default function Marketplace() {
     <div className="container mx-auto py-20 page-transition">
       <div className="mb-16 flex flex-col lg:flex-row lg:items-end lg:justify-between border-b border-border pb-12 gap-8">
         <div className="space-y-4 text-center lg:text-left">
-          <span className="text-xs font-bold uppercase tracking-[0.3em] text-primary">Live Asset Index</span>
+          <span className="text-xs font-bold uppercase tracking-[0.3em] text-emerald-500">Verified Industrial Registry</span>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black font-display tracking-tighter uppercase italic italic-caps">Marketplace</h1>
           <p className="text-muted-foreground font-light max-w-xl mx-auto lg:mx-0 text-sm sm:text-base">
-            Real-time industrial inventory across the UK cluster. 
-            All listings are verified for technical specification accuracy.
+            The global index for trusted industrial exchange. 
+            All registry entries are verified via the HiX Intelligence Node and Digital Product Passports.
           </p>
         </div>
 
@@ -595,6 +600,17 @@ export default function Marketplace() {
                   <div className="flex flex-col justify-center min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[10px] font-mono opacity-60 font-medium tracking-tight">ID: {listing.id.slice(-6).toUpperCase()}</span>
+                      {listing.status === 'available' ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-500 border-none text-[8px] font-mono h-4 -mt-0.5">AVAILABLE</Badge>
+                      ) : (
+                        <Badge className="bg-rose-500/10 text-rose-500 border-none text-[8px] font-mono h-4 -mt-0.5">SOLD OUT</Badge>
+                      )}
+                      {listing.verificationData && (
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-none bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase tracking-[0.2em]">
+                          <ShieldCheck className="h-2 w-2" />
+                          Registry Verified
+                        </div>
+                      )}
                     </div>
                     <Link to={`/listing/${listing.id}`} className="text-xl font-bold tracking-tight hover:text-primary transition-colors truncate">
                       {listing.title}
@@ -626,30 +642,40 @@ export default function Marketplace() {
 
                 {/* ESG Impact */}
                 <div className="col-span-1 md:col-span-2 p-6 flex flex-col items-center justify-center border-x border-border bg-primary/5 md:bg-primary/5">
-                  <div className="flex items-center gap-1.5 text-primary">
-                    <Leaf className="h-3.5 w-3.5" />
-                    <span className="text-xl font-black font-display tracking-tighter">
-                      {listing.co2Savings}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase opacity-60">kg</span>
-                  </div>
-                  <span className="text-[9px] font-bold uppercase tracking-tight text-primary/60 mt-1">Buffer Stock</span>
-                  
-                  <div className="mt-4 w-full h-1.5 bg-primary/10 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, (listing.co2Savings / 500) * 100)}%` }}
-                      className="h-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]" 
-                    />
-                  </div>
+                  {(() => {
+                    const esgScore = calculateESGImpactScore(listing, sellerProfiles[listing.sellerId]);
+                    return (
+                      <>
+                        <div className={`flex items-center gap-1.5 ${esgScore >= 70 ? 'text-emerald-500' : esgScore >= 40 ? 'text-amber-500' : 'text-rose-500'}`}>
+                          <Leaf className="h-3.5 w-3.5" />
+                          <span className="text-xl font-black font-display tracking-tighter">
+                            {esgScore}
+                          </span>
+                          <span className="text-[10px] font-bold uppercase opacity-60">ESG</span>
+                        </div>
+                        <Badge variant="outline" className={`mt-2 border-none rounded-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5 ${getESGImpactColorBadge(esgScore)}`}>
+                          {getESGImpactScoreLabel(esgScore)}
+                        </Badge>
+                        <div className="mt-3 w-full h-1 bg-primary/5 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${esgScore}%` }}
+                            className={`h-full ${esgScore >= 70 ? 'bg-emerald-500' : esgScore >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`} 
+                          />
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Price */}
                 <div className="col-span-1 md:col-span-2 p-6 flex flex-col items-center md:items-start justify-center border-t md:border-t-0 border-border">
-                  <div className="text-2xl md:text-xl font-black tracking-tighter text-foreground">
+                  <div className={`text-2xl md:text-xl font-black tracking-tighter ${listing.status === 'sold' ? 'text-muted-foreground line-through opacity-50' : 'text-foreground'}`}>
                     £{listing.price?.toLocaleString()}
                   </div>
-                  <span className="text-[9px] font-bold uppercase tracking-tight text-muted-foreground mt-1">Valuation (GBP)</span>
+                  <span className="text-[9px] font-bold uppercase tracking-tight text-muted-foreground mt-1">
+                    {listing.status === 'sold' ? 'Final Sale Value' : 'Valuation (GBP)'}
+                  </span>
                 </div>
 
                 {/* Action */}
@@ -711,7 +737,7 @@ export default function Marketplace() {
               <span className="text-[10px] font-black uppercase tracking-widest text-primary">Semantic Diagnosis Node</span>
             </div>
           </div>
-          <h3 className="text-3xl font-black mb-6 tracking-tighter uppercase font-serif italic">Target Reference Not Found</h3>
+          <h3 className="text-3xl font-black mb-6 tracking-tighter uppercase italic">Target Reference Not Found</h3>
           <p className="text-muted-foreground text-sm mb-12 leading-relaxed font-mono uppercase text-xs tracking-widest">
             IDENTIFIER: "{search}" <br />
             STATUS: ZERO_MATCH <br /><br />

@@ -26,91 +26,56 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+
+import { scanAssetDocument, AssetVerificationResult, matchMarketplaceInventory } from "@/services/geminiService";
 
 export default function RequestAsset() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAiMatching, setIsAiMatching] = useState(false);
   const [matches, setMatches] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
+    title: location.state?.title || "",
+    description: location.state?.description || "",
     budget: "",
     deadline: "",
-    technicalSpecs: ""
+    technicalSpecs: location.state?.technicalSpecs || ""
   });
 
   const handleAiScan = async () => {
     if (!formData.description && !formData.title) {
-      toast.error("Please provide a description first");
+      toast.error("Please provide requirements first");
       return;
     }
 
     setIsAiMatching(true);
-    const toastId = toast.loading("AI Agent scanning marketplace for technical matches...");
+    const toastId = toast.loading("Industrial Procurement Agent scanning global buffer for technical matches...");
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-      // 1. Fetch current listings for the AI to "know"
+      // 1. Fetch current listings
       const listingsSnap = await getDocs(query(collection(db, "listings"), where("status", "==", "available")));
-      const availableAssets = listingsSnap.docs.map(doc => ({
-        id: doc.id,
-        title: doc.data().title,
-        brand: doc.data().brand,
-        model: doc.data().model,
-        price: doc.data().price,
-        description: doc.data().description
-      }));
+      const availableAssets = listingsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
-      // 2. Ask Gemini to match
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{
-          parts: [{
-            text: `As an Industrial Procurement Agent, analyze this project request: "${formData.title}: ${formData.description}". 
-            Matches these against available inventory: ${JSON.stringify(availableAssets)}.
-            Identify the top 3 matches or closest alternatives based on technical compatibility. 
-            Return JSON: matches (array of {id, score, reasoning}).`
-          }]
-        }],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              matches: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    id: { type: Type.STRING },
-                    score: { type: Type.NUMBER, description: "Match score 0-100" },
-                    reasoning: { type: Type.STRING }
-                  }
-                }
-              }
-            }
-          }
-        }
-      });
+      // 2. Use the centralized matching service
+      const requirementsStr = `Target: ${formData.title}. Details: ${formData.description}. Critical Specs: ${formData.technicalSpecs}. Deadline: ${formData.deadline}. Budget: £${formData.budget}`;
+      const result = await matchMarketplaceInventory(requirementsStr, availableAssets);
 
-      const result = JSON.parse(response.text);
       const matchedAssets = result.matches
         .map((m: any) => {
-          const asset = availableAssets.find(a => a.id === m.id);
-          return asset ? { ...asset, ...m } : null;
+          const asset = availableAssets.find(a => a.id === m.listingId);
+          return asset ? { ...asset, ...m, score: m.confidenceScore, reasoning: m.matchReason } : null;
         })
         .filter(Boolean);
 
       setMatches(matchedAssets);
-      toast.success(`Found ${matchedAssets.length} potential matches!`, { id: toastId });
+      toast.success(`Semantic scan complete. Found ${matchedAssets.length} verified matches.`, { id: toastId });
     } catch (error) {
       console.error("AI Matching Error:", error);
-      toast.error("AI Scan failed. Please try manual search.", { id: toastId });
+      toast.error("Failed to connect to the marketplace matching node.", { id: toastId });
     } finally {
       setIsAiMatching(false);
     }
@@ -158,7 +123,7 @@ export default function RequestAsset() {
               <Building2 className="h-3 w-3" />
               Procurement Protocol v3.1
             </motion.div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic serif mb-4 font-serif">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic mb-4">
               Request for <span className="text-primary not-italic">Asset</span>
             </h1>
             <p className="text-muted-foreground font-mono text-xs uppercase tracking-wider">
@@ -296,6 +261,15 @@ export default function RequestAsset() {
                                 <span className="font-bold text-sm">{match.title}</span>
                               </div>
                               <p className="text-[10px] font-mono text-muted-foreground uppercase">{match.reasoning}</p>
+                              {match.technicalOverlap && match.technicalOverlap.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {match.technicalOverlap.map((overlap: string, oi: number) => (
+                                    <span key={`overlap-${oi}`} className="text-[8px] font-mono bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded italic">
+                                      ✓ {overlap}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-4 w-full md:w-auto shrink-0 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 md:pl-6">
                               <div className="font-mono text-sm font-bold">£{match.price?.toLocaleString()}</div>

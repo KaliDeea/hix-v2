@@ -27,12 +27,20 @@ import {
   writeBatch,
   increment
 } from "firebase/firestore";
+import { 
+  getStorage, 
+  ref, 
+  uploadBytes, 
+  getDownloadURL, 
+  deleteObject 
+} from "firebase/storage";
 import { initializeApp } from "firebase/app";
 import firebaseConfig from "@/firebase-applet-config.json";
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const storage = getStorage(app);
 
 // Export Firestore functions for use in other files
 export { 
@@ -52,7 +60,11 @@ export {
   orderBy,
   limit,
   writeBatch,
-  increment
+  increment,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
 };
 
 // Connection test

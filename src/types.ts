@@ -41,6 +41,16 @@ export interface UserProfile {
   currency?: string;
 }
 
+export interface LedgerEvent {
+  id: string;
+  date: string;
+  event: string;
+  desc: string;
+  status: string;
+  type: 'audit' | 'maintenance' | 'certification' | 'transfer' | 'genesis';
+  icon?: string;
+}
+
 export interface Listing {
   id: string;
   sellerId: string;
@@ -58,12 +68,31 @@ export interface Listing {
   weight?: number;
   dimensions?: string;
   images: string[];
-  documents?: { name: string; url: string; type: string }[];
+  documents?: { 
+    name: string; 
+    url: string; 
+    type: string;
+    extractedData?: {
+      summary?: string;
+      calibrationDate?: string;
+      expiryDate?: string;
+      technicianNotes?: string;
+      isLogBook?: boolean;
+      isManual?: boolean;
+    };
+  }[];
   co2Savings: number; // in kg
   status: 'available' | 'sold' | 'draft';
   listingType: 'fixed';
   shippingOptions: ('collection' | 'standard' | 'express' | 'international')[];
   shippingCost?: number;
+  ledger?: LedgerEvent[];
+  verificationData?: {
+    score: number;
+    analysis: string;
+    verifiedAt: string;
+    verifiedBy: "HiX-AI";
+  };
   createdAt: any;
   updatedAt?: any;
 }
@@ -110,8 +139,13 @@ export interface Transaction {
   co2Saved: number;
   shippingMethod?: 'collection' | 'standard' | 'express' | 'international';
   shippingCost?: number;
-  status: 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled';
+  status: 'pending' | 'escrow' | 'shipped' | 'delivered' | 'completed' | 'failed' | 'refunded' | 'cancelled' | 'disputed';
+  escrowStatus?: 'awaiting_funds' | 'held' | 'released' | 'refunded';
+  shippingStatus?: 'pending' | 'label_created' | 'in_transit' | 'out_for_delivery' | 'delivered';
+  trackingNumber?: string;
+  carrier?: string;
   createdAt: any;
+  updatedAt?: any;
   invoiceUrl?: string;
   certificateUrl?: string;
 }

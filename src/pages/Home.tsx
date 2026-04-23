@@ -23,18 +23,18 @@ export default function Home() {
                 transition={{ duration: 0.6 }}
                 className="space-y-6 flex flex-col items-center"
               >
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Vetted Industrial Exchange</span>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Verified Industrial Registry Status</span>
                 </div>
                 
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] max-w-3xl mx-auto">
-                  Infrastructure for <br className="hidden sm:block" />
-                  <span className="text-primary italic font-serif">Circular</span> Liquidity.
+                <h1 className="text-4xl sm:text-6xl lg:text-8xl font-black tracking-tighter leading-[0.9] max-w-4xl mx-auto uppercase">
+                  The HiX <br className="hidden sm:block" />
+                  <span className="text-primary italic">Verified</span> Registry.
                 </h1>
                 
-                <p className="max-w-2xl mx-auto text-base sm:text-lg text-muted-foreground leading-relaxed px-4">
-                  The HiX network connects industrial clusters across the UK, allowing firms to trade surplus machinery with verified accuracy and secure settlement.
+                <p className="max-w-2xl mx-auto text-lg sm:text-xl text-muted-foreground leading-relaxed px-4 font-sans tracking-tight">
+                  The world's first AI-powered Industrial Registry. We verify technical specifications, ESG claims, and asset lineage through Digital Product Passports.
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 w-full">
@@ -90,7 +90,7 @@ export default function Home() {
                     <Leaf className="h-4 w-4 text-primary" />
                     <span className="text-xs font-bold uppercase tracking-widest">Sustainability Node</span>
                   </div>
-                  <p className="text-lg font-serif italic">"Decarbonizing industrial procurement through secondary market liquidity."</p>
+                  <p className="text-xl italic font-light tracking-tight">"Decarbonizing industrial procurement through secondary market liquidity."</p>
                 </div>
               </motion.div>
               {/* Decorative background element - positioned more safely */}
@@ -131,7 +131,7 @@ export default function Home() {
         <div className="container mx-auto">
           <div className="flex flex-col gap-12 lg:gap-16 items-center">
             <div className="w-full flex flex-col items-center text-center">
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">Designed for <span className="text-primary italic font-serif">Professionals.</span></h2>
+              <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 uppercase">Designed for <span className="text-primary italic">Professionals.</span></h2>
               <p className="text-muted-foreground text-lg leading-relaxed mb-8 max-w-2xl mx-auto">
                 The HiX Dashboard provides the technical tools required for complex industrial inventory management and ESG reporting.
               </p>

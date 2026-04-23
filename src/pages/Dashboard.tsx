@@ -60,7 +60,8 @@ import {
   Upload,
   Globe,
   ClipboardList,
-  Truck
+  Truck,
+  Info
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
 import { 
@@ -115,6 +116,12 @@ export default function Dashboard() {
   const [isUpdatingPrice, setIsUpdatingPrice] = useState<string | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
+  const [isUpdateStatusDialogOpen, setIsUpdateStatusDialogOpen] = useState(false);
+  const [statusUpdateData, setStatusUpdateData] = useState({
+    status: 'pending' as Transaction['status'],
+    trackingNumber: "",
+    carrier: ""
+  });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
@@ -161,7 +168,8 @@ export default function Dashboard() {
               buyerCommission: amount * (buyerRate / 100),
               sellerCommission: amount * (sellerRate / 100),
               co2Saved,
-              status: "completed",
+              status: "escrow",
+              escrowStatus: "held",
               createdAt: new Date().toISOString()
             });
             
@@ -493,6 +501,45 @@ export default function Dashboard() {
     }
   };
 
+  const handleUpdateTransactionStatus = async () => {
+    if (!selectedTransaction || !user) return;
+    
+    try {
+      const updates: any = {
+        status: statusUpdateData.status,
+        updatedAt: serverTimestamp()
+      };
+      
+      if (statusUpdateData.trackingNumber) updates.trackingNumber = statusUpdateData.trackingNumber;
+      if (statusUpdateData.carrier) updates.carrier = statusUpdateData.carrier;
+      
+      // Auto-set shippingStatus if status is shipped
+      if (statusUpdateData.status === 'shipped') {
+        updates.shippingStatus = 'in_transit';
+      } else if (statusUpdateData.status === 'delivered') {
+        updates.shippingStatus = 'delivered';
+      }
+
+      await updateDoc(doc(db, "transactions", selectedTransaction.id), updates);
+      
+      // Notify Buyer
+      await addDoc(collection(db, "notifications"), {
+        userId: selectedTransaction.buyerId,
+        title: `Order Status Updated: ${statusUpdateData.status.toUpperCase()}`,
+        message: `Your order for Asset ${selectedTransaction.listingId} has been updated to ${statusUpdateData.status}.`,
+        type: "system",
+        link: "/dashboard?tab=history&subtab=purchase",
+        read: false,
+        createdAt: serverTimestamp()
+      });
+
+      toast.success("Transaction status updated successfully");
+      setIsUpdateStatusDialogOpen(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `transactions/${selectedTransaction.id}`);
+    }
+  };
+
   const downloadTemplate = () => {
     try {
       const csv = Papa.unparse([
@@ -614,8 +661,13 @@ export default function Dashboard() {
     <div className="container py-12">
       <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="text-center lg:text-left">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground text-sm">Manage your industrial exchange activities.</p>
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter italic">Dashboard</h1>
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mt-1">
+            <p className="text-muted-foreground text-sm font-medium tracking-tight">Manage your industrial exchange activities.</p>
+            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 border-none rounded-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
+              Verified Industrial Registry active
+            </Badge>
+          </div>
         </div>
         <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-end gap-3">
           {!profile?.isVatVerified && (
@@ -673,6 +725,23 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeListings}</div>
             <p className="text-xs text-muted-foreground">Items in marketplace</p>
+          </CardContent>
+        </Card>
+
+        <Card className="glass md:col-span-2 lg:col-span-4 border-emerald-500/30 bg-emerald-500/5">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                <LayoutDashboard className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">World's First Verified Industrial Registry</p>
+                <p className="text-xs text-muted-foreground">HiX has successfully transitioned to a Verified Registry. Every asset you list is now eligible for AI-powered Technical Auditing and a Digital Product Passport.</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="rounded-full border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 text-[10px] font-black uppercase h-9 px-6" asChild>
+              <Link to="/marketplace">Browse Verified Assets</Link>
+            </Button>
           </CardContent>
         </Card>
 
@@ -1018,31 +1087,27 @@ export default function Dashboard() {
 
         <TabsContent value="history" className="mt-0">
           <Card className="glass">
-            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardHeader className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between border-b border-primary/10 pb-6">
               <div>
-                <CardTitle>Trade History</CardTitle>
-                <CardDescription>A record of all your purchases and sales.</CardDescription>
+                <CardTitle className="text-xl font-black uppercase tracking-tight">Trade & Fulfillment Lineage</CardTitle>
+                <CardDescription className="text-xs uppercase tracking-widest font-mono opacity-70">Order node management and lifecycle tracking</CardDescription>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full sm:w-auto">
+                  <TabsList className="bg-background/50 border border-white/10 rounded-full h-10 p-1">
+                    <TabsTrigger value="purchase" className="rounded-full px-6 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-primary/20">Purchases</TabsTrigger>
+                    <TabsTrigger value="sale" className="rounded-full px-6 text-[10px] uppercase font-bold tracking-widest data-[state=active]:bg-primary/20">Sales</TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <div className="relative w-full sm:w-48">
-                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                   <Input 
-                    placeholder="Search history..." 
-                    className="pl-8 h-9 text-xs rounded-full"
+                    placeholder="Search ID..." 
+                    className="pl-8 h-10 text-[11px] rounded-full bg-background/50 border-white/10"
                     value={historySearch}
                     onChange={(e) => setHistorySearch(e.target.value)}
                   />
                 </div>
-                <Select value={historyTypeFilter} onValueChange={setHistoryTypeFilter}>
-                  <SelectTrigger className="h-9 text-xs rounded-full w-full sm:w-32">
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="purchase">Purchases</SelectItem>
-                    <SelectItem value="sale">Sales</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </CardHeader>
             <CardContent>
@@ -1561,6 +1626,74 @@ export default function Dashboard() {
             </Button>
             <Button variant="ghost" className="w-full rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest" onClick={() => setIsCounterDialogOpen(false)}>
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Update Order Lifecycle Dialog */}
+      <Dialog open={isUpdateStatusDialogOpen} onOpenChange={setIsUpdateStatusDialogOpen}>
+        <DialogContent className="glass border-primary/20 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black uppercase italic tracking-tighter text-primary">Manage Asset Lifecycle Node</DialogTitle>
+            <DialogDescription className="text-[10px] uppercase tracking-widest opacity-70">Updating Transaction Node: {selectedTransaction?.id}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-[0.2em]">Current Fulfillment Stage</Label>
+              <Select 
+                value={statusUpdateData.status} 
+                onValueChange={(v: any) => setStatusUpdateData({...statusUpdateData, status: v})}
+              >
+                <SelectTrigger className="h-12 rounded-xl bg-background/50 border-white/10 text-xs font-bold uppercase">
+                  <SelectValue placeholder="Select Stage" />
+                </SelectTrigger>
+                <SelectContent className="glass">
+                  <SelectItem value="pending">Payment Verified (Pending)</SelectItem>
+                  <SelectItem value="escrow">Funds in Escrow</SelectItem>
+                  <SelectItem value="shipped">Asset Dispatched</SelectItem>
+                  <SelectItem value="delivered">Asset Delivered</SelectItem>
+                  <SelectItem value="completed">Cycle Completed (Release Funds)</SelectItem>
+                  <SelectItem value="disputed">Audit Dispute</SelectItem>
+                  <SelectItem value="cancelled">Cycle Terminated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-[0.2em]">Logistics Provider</Label>
+                <Input 
+                  placeholder="e.g. DHL Industrial" 
+                  value={statusUpdateData.carrier}
+                  onChange={e => setStatusUpdateData({...statusUpdateData, carrier: e.target.value})}
+                  className="rounded-xl border-white/10 text-xs h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground tracking-[0.2em]">Tracking Node ID</Label>
+                <Input 
+                  placeholder="e.g. TRK-992-BX" 
+                  value={statusUpdateData.trackingNumber}
+                  onChange={e => setStatusUpdateData({...statusUpdateData, trackingNumber: e.target.value})}
+                  className="rounded-xl border-white/10 font-mono text-xs h-10"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-2">
+              <div className="flex items-center gap-2 text-primary">
+                <Info className="h-3 w-3" />
+                <p className="text-[9px] font-black uppercase tracking-widest">Protocol Sync</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Updating this node will synchronously notify the buyer and update the Asset Lineage on the blockchain (simulated).
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsUpdateStatusDialogOpen(false)} className="rounded-full text-xs font-bold">Cancel</Button>
+            <Button onClick={handleUpdateTransactionStatus} className="rounded-full px-8 h-11 shadow-lg shadow-primary/20 font-black italic uppercase tracking-tighter">
+              Update Node
             </Button>
           </DialogFooter>
         </DialogContent>

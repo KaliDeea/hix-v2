@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import { useAuth, db, handleFirestoreError, OperationType } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,14 @@ import {
   onSnapshot,
   orderBy
 } from "firebase/firestore";
-import { Transaction } from "@/types";
+import { Transaction, UserProfile } from "@/types";
 import { format } from "date-fns";
+import { 
+  calculateUserESGImpactScore, 
+  getUserESGScoreColor, 
+  getUserESGScoreBadge, 
+  getUserESGLevel 
+} from "@/lib/qualityScore";
 
 export default function Profile() {
   const { user, profile, isAuthReady } = useAuth();
@@ -252,6 +259,56 @@ export default function Profile() {
               <p className="text-[10px] text-muted-foreground mt-6 italic">
                 All companies must be manually vetted by the HiX admin team before they can list assets or make purchases. Vetting usually takes 24-48 hours.
               </p>
+            </CardContent>
+          </Card>
+
+          {/* ESG Impact Score Card */}
+          <Card className="glass border-primary/20 bg-gradient-to-br from-background to-primary/5">
+            <CardHeader>
+              <div className="flex items-center justify-between group">
+                <div>
+                  <CardTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+                    <Leaf className="h-5 w-5 text-emerald-500" />
+                    ESG Impact Rating
+                  </CardTitle>
+                  <CardDescription>Your environmental and social governance standing.</CardDescription>
+                </div>
+                {profile && (
+                  <div className={`px-4 py-2 rounded-2xl border flex flex-col items-center transition-all group-hover:scale-105 ${getUserESGScoreBadge(calculateUserESGImpactScore(profile))}`}>
+                    <span className="text-2xl font-black font-display tracking-tighter">
+                      {calculateUserESGImpactScore(profile)}
+                    </span>
+                    <span className="text-[7px] font-black uppercase tracking-[0.2em] leading-none">SCORE</span>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                 <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono uppercase opacity-60">Impact Level</span>
+                    <Badge variant="outline" className={`font-mono text-[10px] uppercase font-black px-3 ${profile ? getUserESGScoreBadge(calculateUserESGImpactScore(profile)) : ''}`}>
+                      {profile ? getUserESGLevel(calculateUserESGImpactScore(profile)) : 'Calculating...'}
+                    </Badge>
+                 </div>
+                 
+                 <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-mono uppercase">
+                       <span>Marketplace Contribution</span>
+                       <span>{profile?.totalCo2Saved.toLocaleString() || 0} kg CO2 Saved</span>
+                    </div>
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                       <motion.div 
+                          className="h-full bg-emerald-500"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, ((profile?.totalCo2Saved || 0) / 10000) * 100)}%` }}
+                       />
+                    </div>
+                    <p className="text-[9px] text-muted-foreground italic mt-2">
+                      Score is derived from total environmental savings from completed circular transactions and the depth of your organizational verification.
+                    </p>
+                 </div>
+              </div>
             </CardContent>
           </Card>
 

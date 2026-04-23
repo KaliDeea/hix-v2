@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, db, collection, setDoc, doc, handleFirestoreError, OperationType, onSnapshot, getDocs, addDoc, updateDoc, serverTimestamp } from "@/lib/firebase";
+import { useAuth, db, collection, setDoc, doc, handleFirestoreError, OperationType, onSnapshot, getDocs, addDoc, updateDoc, serverTimestamp, storage, ref, uploadBytes, getDownloadURL } from "@/lib/firebase";
 import { CATEGORIES } from "@/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,8 +37,10 @@ import {
   FileText,
   FileUp,
   X,
-  Globe
+  Globe,
+  Download
 } from "lucide-react";
+import { scanAssetDocument, AssetVerificationResult, scanTechnicalDocument } from "@/services/geminiService";
 import { GoogleGenAI, Type } from "@google/genai";
 import { 
   Tooltip, 
@@ -71,11 +73,38 @@ export default function CreateListing() {
     shippingOptions: ['collection'] as ('collection' | 'standard' | 'express' | 'international')[],
     shippingCost: ""
   });
-  const [images, setImages] = useState<string[]>([]);
-  const [documents, setDocuments] = useState<{name: string, url: string, type: string}[]>([]);
+  const [images, setImages] = useState<{url: string, file?: File}[]>([]);
+  const [documents, setDocuments] = useState<{
+    name: string, 
+    url: string, 
+    type: string, 
+    file?: File,
+    extractedData?: any,
+    isScanning?: boolean
+  }[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  const handleScanDocument = async (index: number) => {
+    const docToScan = documents[index];
+    if (!docToScan.file) return;
+
+    setDocuments(prev => prev.map((d, i) => i === index ? { ...d, isScanning: true } : d));
+    const toastId = toast.loading(`AI Librarian scanning technical node: ${docToScan.name}...`);
+
+    try {
+      const extraction = await scanTechnicalDocument(docToScan.file);
+      setDocuments(prev => prev.map((d, i) => i === index ? { ...d, extractedData: extraction, isScanning: false } : d));
+      toast.success("Technical metadata extracted and synced to DPP node.", { id: toastId });
+    } catch (error) {
+      console.error("Doc Scan Error:", error);
+      toast.error("AI Librarian failed to parse technical node specifications.", { id: toastId });
+      setDocuments(prev => prev.map((d, i) => i === index ? { ...d, isScanning: false } : d));
+    }
+  };
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [isAiExtracting, setIsAiExtracting] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [verificationData, setVerificationData] = useState<AssetVerificationResult | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -173,29 +202,36 @@ export default function CreateListing() {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setImages(prev => {
-          const newImages = [...prev, base64];
-          // Offer extraction on the first image added if it's the very first one
-          if (prev.length === 0) {
+      const url = URL.createObjectURL(file);
+      setImages(prev => {
+        const newImages = [...prev, { url, file }];
+        // Offer extraction on the first image added
+        if (prev.length === 0) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = reader.result as string;
             toast("Industrial Data Plate detected?", {
               action: {
                 label: "AI Extract Specs",
                 onClick: () => handleAiExtract(base64)
               },
             });
-          }
-          return newImages;
-        });
-      };
-      reader.readAsDataURL(file);
+          };
+          reader.readAsDataURL(file);
+        }
+        return newImages;
+      });
     });
   };
 
   const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+    setImages(prev => {
+      const target = prev[index];
+      if (target.url.startsWith('blob:')) {
+        URL.revokeObjectURL(target.url);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const setPrimaryImage = (index: number) => {
@@ -219,16 +255,13 @@ export default function CreateListing() {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setDocuments(prev => [...prev, {
-          name: file.name,
-          url: base64, // Use base64 as the URL for simulation
-          type: file.type
-        }]);
-      };
-      reader.readAsDataURL(file);
+      const url = URL.createObjectURL(file);
+      setDocuments(prev => [...prev, {
+        name: file.name,
+        url,
+        type: file.type,
+        file
+      }]);
     });
   };
 
@@ -341,6 +374,41 @@ export default function CreateListing() {
     }
   };
 
+  const handleSmartScan = async () => {
+    const fileToScan = documents[0]?.file || images[0]?.file;
+    if (!fileToScan) {
+      toast.error("Please upload a technical document (DPP) or nameplate image first.");
+      return;
+    }
+
+    setIsScanning(true);
+    const toastId = toast.loading("HiX-AI Intelligence Node scanning technical lineage...");
+
+    try {
+      const result = await scanAssetDocument(fileToScan);
+      setVerificationData(result);
+      
+      setFormData(prev => ({
+        ...prev,
+        title: result.title || prev.title,
+        category: result.category || prev.category,
+        weight: result.specs.weight ? result.specs.weight.replace(/[^0-9.]/g, '') : prev.weight,
+        dimensions: result.specs.dimensions || prev.dimensions,
+        brand: result.specs.manufacturer || prev.brand,
+        model: result.specs.model || prev.model,
+        voltage: result.specs.voltage || prev.voltage,
+        description: result.esgAnalysis ? `${result.esgAnalysis}\n\n${result.title} extracted technical metadata verified.` : prev.description
+      }));
+      
+      toast.success("HiX-AI node sync successful. Specifications verified.", { id: toastId });
+    } catch (error) {
+      console.error("Smart Scan Error:", error);
+      toast.error("Intelligence node failed to parse document.", { id: toastId });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent, status: 'available' | 'draft' = 'available') => {
     if (e) e.preventDefault();
 
@@ -366,6 +434,43 @@ export default function CreateListing() {
     const path = `listings/${listingId}`;
     
     try {
+      // Upload Images
+      const imageUrls: string[] = [];
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        if (image.file) {
+          const imageRef = ref(storage, `listings/${listingId}/images/image_${i}_${Date.now()}`);
+          await uploadBytes(imageRef, image.file);
+          const downloadUrl = await getDownloadURL(imageRef);
+          imageUrls.push(downloadUrl);
+        } else {
+          imageUrls.push(image.url);
+        }
+      }
+
+      // Upload Documents
+      const finalDocs: any[] = [];
+      for (const docInfo of documents) {
+        if (docInfo.file) {
+          const docRef = ref(storage, `listings/${listingId}/dpp/${docInfo.name}`);
+          await uploadBytes(docRef, docInfo.file);
+          const downloadUrl = await getDownloadURL(docRef);
+          finalDocs.push({
+            name: docInfo.name,
+            url: downloadUrl,
+            type: docInfo.type,
+            extractedData: docInfo.extractedData || null
+          });
+        } else {
+          finalDocs.push({
+            name: docInfo.name,
+            url: docInfo.url,
+            type: docInfo.type,
+            extractedData: docInfo.extractedData || null
+          });
+        }
+      }
+
       await setDoc(doc(db, "listings", listingId), {
         sellerId: user.uid,
         sellerName: profile.companyName,
@@ -383,12 +488,28 @@ export default function CreateListing() {
         dimensions: formData.dimensions,
         voltage: formData.voltage,
         co2Savings: parseFloat(formData.co2Savings) || 0,
-        images: images.length > 0 ? images : ["https://picsum.photos/seed/" + listingId + "/800/600"],
-        documents: documents,
+        images: imageUrls.length > 0 ? imageUrls : ["https://picsum.photos/seed/" + listingId + "/800/600"],
+        documents: finalDocs,
         status: status,
         listingType: 'fixed',
         shippingOptions: formData.shippingOptions,
         shippingCost: formData.shippingCost ? parseFloat(formData.shippingCost) : 0,
+        verificationData: verificationData ? {
+          score: verificationData.verificationScore,
+          analysis: verificationData.esgAnalysis,
+          verifiedAt: new Date().toISOString(),
+          verifiedBy: "HiX-AI"
+        } : null,
+        ledger: [
+          {
+            id: crypto.randomUUID(),
+            date: new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).toUpperCase(),
+            event: "Asset Commissioning",
+            desc: `Initial listing on HiX Marketplace by ${profile.companyName}.`,
+            status: "Genesis",
+            type: "genesis"
+          }
+        ],
         createdAt: new Date().toISOString()
       });
       
@@ -460,9 +581,17 @@ export default function CreateListing() {
                   <Label htmlFor="title" className={errors.title ? "text-destructive" : ""}>
                     Listing Title *
                   </Label>
-                  <span className={`text-[10px] font-medium ${formData.title.length > 100 ? "text-destructive" : "text-muted-foreground"}`}>
-                    {formData.title.length}/100
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {verificationData && (
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[9px] font-black uppercase tracking-widest gap-1">
+                        <CheckCircle2 className="h-2.5 w-2.5" />
+                        AI Verified ({verificationData.verificationScore}%)
+                      </Badge>
+                    )}
+                    <span className={`text-[10px] font-medium ${formData.title.length > 100 ? "text-destructive" : "text-muted-foreground"}`}>
+                      {formData.title.length}/100
+                    </span>
+                  </div>
                 </div>
                 <Input 
                   id="title" 
@@ -476,6 +605,26 @@ export default function CreateListing() {
                   required
                 />
                 {errors.title && <p className="text-[10px] text-destructive font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.title}</p>}
+                
+                <Button 
+                   type="button" 
+                   variant="outline" 
+                   className="w-full rounded-full border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs font-black uppercase tracking-tighter italic h-10 shadow-lg shadow-primary/10 transition-all active:scale-[0.98]"
+                   onClick={handleSmartScan}
+                   disabled={isScanning || (documents.length === 0 && images.length === 0)}
+                 >
+                   {isScanning ? (
+                     <>
+                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                       Intelligence Node Syncing...
+                     </>
+                   ) : (
+                     <>
+                       <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                       HiX Intelligence Scan (Extract Specs & Verify)
+                     </>
+                   )}
+                 </Button>
               </div>
 
               <div className="grid gap-2">
@@ -774,7 +923,7 @@ export default function CreateListing() {
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                   {images.map((img, idx) => (
                     <div key={`create-img-${idx}`} className="relative aspect-square rounded-2xl overflow-hidden border border-border group bg-muted/20">
-                      <img src={img} alt={`Asset ${idx}`} className="h-full w-full object-cover" />
+                      <img src={img.url} alt={`Asset ${idx}`} className="h-full w-full object-cover" />
                       
                       {/* Badge for Primary */}
                       {idx === 0 && (
@@ -854,25 +1003,72 @@ export default function CreateListing() {
                 
                 <div className="grid gap-3">
                   {documents.map((doc, idx) => (
-                    <div key={`doc-upload-${idx}`} className="flex items-center justify-between p-3 rounded-xl bg-background/50 border border-border group">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <FileText className="h-4 w-4 text-primary" />
+                    <div key={`doc-upload-${idx}`} className="flex flex-col p-4 rounded-xl bg-background/50 border border-border group gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <FileText className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold font-mono truncate">{doc.name}</p>
+                            <p className="text-[8px] text-muted-foreground uppercase">{doc.type.split('/')[1] || 'FILE'}</p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-bold font-mono truncate">{doc.name}</p>
-                          <p className="text-[8px] text-muted-foreground uppercase">{doc.type.split('/')[1] || 'FILE'}</p>
+                        <div className="flex items-center gap-2">
+                          {!doc.extractedData && (
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 px-2"
+                              onClick={() => handleScanDocument(idx)}
+                              disabled={doc.isScanning}
+                            >
+                              {doc.isScanning ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <Sparkles className="h-3 w-3 mr-1" />
+                              )}
+                              AI Scan
+                            </Button>
+                          )}
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 rounded-full p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeDocument(idx)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 rounded-full p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeDocument(idx)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+
+                      {doc.extractedData && (
+                        <div className="bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-lg space-y-2">
+                          <div className="flex items-center gap-1.5 text-emerald-500">
+                             <CheckCircle2 className="h-3 w-3" />
+                             <span className="text-[8px] font-black uppercase tracking-widest">Metadata Extracted</span>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground leading-relaxed italic line-clamp-2">"{doc.extractedData.summary}"</p>
+                          {(doc.extractedData.calibrationDate || doc.extractedData.expiryDate) && (
+                            <div className="flex gap-4">
+                              {doc.extractedData.calibrationDate && (
+                                <div className="space-y-0.5">
+                                  <p className="text-[7px] font-bold uppercase opacity-40">Calibrated</p>
+                                  <p className="text-[9px] font-mono font-bold">{doc.extractedData.calibrationDate}</p>
+                                </div>
+                              )}
+                              {doc.extractedData.expiryDate && (
+                                <div className="space-y-0.5">
+                                  <p className="text-[7px] font-bold uppercase opacity-40">Expiry</p>
+                                  <p className="text-[9px] font-mono font-bold">{doc.extractedData.expiryDate}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                   
