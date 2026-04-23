@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth, db, onSnapshot, collection, query, where, handleFirestoreError, OperationType, deleteDoc, doc, updateDoc, increment, getDoc, serverTimestamp, setDoc, addDoc } from "@/lib/firebase";
-import { Listing, Transaction, Report, Offer, AssetRequest } from "@/types";
+import { Listing, Transaction, Report, Offer, AssetRequest, LogisticsJob } from "@/types";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -59,7 +59,8 @@ import {
   MessageSquare,
   Upload,
   Globe,
-  ClipboardList
+  ClipboardList,
+  Truck
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
 import { 
@@ -94,6 +95,7 @@ export default function Dashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [assetRequests, setAssetRequests] = useState<AssetRequest[]>([]);
+  const [logisticsJobs, setLogisticsJobs] = useState<LogisticsJob[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [counterAmount, setCounterAmount] = useState("");
@@ -121,7 +123,7 @@ export default function Dashboard() {
     const subtab = searchParams.get("subtab");
     
     if (tab) {
-      const validTabs = ["overview", "listings", "history", "offers", "bulk", "procurement"];
+      const validTabs = ["overview", "listings", "history", "offers", "bulk", "procurement", "logistics"];
       if (validTabs.includes(tab)) {
         setActiveTab(tab);
       } else if (tab === "sales") {
@@ -279,6 +281,31 @@ export default function Dashboard() {
       setAssetRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AssetRequest[]);
     });
 
+    const unsubLogisticsBuyer = onSnapshot(query(collection(db, "logistics_jobs"), where("buyerId", "==", user.uid)), (snapshot) => {
+      const bJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LogisticsJob[];
+      setLogisticsJobs(prev => {
+        const sJobs = prev.filter(j => j.sellerId === user.uid && j.buyerId !== user.uid);
+        return [...bJobs, ...sJobs].sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+      });
+    });
+
+    const unsubLogisticsSeller = onSnapshot(query(collection(db, "logistics_jobs"), where("sellerId", "==", user.uid)), (snapshot) => {
+      const sJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LogisticsJob[];
+      setLogisticsJobs(prev => {
+        const bJobs = prev.filter(j => j.buyerId === user.uid);
+        const uniqueSJobs = sJobs.filter(sj => !bJobs.find(bj => bj.id === sj.id));
+        return [...bJobs, ...uniqueSJobs].sort((a, b) => {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
+      });
+    });
+
     return () => {
       unsubListings();
       unsubBuyer();
@@ -286,6 +313,8 @@ export default function Dashboard() {
       unsubOffersReceived();
       unsubOffersSent();
       unsubRequests();
+      unsubLogisticsBuyer();
+      unsubLogisticsSeller();
     };
   }, [user]);
 
@@ -715,6 +744,13 @@ export default function Dashboard() {
             >
               <Search className="h-5 w-5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Procurement</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="logistics" 
+              className="group flex-shrink-0 h-10 w-10 sm:h-11 sm:w-auto rounded-xl sm:rounded-full px-0 sm:px-6 flex items-center justify-center gap-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all data-[state=active]:bg-primary/20 data-[state=active]:border-primary data-[state=active]:shadow-[0_0_10px_rgba(var(--primary),0.3)] border border-transparent hover:border-primary/50"
+            >
+              <Truck className="h-5 w-5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Logistics</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1319,6 +1355,94 @@ export default function Dashboard() {
                       <Link to="/request-asset">View AI Matches</Link>
                     </Button>
                   </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="logistics" className="space-y-6 mt-0">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl font-black uppercase tracking-tighter">Logistics Command Node</h2>
+              <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Active asset movement & technical haulage</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="rounded-full border-primary/20 text-primary font-mono text-[10px] py-1 px-3">
+                {logisticsJobs.filter(j => j.status !== 'delivered').length} Active Shipments
+              </Badge>
+            </div>
+          </div>
+
+          {logisticsJobs.length === 0 ? (
+            <Card className="glass border-dashed border-primary/20 py-20 text-center">
+              <CardContent className="space-y-4">
+                <div className="h-20 w-20 rounded-3xl bg-primary/5 flex items-center justify-center mx-auto mb-6 border border-primary/10">
+                  <Truck className="h-10 w-10 text-primary/40" />
+                </div>
+                <h3 className="text-xl font-bold uppercase tracking-tight">No Active Logistics</h3>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  No equipment is currently in transit. Logistics jobs are created when you request specialized haulage for an asset.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {logisticsJobs.map((job) => (
+                <Card key={job.id} className="glass hardware-surface border-primary/20 overflow-hidden rounded-2xl group">
+                  <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-primary/10">
+                    {/* Status Section */}
+                    <div className="w-full lg:w-64 p-6 bg-primary/5 flex flex-col justify-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${job.status === 'in_transit' ? 'bg-amber-500 animate-pulse' : 'bg-primary'}`} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] truncate">{job.status.replace('_', ' ')}</span>
+                      </div>
+                      <Badge className="w-fit text-[9px] uppercase tracking-widest bg-primary/20 text-primary border-none">
+                        {job.haulageType.replace('_', ' ')}
+                      </Badge>
+                      <p className="text-[10px] text-muted-foreground font-mono mt-2">Job ID: {job.id.slice(0, 8)}</p>
+                    </div>
+
+                    {/* Route Section */}
+                    <div className="flex-1 p-6 flex flex-col sm:flex-row items-center gap-8 justify-between">
+                      <div className="flex items-center gap-6 flex-1 w-full sm:w-auto">
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-black uppercase opacity-40">Origin</p>
+                          <p className="text-sm font-bold truncate max-w-[120px]">{job.origin}</p>
+                        </div>
+                        <div className="flex-1 border-t-2 border-dashed border-primary/20 relative">
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-background p-1 rounded-full border border-primary/20">
+                            <Truck className="h-4 w-4 text-primary" />
+                          </div>
+                        </div>
+                        <div className="space-y-1 text-right">
+                          <p className="text-[9px] font-black uppercase opacity-40">Destination</p>
+                          <p className="text-sm font-bold truncate max-w-[120px]">{job.destination}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="h-10 w-[1px] bg-primary/10 hidden sm:block" />
+                      
+                      <div className="w-full sm:w-48 space-y-1">
+                        <p className="text-[9px] font-black uppercase opacity-40">Asset</p>
+                        <p className="text-xs font-bold truncate text-primary">{job.listingTitle}</p>
+                        <p className="text-[10px] opacity-60 truncate">Tracking: {job.trackingNumber || 'Pending Node Assignment'}</p>
+                      </div>
+                    </div>
+
+                    {/* Actions Section */}
+                    <div className="w-full lg:w-48 p-6 flex flex-col justify-center gap-2">
+                      <Button variant="outline" size="sm" className="w-full h-10 rounded-xl font-mono text-[10px] uppercase tracking-widest border-primary/20 hover:bg-primary/5">
+                        <ExternalLink className="h-3 w-3 mr-2" />
+                        Live Track
+                      </Button>
+                      {job.sellerId === user.uid && job.status === 'quote_requested' && (
+                        <Button className="w-full h-10 rounded-xl font-mono text-[10px] uppercase tracking-widest bg-primary hover:bg-primary/90" onClick={() => toast.success("Logistics quote approved. Hauler notified.")}>
+                          Approve Quote
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </Card>
               ))}
             </div>

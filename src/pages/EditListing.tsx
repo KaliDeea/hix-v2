@@ -31,7 +31,11 @@ import {
   Loader2, 
   HelpCircle, 
   Trash2, 
-  AlertCircle 
+  AlertCircle,
+  FileText,
+  FileUp,
+  X,
+  Globe
 } from "lucide-react";
 import { Listing } from "@/types";
 import { 
@@ -62,6 +66,7 @@ export default function EditListing() {
     shippingCost: ""
   });
   const [images, setImages] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<{name: string, url: string, type: string}[]>([]);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -117,6 +122,7 @@ export default function EditListing() {
             shippingCost: data.shippingCost?.toString() || ""
           });
           setImages(data.images || []);
+          setDocuments(data.documents || []);
         } else {
           toast.error("Listing not found");
           navigate("/dashboard");
@@ -169,6 +175,33 @@ export default function EditListing() {
     toast.success("Primary image updated");
   };
 
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    (Array.from(files) as File[]).forEach(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large. Max 10MB.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setDocuments(prev => [...prev, {
+          name: file.name,
+          url: base64,
+          type: file.type
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeDocument = (index: number) => {
+    setDocuments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
@@ -194,6 +227,7 @@ export default function EditListing() {
         dimensions: formData.dimensions,
         co2Savings: parseFloat(formData.co2Savings) || 0,
         images: images,
+        documents: documents,
         shippingOptions: formData.shippingOptions,
         shippingCost: formData.shippingCost ? parseFloat(formData.shippingCost) : 0,
         updatedAt: new Date().toISOString()
@@ -545,6 +579,60 @@ export default function EditListing() {
                   <AlertCircle className="h-3 w-3" />
                   Max 5MB per capture. The 'Primary Asset' image will characterize this listing in the marketplace.
                 </p>
+              </div>
+
+              {/* DPP Technical Documentation Section */}
+              <div className="space-y-4 p-5 rounded-2xl bg-primary/5 border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Globe className="h-4 w-4" />
+                    <Label className="text-base font-black uppercase tracking-tight">Digital Product Passport (DPP)</Label>
+                  </div>
+                  <Badge variant="outline" className="text-[8px] font-mono border-primary/30 text-primary uppercase">v4.0 Protocol</Badge>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Upload technical documentation like Operating Manuals, Calibration Certificates, and Maintenance Logs. These files will be securely embedded in the asset's Technical Lineage node.
+                </p>
+                
+                <div className="grid gap-3">
+                  {documents.map((doc, idx) => (
+                    <div key={`doc-upload-${idx}`} className="flex items-center justify-between p-3 rounded-xl bg-background/50 border border-border group">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold font-mono truncate">{doc.name}</p>
+                          <p className="text-[8px] text-muted-foreground uppercase">{doc.type.split('/')[1] || 'FILE'}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 rounded-full p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeDocument(idx)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-primary/20 rounded-2xl hover:bg-primary/5 transition-all cursor-pointer group">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                      <FileUp className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Upload Technical Node</span>
+                    <span className="text-[8px] text-muted-foreground mt-1">PDF or CSV only (Max 10MB)</span>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept=".pdf,.csv" 
+                      multiple
+                      onChange={handleDocumentUpload}
+                    />
+                  </label>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="border-t border-white/5 pt-6">

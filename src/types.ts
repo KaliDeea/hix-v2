@@ -204,3 +204,23 @@ export interface AssetRequest {
   status: 'active' | 'matched' | 'closed';
   createdAt: any;
 }
+
+export interface LogisticsJob {
+  id: string;
+  transactionId?: string;
+  listingId: string;
+  listingTitle: string;
+  buyerId: string;
+  sellerId: string;
+  haulerId?: string;
+  haulerName?: string;
+  origin: string;
+  destination: string;
+  status: 'quote_requested' | 'scheduled' | 'in_transit' | 'delivered' | 'cancelled';
+  haulageType: 'hiab' | 'flatbed' | 'low_loader' | 'standard_freight';
+  estimatedCost?: number;
+  trackingNumber?: string;
+  notes?: string;
+  createdAt: any;
+  updatedAt: any;
+}

@@ -221,6 +221,20 @@ service cloud.firestore {
              data.details is string && data.details.size() > 0;
     }
 
+    function isValidAssetRequest(data) {
+      return hasOnlyAllowedFields(['userId', 'companyName', 'title', 'description', 'budget', 'deadline', 'technicalSpecs', 'status', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 &&
+             data.status in ['active', 'matched', 'closed'];
+    }
+
+    function isValidLogisticsJob(data) {
+      return hasOnlyAllowedFields(['transactionId', 'listingId', 'listingTitle', 'buyerId', 'sellerId', 'haulerId', 'haulerName', 'origin', 'destination', 'status', 'haulageType', 'estimatedCost', 'trackingNumber', 'notes', 'createdAt', 'updatedAt']) &&
+             (data.buyerId == request.auth.uid || data.sellerId == request.auth.uid) &&
+             data.status in ['quote_requested', 'scheduled', 'in_transit', 'delivered', 'cancelled'] &&
+             data.haulageType in ['hiab', 'flatbed', 'low_loader', 'standard_freight'];
+    }
+
     function isValidTransaction(data) {
       return hasOnlyAllowedFields(['listingId', 'buyerId', 'sellerId', 'amount', 'quantity', 'buyerCommission', 'sellerCommission', 'co2Saved', 'shippingMethod', 'shippingCost', 'status', 'createdAt', 'invoiceUrl', 'certificateUrl']) &&
              data.buyerId == request.auth.uid &&
@@ -369,6 +383,27 @@ service cloud.firestore {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && isValidWishlistItem(request.resource.data);
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /asset_requests/{requestId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isNotSuspended() && isValidAssetRequest(request.resource.data);
+      allow update: if isNotSuspended() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /logistics_jobs/{jobId} {
+      allow read: if isAuthenticated() && (
+        resource.data.buyerId == request.auth.uid || 
+        resource.data.sellerId == request.auth.uid || 
+        isAdmin()
+      );
+      allow create: if isNotSuspended() && isValidLogisticsJob(request.resource.data);
+      allow update: if isNotSuspended() && (
+        resource.data.buyerId == request.auth.uid || 
+        resource.data.sellerId == request.auth.uid || 
+        isAdmin()
+      );
     }
 
     match /platform_settings/{settingId} {

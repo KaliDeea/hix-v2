@@ -39,6 +39,13 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { 
   Leaf, 
   ShieldCheck, 
@@ -54,7 +61,9 @@ import {
   Clock,
   FileText,
   Heart,
-  Globe
+  Globe,
+  ExternalLink,
+  Download
 } from "lucide-react";
 import { 
   Tooltip,
@@ -86,6 +95,14 @@ export default function ListingDetail() {
   const [wishlistId, setWishlistId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isLineageModalOpen, setIsLineageModalOpen] = useState(false);
+  const [isLogisticsModalOpen, setIsLogisticsModalOpen] = useState(false);
+  const [logisticsData, setLogisticsData] = useState({
+    haulageType: 'standard_freight' as 'hiab' | 'flatbed' | 'low_loader' | 'standard_freight',
+    destination: profile?.address || "",
+    notes: ""
+  });
+  const [isRequestingLogistics, setIsRequestingLogistics] = useState(false);
   const [platformSettings, setPlatformSettings] = useState({
     buyerCommission: 3,
     maintenanceMode: false
@@ -225,6 +242,32 @@ export default function ListingDetail() {
       handleFirestoreError(error, OperationType.CREATE, path);
     } finally {
       setIsReporting(false);
+    }
+  };
+
+  const handleRequestHaulage = async () => {
+    if (!user || !listing) return;
+    setIsRequestingLogistics(true);
+    try {
+      await addDoc(collection(db, "logistics_jobs"), {
+        listingId: listing.id,
+        listingTitle: listing.title,
+        buyerId: user.uid,
+        sellerId: listing.sellerId,
+        origin: listing.location,
+        destination: logisticsData.destination,
+        status: 'quote_requested',
+        haulageType: logisticsData.haulageType,
+        notes: logisticsData.notes,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      toast.success("Haulage quote requested. Our logistics team will review the asset dimensions.");
+      setIsLogisticsModalOpen(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, "logistics_jobs");
+    } finally {
+      setIsRequestingLogistics(false);
     }
   };
 
@@ -553,6 +596,53 @@ export default function ListingDetail() {
                 )}
               </div>
             </div>
+
+            {/* Visual Asset Timeline - Recipe 1/3 Style */}
+            <div className="glass p-10 rounded-3xl border border-border bg-muted/20 overflow-hidden relative">
+              <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-4">
+                   <div className="h-10 w-10 bg-primary/20 flex items-center justify-center border border-primary/40 rounded-none">
+                      <Clock className="h-5 w-5 text-primary" />
+                   </div>
+                   <div className="flex flex-col">
+                      <h2 className="text-xl font-black uppercase tracking-tighter">Asset Lifecycle Ledger</h2>
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Chronological Verification History</span>
+                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                   <div className="glow-indicator glow-green animate-pulse" />
+                   <span className="text-[8px] font-bold uppercase tracking-widest text-primary">Traceability Active</span>
+                </div>
+              </div>
+
+              <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[1.25rem] before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary/40 before:via-white/5 before:to-transparent">
+                {[
+                  { date: "MAR 2026", event: "Industrial Health Audit", desc: "Passed internal maintenance sweep. New hydraulic seals installed.", status: "Verified", icon: <ShieldCheck className="h-3 w-3" /> },
+                  { date: "JAN 2026", event: "Safety Certification", desc: "BS EN ISO 12100:2010 compliance renewed for 12 months.", status: "Active", icon: <FileText className="h-3 w-3" /> },
+                  { date: "SEP 2025", event: "Ownership Transfer", desc: "Relocated from Teesport Terminal 4 to current staging facility.", status: "Logged", icon: <Truck className="h-3 w-3" /> },
+                  { date: "MAY 2025", event: "Asset Commissioning", desc: "Initial entry into regional industrial directory.", status: "Genesis", icon: <Send className="h-3 w-3" /> }
+                ].map((item, i) => (
+                  <div key={i} className="relative flex items-center justify-between group">
+                    <div className="flex items-center w-full">
+                      <div className="absolute left-0 mt-0.5 h-6 w-6 flex items-center justify-center rounded-none bg-black border border-primary/50 group-hover:scale-125 transition-transform z-10">
+                        <div className="h-2 w-2 bg-primary shadow-[0_0_8px_var(--primary)]" />
+                      </div>
+                      <div className="ml-12 w-full">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-mono font-black text-primary/60">{item.date}</span>
+                          <Badge variant="outline" className="text-[8px] h-4 border-white/10 uppercase tracking-widest font-bold rounded-none">
+                             {item.icon}
+                             <span className="ml-1">{item.status}</span>
+                          </Badge>
+                        </div>
+                        <h4 className="text-sm font-bold uppercase tracking-tight">{item.event}</h4>
+                        <p className="text-xs text-muted-foreground font-light mt-1">{item.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -587,27 +677,21 @@ export default function ListingDetail() {
                   </TooltipProvider>
                 </div>
 
-                <div className="flex items-center justify-center gap-3 w-full px-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`flex-1 rounded-full h-7 glass border-white/10 transition-all duration-300 ${isWishlisted ? 'text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.1)]' : 'text-muted-foreground'} hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/30`}
+                <div className="flex items-center justify-center gap-6 w-full px-2 py-2">
+                  <button
                     onClick={toggleWishlist}
+                    className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest transition-all duration-300 ${isWishlisted ? 'text-red-500 hover:text-red-400' : 'text-muted-foreground hover:text-emerald-500'}`}
                   >
-                    <Heart className={`h-3 w-3 mr-1.5 ${isWishlisted ? 'fill-current' : ''}`} />
-                    <span className="text-[8px] font-bold uppercase tracking-wider">Wishlist</span>
-                  </Button>
+                    <Heart className={`h-3 w-3 ${isWishlisted ? 'fill-current' : ''}`} />
+                    <span>{isWishlisted ? 'Wishlisted' : 'Wishlist'}</span>
+                  </button>
                   
                   <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
-                    <DialogTrigger asChild nativeButton={true}>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1 rounded-full h-7 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10"
-                      >
-                        <AlertTriangle className="h-3 w-3 mr-1.5" />
-                        <span className="text-[8px] font-bold uppercase tracking-wider">Report</span>
-                      </Button>
+                    <DialogTrigger asChild>
+                      <button className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground transition-all duration-300 hover:text-red-500">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>Report</span>
+                      </button>
                     </DialogTrigger>
                     <DialogContent className="glass sm:max-w-[425px]">
                       <form onSubmit={handleReport}>
@@ -770,9 +854,182 @@ export default function ListingDetail() {
                       <span className="font-bold">High (Industrial Class)</span>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full rounded-xl h-9 font-mono text-[9px] uppercase tracking-widest border-primary/20 hover:bg-primary/20" size="sm">
-                    View Technical Lineage
-                  </Button>
+                  
+                  <Dialog open={isLineageModalOpen} onOpenChange={setIsLineageModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full rounded-xl h-9 font-mono text-[9px] uppercase tracking-widest border-primary/20 hover:bg-primary/20" size="sm">
+                        View Technical Lineage
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="glass border-primary/20 rounded-3xl sm:max-w-2xl p-0 overflow-hidden">
+                      <div className="bg-primary/10 p-8 border-b border-white/10">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Globe className="h-5 w-5 text-primary" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-primary">Digital Product Passport (DPP) Node</span>
+                        </div>
+                        <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">Technical Lineage</h2>
+                        <p className="text-xs text-muted-foreground font-mono">Asset ID: {listing.id} | Protocol v4.0 Embedded Tracking</p>
+                      </div>
+                      
+                      <div className="p-8 space-y-8 max-h-[60vh] overflow-y-auto no-scrollbar">
+                        <section className="space-y-4">
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                            <ShieldCheck className="h-3 w-3" />
+                            Provenance & Origin
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 rounded-xl bg-muted/20 border border-border">
+                              <p className="text-[8px] uppercase tracking-widest opacity-50 mb-1">Manufacturing Site</p>
+                              <p className="text-xs font-bold font-mono">{listing.brand || "Verified European Cluster"}</p>
+                            </div>
+                            <div className="p-4 rounded-xl bg-muted/20 border border-border">
+                              <p className="text-[8px] uppercase tracking-widest opacity-50 mb-1">Installation Year</p>
+                              <p className="text-xs font-bold font-mono">{listing.year || "Unknown"}</p>
+                            </div>
+                          </div>
+                        </section>
+
+                        <section className="space-y-4">
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                            <Leaf className="h-3 w-3" />
+                            ESG & Circularity Node
+                          </h3>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 border-b border-border text-[10px] font-mono">
+                              <span className="opacity-60 uppercase">Scope 3 Avoidance</span>
+                              <span className="font-bold">{listing.co2Savings} KG CO2e</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 border-b border-border text-[10px] font-mono">
+                              <span className="opacity-60 uppercase">Recyclable Fraction</span>
+                              <span className="font-bold">88.4% (Direct Reuse)</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 text-[10px] font-mono">
+                              <span className="opacity-60 uppercase">Dismantling Complexity</span>
+                              <span className="font-bold">Moderate (L2 Protocol)</span>
+                            </div>
+                          </div>
+                        </section>
+
+                        <section className="space-y-4">
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                            <Info className="h-3 w-3" />
+                            Technical Documentation
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mb-6 md:mb-0">
+                            {listing.documents && listing.documents.length > 0 ? (
+                              listing.documents.map((doc, idx) => (
+                                <a 
+                                  key={`doc-${idx}`} 
+                                  href={doc.url} 
+                                  download={doc.name}
+                                  className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/10 group cursor-pointer hover:bg-primary/10 transition-colors h-full"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <FileText className="h-3 w-3 text-primary shrink-0" />
+                                    <span className="text-[8px] font-bold font-mono truncate">{doc.name}</span>
+                                  </div>
+                                  <div className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                                    <Download className="h-2.5 w-2.5 text-primary" />
+                                  </div>
+                                </a>
+                              ))
+                            ) : (
+                              <div className="col-span-full p-6 text-center rounded-xl border border-dashed border-primary/10 opacity-60">
+                                <p className="text-[10px] font-mono uppercase">No technical documents attached to this asset</p>
+                              </div>
+                            )}
+                          </div>
+                        </section>
+                      </div>
+                      
+                      <div className="p-8 bg-muted/10 border-t border-border flex justify-end">
+                        <Button className="rounded-full px-8 h-10 text-[10px] font-bold uppercase tracking-widest" onClick={() => setIsLineageModalOpen(false)}>
+                          Close Passport
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {/* Logistics Command Node Section */}
+                <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-600">
+                      <Truck className="h-4 w-4" />
+                      <span className="font-mono text-[9px] font-black uppercase tracking-widest">Logistics Command Node</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    Request specialized UK industrial haulage for this asset. Includes route optimization and route risk assessment.
+                  </p>
+                  <Dialog open={isLogisticsModalOpen} onOpenChange={setIsLogisticsModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full rounded-xl h-9 font-mono text-[9px] uppercase tracking-widest border-amber-500/20 hover:bg-amber-500/10 text-amber-700" size="sm">
+                        Request Haulage Quote
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="glass border-primary/20 rounded-3xl sm:max-w-md p-8">
+                      <DialogHeader className="mb-6">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Truck className="h-4 w-4 text-amber-500" />
+                          <span className="text-[10px] font-mono tracking-widest uppercase opacity-70">Logistics Protocol</span>
+                        </div>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tighter text-amber-600">Request Haulage</DialogTitle>
+                        <DialogDescription className="text-xs opacity-70 mt-2">
+                          Define your haulage requirements. Our logistics partners will review asset dimensions and accessibility.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Haulage Configuration</Label>
+                          <Select 
+                            defaultValue="standard_freight" 
+                            onValueChange={(v) => setLogisticsData({...logisticsData, haulageType: v as any})}
+                          >
+                            <SelectTrigger className="h-14 rounded-xl border-primary/10 bg-background/40 font-mono text-sm">
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent className="glass">
+                              <SelectItem value="standard_freight">Standard Freight</SelectItem>
+                              <SelectItem value="hiab">HIAB Crane Truck</SelectItem>
+                              <SelectItem value="flatbed">Flatbed Trailer</SelectItem>
+                              <SelectItem value="low_loader">Low Loader (Heavy/Oversize)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Destination Site (UK)</Label>
+                          <Input 
+                            className="h-14 rounded-xl border-primary/10 bg-background/40 font-mono text-sm" 
+                            placeholder="City or Postcode" 
+                            value={logisticsData.destination}
+                            onChange={(e) => setLogisticsData({...logisticsData, destination: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Technical Logistics Notes</Label>
+                          <Textarea 
+                            className="rounded-xl border-primary/10 bg-background/40 font-mono text-xs h-24" 
+                            placeholder="Loading dock access, site restrictions, etc." 
+                            value={logisticsData.notes}
+                            onChange={(e) => setLogisticsData({...logisticsData, notes: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter className="mt-8 gap-3 sm:flex-col">
+                        <Button 
+                          className="w-full rounded-xl h-14 bg-amber-600 hover:bg-amber-700 text-white font-black tracking-widest text-[10px] uppercase shadow-lg shadow-amber-600/20"
+                          onClick={handleRequestHaulage}
+                          disabled={isRequestingLogistics}
+                        >
+                          {isRequestingLogistics ? <Loader2 className="h-4 w-4 animate-spin" /> : "TRANSMIT LOGISTICS REQUEST"}
+                        </Button>
+                        <Button variant="ghost" className="w-full rounded-xl h-10 text-[10px] font-bold uppercase tracking-widest" onClick={() => setIsLogisticsModalOpen(false)}>
+                          Cancel
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -992,53 +1249,6 @@ export default function ListingDetail() {
                      </p>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Visual Asset Timeline - Recipe 1/3 Style */}
-            <div className="glass p-10 rounded-3xl border border-border bg-muted/20 overflow-hidden relative">
-              <div className="flex items-center justify-between mb-10">
-                <div className="flex items-center gap-4">
-                   <div className="h-10 w-10 bg-primary/20 flex items-center justify-center border border-primary/40 rounded-none">
-                      <Clock className="h-5 w-5 text-primary" />
-                   </div>
-                   <div className="flex flex-col">
-                      <h2 className="text-xl font-black uppercase tracking-tighter">Asset Lifecycle Ledger</h2>
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Chronological Verification History</span>
-                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                   <div className="glow-indicator glow-green animate-pulse" />
-                   <span className="text-[8px] font-bold uppercase tracking-widest text-primary">Traceability Active</span>
-                </div>
-              </div>
-
-              <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[1.25rem] before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary/40 before:via-white/5 before:to-transparent">
-                {[
-                  { date: "MAR 2026", event: "Industrial Health Audit", desc: "Passed internal maintenance sweep. New hydraulic seals installed.", status: "Verified", icon: <ShieldCheck className="h-3 w-3" /> },
-                  { date: "JAN 2026", event: "Safety Certification", desc: "BS EN ISO 12100:2010 compliance renewed for 12 months.", status: "Active", icon: <FileText className="h-3 w-3" /> },
-                  { date: "SEP 2025", event: "Ownership Transfer", desc: "Relocated from Teesport Terminal 4 to current staging facility.", status: "Logged", icon: <Truck className="h-3 w-3" /> },
-                  { date: "MAY 2025", event: "Asset Commissioning", desc: "Initial entry into regional industrial directory.", status: "Genesis", icon: <Send className="h-3 w-3" /> }
-                ].map((item, i) => (
-                  <div key={i} className="relative flex items-center justify-between group">
-                    <div className="flex items-center w-full">
-                      <div className="absolute left-0 mt-0.5 h-6 w-6 flex items-center justify-center rounded-none bg-black border border-primary/50 group-hover:scale-125 transition-transform z-10">
-                        <div className="h-2 w-2 bg-primary shadow-[0_0_8px_var(--primary)]" />
-                      </div>
-                      <div className="ml-12 w-full">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-mono font-black text-primary/60">{item.date}</span>
-                          <Badge variant="outline" className="text-[8px] h-4 border-white/10 uppercase tracking-widest font-bold rounded-none">
-                             {item.icon}
-                             <span className="ml-1">{item.status}</span>
-                          </Badge>
-                        </div>
-                        <h4 className="text-sm font-bold uppercase tracking-tight">{item.event}</h4>
-                        <p className="text-xs text-muted-foreground font-light mt-1">{item.desc}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>

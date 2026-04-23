@@ -1489,10 +1489,12 @@ export default function Admin() {
                   <TabsTrigger 
                     key={`admin-tab-${tab.value}`}
                     value={tab.value} 
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/10 hover:bg-white/5 transition-all relative group shrink-0 border-none w-auto"
+                    className="flex items-center justify-center gap-0 px-3 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/10 hover:bg-white/5 transition-all relative group shrink-0 border-none w-auto"
                   >
                     <tab.icon className="h-4 w-4 shrink-0" />
-                    <span className="font-bold text-[10px] tracking-tight hidden xl:inline-block whitespace-nowrap">{tab.label}</span>
+                    <span className="font-bold text-[10px] tracking-tight max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 group-hover:ml-2 transition-all duration-300 whitespace-nowrap overflow-hidden">
+                      {tab.label}
+                    </span>
                     {tab.badge !== undefined && tab.badge > 0 && (
                       <span className={`h-4 w-4 rounded-full ${tab.badgeColor} text-white text-[9px] flex items-center justify-center font-bold shadow-sm shrink-0`}>
                         {tab.badge}
@@ -1883,21 +1885,23 @@ export default function Admin() {
                               <TableCell className="font-bold text-primary">
                                 {u.totalCo2Saved?.toLocaleString() || 0} kg
                               </TableCell>
-                              <TableCell className="text-right pr-6 space-x-1">                                  <div className="flex items-center justify-end gap-3">
+                              <TableCell className="text-right pr-6 space-x-1">                                  <div className="flex items-center justify-end gap-3 px-2">
                                   {canManageVetting && !u.isVatVerified && (
-                                    <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleVerifyVat(u.uid)}>
-                                      VAT
+                                    <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold group px-3" onClick={() => handleVerifyVat(u.uid)}>
+                                      <FileText className="h-3.5 w-3.5 transition-all group-hover:mr-2 shrink-0" />
+                                      <span className="max-w-0 opacity-0 group-hover:max-w-[40px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">VAT</span>
                                     </Button>
                                   )}
                                   {canManageVetting && u.vettingStatus !== 'approved' && (
-                                    <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => setSelectedUserForVetting(u)}>
-                                      Vet
+                                    <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold group px-3 shadow-sm shadow-primary/10" onClick={() => setSelectedUserForVetting(u)}>
+                                      <ShieldCheck className="h-3.5 w-3.5 transition-all group-hover:mr-2 shrink-0" />
+                                      <span className="max-w-0 opacity-0 group-hover:max-w-[40px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">Vet</span>
                                     </Button>
                                   )}
                                   
                                   {canManageUsers && (
-                                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 border border-white/10">
-                                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Suspended</span>
+                                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 border border-white/10 group transition-all hover:border-amber-500/30">
+                                      <span className="text-[10px] font-bold uppercase text-muted-foreground w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 group-hover:mr-1 transition-all duration-300 overflow-hidden whitespace-nowrap">Suspend</span>
                                       <Switch 
                                         checked={u.isSuspended} 
                                         onCheckedChange={(checked) => {
@@ -1915,18 +1919,20 @@ export default function Admin() {
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
-                                    className="h-8 rounded-lg border-primary/30 text-primary hover:bg-primary/10" 
+                                    className="h-8 rounded-lg border-primary/30 text-primary hover:bg-primary/10 group px-3" 
                                     onClick={() => navigate(`/admin/transactions?uid=${u.uid}&type=buy`)}
                                   >
-                                    <ShoppingCart className="h-3.5 w-3.5" />
+                                    <ShoppingCart className="h-3.5 w-3.5 transition-all group-hover:mr-2" />
+                                    <span className="max-w-0 opacity-0 group-hover:max-w-[40px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">BUY</span>
                                   </Button>
                                   <Button 
                                     size="sm" 
                                     variant="outline" 
-                                    className="h-8 rounded-lg border-primary/30 text-primary hover:bg-primary/10" 
+                                    className="h-8 rounded-lg border-primary/30 text-primary hover:bg-primary/10 group px-3" 
                                     onClick={() => navigate(`/admin/transactions?uid=${u.uid}&type=sell`)}
                                   >
-                                    <DollarSign className="h-3.5 w-3.5" />
+                                    <DollarSign className="h-3.5 w-3.5 transition-all group-hover:mr-2" />
+                                    <span className="max-w-0 opacity-0 group-hover:max-w-[40px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">SELL</span>
                                   </Button>
                                   {canDelete && (
                                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg text-destructive hover:bg-destructive/10" onClick={() => {
@@ -2124,8 +2130,9 @@ export default function Admin() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" className="rounded-xl hover:bg-primary/10 hover:text-primary">
-                                Manage Permissions
+                              <Button variant="ghost" size="sm" className="rounded-xl hover:bg-primary/10 hover:text-primary group px-3">
+                                <ShieldCheck className="h-3.5 w-3.5 transition-all group-hover:mr-2" />
+                                <span className="max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">Manage Permissions</span>
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -2269,8 +2276,8 @@ export default function Admin() {
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Dialog>
                                     <DialogTrigger asChild nativeButton={true}>
-                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg" onClick={() => setSelectedReport(r)}>
-                                        <Eye className="h-4 w-4" />
+                                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg group" onClick={() => setSelectedReport(r)}>
+                                        <Eye className="h-4 w-4 transition-all group-hover:scale-110" />
                                       </Button>
                                     </DialogTrigger>
                                     <DialogContent className="glass border-primary/20 max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -2407,8 +2414,9 @@ export default function Admin() {
                                   </Dialog>
                                   {canManageReports && r.status === 'pending' && (
                                     <>
-                                      <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleResolveReport(r.id)}>
-                                        Resolve
+                                      <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold group px-3" onClick={() => handleResolveReport(r.id)}>
+                                        <CheckCircle2 className="h-3.5 w-3.5 transition-all group-hover:mr-2 text-green-500" />
+                                        <span className="max-w-0 opacity-0 group-hover:max-w-[60px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">Resolve</span>
                                       </Button>
                                     </>
                                   )}
@@ -2536,17 +2544,20 @@ export default function Admin() {
                           </TableCell>
                           <TableCell className="text-right pr-6 space-x-1">
                             <div className="flex items-center justify-end gap-1">
-                              <Button size="sm" variant="ghost" className="h-8 rounded-lg text-xs font-bold uppercase tracking-wider" onClick={() => setSelectedUserForVetting(u)}>
-                                Details
+                              <Button size="sm" variant="ghost" className="h-8 rounded-lg text-[10px] font-bold uppercase tracking-wider group px-3" onClick={() => setSelectedUserForVetting(u)}>
+                                <Eye className="h-3.5 w-3.5 transition-all group-hover:mr-2" />
+                                <span className="max-w-0 opacity-0 group-hover:max-w-[60px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">Details</span>
                               </Button>
                               {!u.isVatVerified && (
-                                <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleVerifyVat(u.uid)}>
-                                  VAT
+                                <Button size="sm" variant="outline" className="h-8 rounded-lg text-[10px] uppercase font-bold group px-3" onClick={() => handleVerifyVat(u.uid)}>
+                                  <FileText className="h-3.5 w-3.5 transition-all group-hover:mr-2" />
+                                  <span className="max-w-0 opacity-0 group-hover:max-w-[40px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">VAT</span>
                                 </Button>
                               )}
                               {u.vettingStatus !== 'approved' && (
-                                <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold" onClick={() => handleVetCompany(u.uid, 'approved')}>
-                                  Approve
+                                <Button size="sm" className="h-8 rounded-lg text-[10px] uppercase font-bold group px-3 shadow-sm shadow-primary/10" onClick={() => handleVetCompany(u.uid, 'approved')}>
+                                  <CheckCircle2 className="h-3.5 w-3.5 transition-all group-hover:mr-2" />
+                                  <span className="max-w-0 opacity-0 group-hover:max-w-[60px] group-hover:opacity-100 transition-all duration-300 overflow-hidden whitespace-nowrap">Approve</span>
                                 </Button>
                               )}
                             </div>
