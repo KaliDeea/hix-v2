@@ -61,6 +61,7 @@ import {
   Globe,
   ClipboardList,
   Truck,
+  Headphones,
   Info
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
@@ -760,6 +761,24 @@ export default function Dashboard() {
               <Download className="mr-2 h-3.5 w-3.5" />
               Export ESG Record
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="glass md:col-span-2 lg:col-span-4 border-primary/20 bg-primary/5">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <Headphones className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Priority Concierge Support</p>
+                <p className="text-xs text-muted-foreground">Need help with a trade or asset valuation? Chat with our AI Concierge or link with a HIX Specialist.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground font-mono uppercase animate-pulse">Support Node Active</span>
+              <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            </div>
           </CardContent>
         </Card>
       </div>

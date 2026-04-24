@@ -141,14 +141,14 @@ service cloud.firestore {
     }
 
     function isValidChat(data) {
-      return hasOnlyAllowedFields(['participants', 'participantNames', 'participantLogos', 'listingId', 'listingTitle', 'listingImage', 'lastMessage', 'lastMessageTime', 'updatedAt', 'createdAt']) &&
-             request.auth.uid in data.participants &&
-             data.participants.size() == 2;
+      return hasOnlyAllowedFields(['participants', 'participantNames', 'participantLogos', 'listingId', 'listingTitle', 'listingImage', 'lastMessage', 'lastMessageTime', 'updatedAt', 'createdAt', 'isSupport', 'supportMode', 'lastRead']) &&
+             (request.auth.uid in data.participants || isAdmin()) &&
+             data.participants.size() >= 2;
     }
 
     function isValidChatMessage(data) {
-      return hasOnlyAllowedFields(['chatId', 'senderId', 'text', 'createdAt']) &&
-             data.senderId == request.auth.uid &&
+      return hasOnlyAllowedFields(['chatId', 'senderId', 'text', 'createdAt', 'senderName']) &&
+             (data.senderId == request.auth.uid || data.senderId == 'SYSTEM' || data.senderId == 'HIX_SUPPORT_AI' || isAdmin()) &&
              data.text is string && data.text.size() > 0 && data.text.size() < 5000;
     }
 
@@ -261,7 +261,7 @@ service cloud.firestore {
 
     match /error_logs/{logId} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated() && isValidErrorLog(request.resource.data);
+      allow create: if isAuthenticated();
       allow delete: if isAdmin();
     }
 
@@ -286,7 +286,7 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants || isAdmin());
-        allow create: if isNotSuspended() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants) && isValidChatMessage(request.resource.data);
+        allow create: if isNotSuspended() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants || isAdmin()) && isValidChatMessage(request.resource.data);
       }
     }
 

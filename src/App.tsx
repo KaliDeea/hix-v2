@@ -27,6 +27,7 @@ import Auth from "@/pages/Auth";
 import PublicProfile from "@/pages/PublicProfile";
 import RequestAsset from "@/pages/RequestAsset";
 import Whitepaper from "@/pages/Whitepaper";
+import SupportChatWidget from "@/components/SupportChatWidget";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/firebase";
@@ -106,6 +107,7 @@ export default function App() {
                   </Routes>
                 </main>
                 <Footer />
+                <SupportChatWidget />
               </div>
               <Toaster />
             </Router>

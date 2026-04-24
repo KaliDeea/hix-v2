@@ -133,7 +133,9 @@
         "lastMessageTime": { "type": "string", "format": "date-time" },
         "lastRead": { "type": "object", "description": "Map of UID to last read timestamp" },
         "updatedAt": { "type": "string", "format": "date-time" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isSupport": { "type": "boolean", "description": "Whether this is a support chat" },
+        "supportMode": { "type": "string", "enum": ["ai", "agent"], "description": "Who is currently handling the support chat" }
       },
       "required": ["participants", "participantNames", "updatedAt", "createdAt"]
     },

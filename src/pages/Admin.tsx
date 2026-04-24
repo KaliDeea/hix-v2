@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth, db, onSnapshot, handleFirestoreError, OperationType } from "@/lib/firebase";
-import { UserProfile, Transaction, Report, AuditLog, Listing, WhitepaperRequest } from "@/types";
+import { UserProfile, Transaction, Report, AuditLog, Listing, WhitepaperRequest, Chat } from "@/types";
 import { 
   collection, 
   query, 
@@ -73,6 +73,7 @@ import {
   TrendingUp,
   Package,
   Bell,
+  Headphones,
   ChevronLeft,
   ChevronRight,
   Menu,
@@ -103,6 +104,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
+import AdminSupportChat from "@/components/AdminSupportChat";
 import { 
   Dialog,
   DialogContent,
@@ -469,6 +471,7 @@ export default function Admin() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [whitepaperRequests, setWhitepaperRequests] = useState<WhitepaperRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [supportChats, setSupportChats] = useState<Chat[]>([]);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -553,6 +556,38 @@ export default function Admin() {
   const [selectedUserForCert, setSelectedUserForCert] = useState<UserProfile | null>(null);
   const [editedVatNumber, setEditedVatNumber] = useState("");
   const [isUpdatingVat, setIsUpdatingVat] = useState(false);
+  const [selectedSupportChat, setSelectedSupportChat] = useState<Chat | null>(null);
+  const [supportSearchQuery, setSupportSearchQuery] = useState("");
+  const [supportFilter, setSupportFilter] = useState<"all" | "ai" | "agent">("all");
+  const [supportDateFilter, setSupportDateFilter] = useState<"all" | "today" | "week">("all");
+
+  const filteredSupportChats = useMemo(() => {
+    return supportChats.filter(chat => {
+      const userId = Object.keys(chat.participantNames || {}).find(id => id !== 'HIX_SUPPORT');
+      const userName = (chat.participantNames?.[userId || ""] || "").toLowerCase();
+      const lastMsg = (chat.lastMessage || "").toLowerCase();
+      const matchesSearch = userName.includes(supportSearchQuery.toLowerCase()) || lastMsg.includes(supportSearchQuery.toLowerCase());
+      
+      const matchesFilter = supportFilter === 'all' || 
+                            (supportFilter === 'ai' && chat.supportMode === 'ai') ||
+                            (supportFilter === 'agent' && chat.supportMode === 'agent');
+      
+      let matchesDate = true;
+      if (supportDateFilter !== 'all') {
+        const chatDate = chat.updatedAt?.toDate ? chat.updatedAt.toDate() : new Date();
+        const now = new Date();
+        if (supportDateFilter === 'today') {
+           matchesDate = chatDate.toDateString() === now.toDateString();
+        } else if (supportDateFilter === 'week') {
+           const sevenDaysAgo = new Date();
+           sevenDaysAgo.setDate(now.getDate() - 7);
+           matchesDate = chatDate >= sevenDaysAgo;
+        }
+      }
+      
+      return matchesSearch && matchesFilter && matchesDate;
+    });
+  }, [supportChats, supportSearchQuery, supportFilter, supportDateFilter]);
 
   useEffect(() => {
     if (selectedUserForVetting) {
@@ -817,6 +852,14 @@ export default function Admin() {
       console.error("Whitepaper requests error:", error);
     });
 
+    const supportChatsQuery = query(collection(db, "chats"), where("isSupport", "==", true), orderBy("updatedAt", "desc"));
+    const unsubscribeSupport = onSnapshot(supportChatsQuery, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Chat[];
+      setSupportChats(data);
+    }, (error) => {
+      console.error("Support chats error:", error);
+    });
+
     return () => {
       unsubscribeUsers();
       unsubscribeReports();
@@ -825,6 +868,7 @@ export default function Admin() {
       unsubscribeAudit();
       unsubscribeErrorLogs();
       unsubscribeWhitepaper();
+      unsubscribeSupport();
     };
   }, [profile]);
 
@@ -1509,6 +1553,7 @@ export default function Admin() {
                   { value: "transactions", label: "Transactions", icon: DollarSign, show: isViewer },
                   { value: "admins", label: "Admins", icon: ShieldCheck, show: isAdmin },
                   { value: "vetting", label: "Vetting Queue", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, badgeColor: "bg-amber-500", show: isEditor },
+                  { value: "support", label: "Live Support", icon: Headphones, badge: supportChats.filter(c => c.supportMode === 'agent').length, badgeColor: "bg-red-500", show: isEditor },
                   { value: "reports", label: "Reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, badgeColor: "bg-destructive", show: isEditor },
                   { value: "requests", label: "Requests", icon: FileText, badge: whitepaperRequests.filter(r => r.status === 'pending').length, badgeColor: "bg-blue-500", show: isEditor },
                   { value: "bulk", label: "Bulk Upload", icon: Upload, show: isEditor },
@@ -2559,6 +2604,171 @@ export default function Admin() {
                   />
                 </CardContent>
               </Card>
+            </motion.div>
+          </TabsContent>
+        )}
+
+        {isEditor && (
+          <TabsContent value="support" className="mt-0 outline-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-6"
+            >
+              {selectedSupportChat ? (
+                <div className="max-w-4xl mx-auto">
+                  <AdminSupportChat chat={selectedSupportChat} onBack={() => setSelectedSupportChat(null)} />
+                </div>
+              ) : (
+                <Card className="glass border-primary/20">
+                  <CardHeader className="border-b border-white/5 bg-white/5 pb-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          <Headphones className="h-5 w-5 text-primary" />
+                          Live Support Queue
+                        </CardTitle>
+                        <CardDescription>Monitor AI interactions and step in when human agents are requested.</CardDescription>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input 
+                            placeholder="Search user or message..."
+                            className="pl-9 h-9 w-64 rounded-xl glass border-white/10 text-xs font-mono"
+                            value={supportSearchQuery}
+                            onChange={(e) => setSupportSearchQuery(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportFilter('all')}
+                          >
+                            All
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportFilter === 'ai' ? 'bg-emerald-500/20 text-emerald-500' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportFilter('ai')}
+                          >
+                            AI
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportFilter === 'agent' ? 'bg-red-500/20 text-red-500' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportFilter('agent')}
+                          >
+                            Agent
+                          </Button>
+                        </div>
+                        <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportDateFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportDateFilter('all')}
+                          >
+                            All Time
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportDateFilter === 'today' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportDateFilter('today')}
+                          >
+                            Today
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportDateFilter === 'week' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportDateFilter('week')}
+                          >
+                            7 Days
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/10">
+                          <TableRow>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-widest pl-8">Last Activity</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-widest">User / Company</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-widest">Last Message</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-widest">Mode</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold tracking-widest text-right pr-8">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredSupportChats.length > 0 ? (
+                            filteredSupportChats.map((chat) => {
+                              const userId = Object.keys(chat.participantNames || {}).find(id => id !== 'HIX_SUPPORT');
+                              const userName = chat.participantNames?.[userId || ""] || "Unknown User";
+                              const isAgentNeeded = chat.supportMode === 'agent';
+
+                              return (
+                                <TableRow 
+                                  key={chat.id} 
+                                  className={`group transition-all hover:bg-white/5 cursor-pointer ${isAgentNeeded ? "bg-red-500/5" : ""}`}
+                                  onClick={() => setSelectedSupportChat(chat)}
+                                >
+                                  <TableCell className="pl-8 text-[10px] font-mono opacity-60">
+                                    {chat.updatedAt?.toDate ? format(chat.updatedAt.toDate(), "dd/MM HH:mm") : "N/A"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-8 w-8 border border-white/10">
+                                        <AvatarFallback className="text-[10px] font-bold">
+                                          {userName.charAt(0)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-bold truncate">{userName}</p>
+                                        <p className="text-[9px] font-mono text-muted-foreground opacity-60 truncate">{userId}</p>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <p className="text-xs text-muted-foreground truncate max-w-xs italic leading-tight">
+                                      "{chat.lastMessage || "No messages yet"}"
+                                    </p>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${
+                                      isAgentNeeded ? "border-red-500/20 text-red-500 bg-red-500/5" : "border-emerald-500/20 text-emerald-500 bg-emerald-500/5"
+                                    }`}>
+                                      {chat.supportMode === 'ai' ? "AI Assistant" : "Agent Requested"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right pr-8">
+                                    <Button variant="ghost" size="sm" className="rounded-lg font-black text-[10px] uppercase tracking-widest h-8 px-4 transition-all opacity-0 group-hover:opacity-100 hover:bg-primary/10 hover:text-primary">
+                                      Join Chat
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="h-40 text-center text-muted-foreground italic text-sm">
+                                No active support chats found.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </motion.div>
           </TabsContent>
         )}
