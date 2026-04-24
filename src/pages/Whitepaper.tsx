@@ -57,7 +57,7 @@ export default function Whitepaper() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full glass p-12 rounded-[2.5rem] text-center border-primary/20"
+          className="max-w-md w-full glass p-8 lg:p-12 rounded-[2rem] lg:rounded-[2.5rem] text-center border-primary/20"
         >
           <div className="h-20 w-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-8">
             <CheckCircle2 className="h-10 w-10 text-primary" />
@@ -77,19 +77,19 @@ export default function Whitepaper() {
   return (
     <div className="min-h-screen pb-20 overflow-hidden">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-32 lg:pt-32 lg:pb-48 bg-primary/5">
+      <section className="relative pt-16 pb-20 lg:pt-32 lg:pb-48 bg-primary/5">
         <div className="absolute inset-0 z-0">
           <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent" />
           <div className="absolute bottom-0 left-0 w-1/3 h-1/2 bg-gradient-to-tr from-primary/5 to-transparent blur-3xl" />
         </div>
         
         <div className="container relative z-10 mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div className="space-y-6 lg:space-y-8">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold uppercase tracking-[0.2em] text-primary"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-[10px] lg:text-xs font-bold uppercase tracking-[0.2em] text-primary"
               >
                 <FileText className="h-3 w-3" />
                 Technical Whitepaper 2026
@@ -99,7 +99,7 @@ export default function Whitepaper() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-3xl lg:text-5xl font-black uppercase tracking-tighter leading-[0.9]"
+                className="text-4xl lg:text-5xl font-black uppercase tracking-tighter leading-[0.95] lg:leading-[0.9]"
               >
                 Revolutionizing <br />
                 <span className="text-primary">Industrial</span> <br />
@@ -110,7 +110,7 @@ export default function Whitepaper() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-xl text-muted-foreground max-w-xl leading-relaxed italic font-serif"
+                className="text-lg lg:text-xl text-muted-foreground max-w-xl leading-relaxed italic font-serif"
               >
                 An in-depth analysis of high-intensity asset reuse, carbon abatement methodologies, and the future of industrial procurement through the HiX ecosystem.
               </motion.p>
@@ -190,8 +190,8 @@ export default function Whitepaper() {
       </section>
 
       {/* Content Overview */}
-      <section className="container mx-auto px-4 -mt-20 relative z-20">
-        <div className="grid md:grid-cols-3 gap-8">
+      <section className="container mx-auto px-4 -mt-10 lg:-mt-20 relative z-20">
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 lg:gap-8">
           {[
             {
               icon: Leaf,
@@ -215,13 +215,13 @@ export default function Whitepaper() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="glass p-8 rounded-[2rem] border-primary/10 hover:border-primary/30 transition-all group"
+              className="glass p-6 lg:p-8 rounded-[1.5rem] lg:rounded-[2rem] border-primary/10 hover:border-primary/30 transition-all group"
             >
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 border border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
-                <item.icon className="h-7 w-7" />
+              <div className="h-12 w-12 lg:h-14 lg:w-14 rounded-xl lg:rounded-2xl bg-primary/10 flex items-center justify-center mb-4 lg:mb-6 border border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
+                <item.icon className="h-6 w-6 lg:h-7 lg:w-7" />
               </div>
-              <h3 className="text-xl font-bold uppercase tracking-tight mb-3">{item.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <h3 className="text-lg lg:text-xl font-bold uppercase tracking-tight mb-2 lg:mb-3">{item.title}</h3>
+              <p className="text-xs lg:text-sm text-muted-foreground leading-relaxed">
                 {item.desc}
               </p>
             </motion.div>
@@ -230,13 +230,13 @@ export default function Whitepaper() {
       </section>
 
       {/* Form Section */}
-      <section className="container mx-auto px-4 mt-32">
-        <div className="max-w-6xl mx-auto glass rounded-[3rem] overflow-hidden border-primary/20 relative">
+      <section className="container mx-auto px-4 mt-20 lg:mt-32">
+        <div className="max-w-6xl mx-auto glass rounded-[2rem] lg:rounded-[3rem] overflow-hidden border-primary/20 relative">
           <div className="grid lg:grid-cols-2">
-            <div className="p-12 lg:p-20 space-y-8 bg-zinc-900 text-white">
+            <div className="p-8 lg:p-20 space-y-6 lg:space-y-8 bg-zinc-900 text-white">
               <div className="space-y-4">
-                <h2 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter leading-none">Request Access</h2>
-                <p className="text-zinc-400 leading-relaxed italic font-serif">
+                <h2 className="text-3xl lg:text-5xl font-black uppercase tracking-tighter leading-none text-primary">Request Access</h2>
+                <p className="text-zinc-400 leading-relaxed italic font-serif text-sm lg:text-base">
                   Our whitepaper is exclusive to registered industrial partners, institutional investors, and sustainability researchers. Please provide your professional details to request a secure copy.
                 </p>
               </div>
@@ -263,9 +263,9 @@ export default function Whitepaper() {
               </div>
             </div>
 
-            <div className="p-12 lg:p-20 bg-background/50">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+            <div className="p-8 lg:p-20 bg-background/50">
+              <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+                <div className="grid sm:grid-cols-2 gap-4 lg:gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest opacity-60">Full Name</Label>
                     <Input 
@@ -291,7 +291,7 @@ export default function Whitepaper() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid sm:grid-cols-2 gap-4 lg:gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="company" className="text-[10px] font-black uppercase tracking-widest opacity-60">Company</Label>
                     <Input 
