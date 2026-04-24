@@ -46,6 +46,8 @@ export default function RequestAsset() {
     technicalSpecs: location.state?.technicalSpecs || ""
   });
 
+  const [showSuccess, setShowSuccess] = useState(false);
+  
   const handleAiScan = async () => {
     if (!formData.description && !formData.title) {
       toast.error("Please provide requirements first");
@@ -72,10 +74,16 @@ export default function RequestAsset() {
         .filter(Boolean);
 
       setMatches(matchedAssets);
-      toast.success(`Semantic scan complete. Found ${matchedAssets.length} verified matches.`, { id: toastId });
+      if (matchedAssets.length > 0) {
+        toast.success(`Semantic scan complete. Found ${matchedAssets.length} verified matches.`, { id: toastId });
+      } else {
+        toast.info("No immediate matches found in the current inventory. Your RFA will be matched as new assets arrive.", { id: toastId });
+      }
+      return matchedAssets;
     } catch (error) {
       console.error("AI Matching Error:", error);
       toast.error("Failed to connect to the marketplace matching node.", { id: toastId });
+      return [];
     } finally {
       setIsAiMatching(false);
     }
@@ -99,8 +107,16 @@ export default function RequestAsset() {
         createdAt: serverTimestamp()
       });
 
-      toast.success("Request for Asset (RFA) published. Sellers will be notified if they have a match.");
-      navigate("/dashboard");
+      toast.success("Request for Asset (RFA) published.");
+      
+      // Automatically scan for matches after submission
+      const foundMatches = await handleAiScan();
+      
+      if (foundMatches && foundMatches.length > 0) {
+        setShowSuccess(true);
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error("RFA Submission Error:", error);
       toast.error("Failed to post request.");
@@ -108,6 +124,75 @@ export default function RequestAsset() {
       setIsSubmitting(false);
     }
   };
+
+  if (showSuccess) {
+    return (
+      <div className="min-h-screen bg-background font-sans selection:bg-primary/30 flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-3xl w-full"
+        >
+          <Card className="glass hardware-surface border-primary/20 overflow-hidden rounded-3xl shadow-2xl">
+            <div className="bg-primary/10 p-12 text-center border-b border-primary/20 relative">
+              <div className="absolute top-4 right-4">
+                <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+              </div>
+              <div className="h-20 w-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-primary/30">
+                <CheckCircle2 className="h-10 w-10 text-primary" />
+              </div>
+              <h2 className="text-3xl font-black uppercase tracking-tighter italic mb-2">RFA Published <span className="text-primary not-italic">Successfully</span></h2>
+              <p className="text-muted-foreground font-mono text-xs uppercase tracking-widest">
+                Our AI Agent has discovered {matches.length} compatible units in the marketplace buffer.
+              </p>
+            </div>
+            <CardContent className="p-8">
+              <div className="space-y-4 mb-8">
+                {matches.map((match, i) => (
+                  <motion.div
+                    key={`success-match-${i}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <Card className="glass-dark border-primary/20 hover:border-primary/50 transition-all group overflow-hidden">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center p-4 gap-4">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className="bg-emerald-500/20 text-emerald-500 font-mono text-[9px] rounded-none border-emerald-500/30 font-black">
+                              {match.score}% MATCH
+                            </Badge>
+                            <span className="font-bold text-sm uppercase tracking-tight">{match.title}</span>
+                          </div>
+                          <p className="text-[10px] font-mono text-muted-foreground uppercase leading-tight italic truncate max-w-[400px]">
+                            {match.reasoning}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-end gap-6 sm:border-l border-white/5 sm:pl-6">
+                          <div className="font-mono text-lg font-black text-primary">£{match.price?.toLocaleString()}</div>
+                          <Button size="sm" className="bg-primary hover:bg-primary/80 text-[10px] font-black uppercase rounded-none px-6" asChild>
+                            <Link to={`/listing/${match.id}`}>View Unit</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button variant="outline" className="flex-1 font-mono text-[10px] uppercase rounded-none border-primary/30 h-12" onClick={() => navigate("/dashboard")}>
+                  Return to Dashboard
+                </Button>
+                <Button className="flex-1 font-mono text-[10px] uppercase rounded-none h-12" onClick={() => setShowSuccess(false)}>
+                  Submit Another RFA
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary/30">

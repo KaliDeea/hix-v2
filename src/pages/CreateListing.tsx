@@ -519,27 +519,54 @@ export default function CreateListing() {
       if (status === 'available') {
         try {
           const requestsSnap = await getDocs(collection(db, "asset_requests"));
-          for (const reqDoc of requestsSnap.docs) {
-            const reqData = reqDoc.data();
-            if (reqData.status === 'active') {
-               // Semantic/Keyword detection
-               const isMatch = formData.title.toLowerCase().includes(reqData.title.toLowerCase()) || 
-                               formData.description.toLowerCase().includes(reqData.title.toLowerCase()) ||
-                               reqData.title.toLowerCase().includes(formData.title.toLowerCase());
-               
-               if (isMatch) {
-                 await addDoc(collection(db, "notifications"), {
-                   userId: reqData.userId,
-                   title: "📦 Smart Match Detected",
-                   message: `Automated scan found a new match for your RFA "${reqData.title}": ${formData.title}. Check technical compatibility now.`,
-                   type: "system",
-                   link: `/listing/${listingId}`,
-                   read: false,
-                   createdAt: serverTimestamp()
-                 });
-                 
-                 await updateDoc(doc(db, "asset_requests", reqDoc.id), { status: 'matched' });
-               }
+          const activeRequests = requestsSnap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as any))
+            .filter(req => req.status === 'active');
+
+          if (activeRequests.length > 0) {
+            // We use the same service but we need to match a single listing against multiple RFAs.
+            // For simplicity and efficiency, we can do a semantic check using Gemini.
+            const listingDetails = `Title: ${formData.title}. Description: ${formData.description}. Specs: ${formData.brand} ${formData.model} ${formData.voltage} ${formData.dimensions} ${formData.weight}. Category: ${formData.category}`;
+            
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            const response = await ai.models.generateContent({
+              model: "gemini-3-flash-preview",
+              contents: `A new industrial asset has been listed: "${listingDetails}". 
+              Analyze the following buyer requirements and identify which ones are a technical match (confidence > 70%).
+              
+              Requirements:
+              ${JSON.stringify(activeRequests.map(r => ({ id: r.id, title: r.title, specs: r.technicalSpecs })))}
+              
+              Return JSON: matchedRequestIds (array of strings).`,
+              config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: Type.OBJECT,
+                  properties: {
+                    matchedRequestIds: { type: Type.ARRAY, items: { type: Type.STRING } }
+                  },
+                  required: ["matchedRequestIds"]
+                }
+              }
+            });
+
+            const { matchedRequestIds } = JSON.parse(response.text);
+
+            for (const reqId of matchedRequestIds) {
+              const reqData = activeRequests.find(r => r.id === reqId);
+              if (reqData) {
+                await addDoc(collection(db, "notifications"), {
+                  userId: reqData.userId,
+                  title: "📦 Smart Match Detected",
+                  message: `Automated AI scan found a new match for your RFA "${reqData.title}": ${formData.title}. Check technical compatibility now.`,
+                  type: "system",
+                  link: `/listing/${listingId}`,
+                  read: false,
+                  createdAt: serverTimestamp()
+                });
+                
+                await updateDoc(doc(db, "asset_requests", reqId), { status: 'matched' });
+              }
             }
           }
         } catch (matchErr) {
