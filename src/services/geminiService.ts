@@ -1,6 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not defined. Please add it to your environment variables.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export interface AssetVerificationResult {
   title: string;
@@ -18,6 +29,7 @@ export interface AssetVerificationResult {
 }
 
 export async function scanAssetDocument(file: File): Promise<AssetVerificationResult> {
+  const ai = getAI();
   // Convert File to base64
   const base64Data = await new Promise<string>((resolve) => {
     const reader = new FileReader();
@@ -86,6 +98,7 @@ export interface TechnicalDocumentExtraction {
 }
 
 export async function scanTechnicalDocument(file: File): Promise<TechnicalDocumentExtraction> {
+  const ai = getAI();
   const base64Data = await new Promise<string>((resolve) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -146,6 +159,7 @@ export interface MatchResult {
 }
 
 export async function matchMarketplaceInventory(requirements: string, listings: Listing[]): Promise<MatchResult> {
+  const ai = getAI();
   const listingSamples = listings.map(l => ({
     id: l.id,
     title: l.title,
