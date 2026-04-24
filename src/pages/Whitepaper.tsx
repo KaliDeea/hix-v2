@@ -99,7 +99,7 @@ export default function Whitepaper() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-5xl lg:text-7xl font-black uppercase tracking-tighter leading-[0.9]"
+                className="text-3xl lg:text-5xl font-black uppercase tracking-tighter leading-[0.9]"
               >
                 Revolutionizing <br />
                 <span className="text-primary">Industrial</span> <br />
