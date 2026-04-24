@@ -22,10 +22,12 @@ echo "🏗️ Building frontend..."
 npm run build
 
 # 4. Restart the application
-# We check for PM2 first as it's the standard for Node.js VMs
 if command -v pm2 &> /dev/null; then
     echo "🔄 Restarting app with PM2..."
-    pm2 restart all || pm2 start server.ts --name "hix-app" --interpreter ./node_modules/.bin/tsx
+    # Ensure PM2 uses the package.json start script which sets NODE_ENV=production
+    pm2 stop all || true
+    pm2 delete all || true
+    pm2 start npm --name "hix-app" -- start
 else
     echo "⚠️ PM2 not found. Restarting manually..."
     # Kill existing tsx processes if any

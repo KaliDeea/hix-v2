@@ -5,23 +5,33 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
 import admin from "firebase-admin";
-import firebaseConfig from "./src/firebase-applet-config.json" with { type: "json" };
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load Firebase Config robustly
+const configPath = path.join(__dirname, "src", "firebase-applet-config.json");
+let firebaseConfig: any;
+try {
+  firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+} catch (e) {
+  console.error("Could not load firebase-applet-config.json from src/", e);
+  // Try root
+  try {
+    firebaseConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "firebase-applet-config.json"), "utf8"));
+  } catch (e2) {
+    console.error("Could not load firebase-applet-config.json from root either.");
+  }
+}
 
 // Initialize Firebase Admin
-if (admin.apps.length === 0) {
+if (admin.apps.length === 0 && firebaseConfig) {
   admin.initializeApp({
     projectId: firebaseConfig.projectId,
   });
 }
 
 const db = admin.firestore();
-if (firebaseConfig.firestoreDatabaseId) {
-  // Note: In some versions of firebase-admin, you might need to specify the databaseId differently
-  // but for many cases, the default database is used or it's handled via the projectId.
-}
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 let stripeClient: Stripe | null = null;
 
@@ -150,15 +160,20 @@ async function startServer() {
     res.json({ received: true });
   });
 
+  // Automatic Production detection if NODE_ENV not set
+  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(__dirname, 'dist'));
+
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  if (!isProduction) {
+    console.log("Starting in DEVELOPMENT mode with Vite middleware...");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    console.log("Starting in PRODUCTION mode...");
+    const distPath = path.join(__dirname, 'dist');
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
       app.get('*', (req, res) => {
@@ -171,7 +186,7 @@ async function startServer() {
       });
     } else {
       app.get('*', (req, res) => {
-        res.status(500).send("Production mode enabled but 'dist' directory is missing. Please run npm run build or set NODE_ENV=development.");
+        res.status(500).send("Production mode enabled but 'dist' directory is missing. Please run npm run build.");
       });
     }
   }
