@@ -1,7 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { Message } from "@/types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let genAI: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!genAI) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not defined. Please ensure it is set in your environment.");
+    }
+    genAI = new GoogleGenAI({ apiKey });
+  }
+  return genAI;
+}
 
 const SYSTEM_INSTRUCTION = `
 You are the HIX Circular Economy Support Assistant. 
@@ -25,6 +36,7 @@ Always encourage the circular economy.
 
 export async function generateSupportResponse(history: Message[]): Promise<string> {
   try {
+    const ai = getAI();
     const formattedHistory = history.map(msg => ({
       role: msg.senderId === 'HIX_SUPPORT_AI' ? 'model' : 'user',
       parts: [{ text: msg.text }]
