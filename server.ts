@@ -5,7 +5,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
 import admin from "firebase-admin";
-import firebaseConfig from "./src/firebase-applet-config.json" assert { type: "json" };
+import firebaseConfig from "./src/firebase-applet-config.json" with { type: "json" };
 
 // Initialize Firebase Admin
 if (admin.apps.length === 0) {
