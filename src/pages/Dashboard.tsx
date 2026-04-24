@@ -1397,7 +1397,19 @@ export default function Dashboard() {
                       <span className="text-[9px] font-mono opacity-40 uppercase">{format(new Date(req.createdAt?.toDate ? req.createdAt.toDate() : req.createdAt), 'MMM d, yyyy')}</span>
                     </div>
                     <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{req.title}</CardTitle>
-                    <CardDescription className="line-clamp-2 text-xs h-8">{req.description}</CardDescription>
+                    <div className="flex gap-1.5 mt-2 overflow-x-auto no-scrollbar pb-1">
+                      {req.category && (
+                        <Badge variant="outline" className="text-[8px] font-mono uppercase bg-emerald-500/5 text-emerald-500 border-emerald-500/10">
+                          {req.category}
+                        </Badge>
+                      )}
+                      {req.quantity && (
+                        <Badge variant="outline" className="text-[8px] font-mono uppercase bg-blue-500/5 text-blue-500 border-blue-500/10 whitespace-nowrap">
+                          {req.quantity} UNIT{req.quantity > 1 ? 'S' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    <CardDescription className="line-clamp-2 text-xs h-8 mt-2">{req.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-0 space-y-4 font-mono">
                     <div className="grid grid-cols-2 gap-4 text-[9px] uppercase border-y border-white/5 py-3">
@@ -1410,6 +1422,13 @@ export default function Dashboard() {
                         <p className="font-bold">{req.deadline || 'N/A'}</p>
                       </div>
                     </div>
+                    {req.tags && req.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {req.tags.slice(0, 3).map((tag, i) => (
+                          <span key={i} className="text-[8px] font-mono bg-white/5 px-1.5 py-0.5 rounded opacity-60 uppercase">#{tag}</span>
+                        ))}
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <p className="text-[9px] opacity-50 uppercase tracking-widest">Specifications</p>
                       <p className="text-[10px] font-bold truncate">{req.technicalSpecs || 'Standard Protocol'}</p>

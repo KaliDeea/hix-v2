@@ -222,10 +222,15 @@ service cloud.firestore {
     }
 
     function isValidAssetRequest(data) {
-      return hasOnlyAllowedFields(['userId', 'companyName', 'title', 'description', 'budget', 'deadline', 'technicalSpecs', 'status', 'createdAt']) &&
+      return hasOnlyAllowedFields(['userId', 'userName', 'companyName', 'title', 'description', 'category', 'budget', 'deadline', 'technicalSpecs', 'quantity', 'tags', 'status', 'createdAt', 'updatedAt']) &&
              data.userId == request.auth.uid &&
              data.title is string && data.title.size() > 0 &&
              data.status in ['active', 'matched', 'closed'];
+    }
+
+    function isValidErrorLog(data) {
+      return hasOnlyAllowedFields(['error', 'operationType', 'path', 'timestamp', 'authInfo', 'type', 'url', 'stack']) &&
+             data.error is string && data.timestamp is timestamp;
     }
 
     function isValidWhitepaperRequest(data) {
@@ -253,6 +258,12 @@ service cloud.firestore {
     // ===============================================================
     // Rules
     // ===============================================================
+
+    match /error_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && isValidErrorLog(request.resource.data);
+      allow delete: if isAdmin();
+    }
 
     match /reports/{reportId} {
       // Only reporter or admin can read

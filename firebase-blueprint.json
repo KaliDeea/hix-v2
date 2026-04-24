@@ -157,14 +157,19 @@
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
+        "userName": { "type": "string" },
         "companyName": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
-        "specifications": { "type": "object", "description": "Technical requirements like weight, voltage, dimensions" },
+        "category": { "type": "string" },
         "budget": { "type": "number" },
         "deadline": { "type": "string", "format": "date-time" },
+        "technicalSpecs": { "type": "string" },
+        "quantity": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } },
         "status": { "type": "string", "enum": ["active", "matched", "closed"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "title", "description", "status"]
     },

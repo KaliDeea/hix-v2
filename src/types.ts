@@ -230,14 +230,19 @@ export interface Offer {
 export interface AssetRequest {
   id: string;
   userId: string;
+  userName: string;
   companyName: string;
   title: string;
   description: string;
-  budget: number;
-  deadline: string;
-  technicalSpecs: string;
+  category: string;
+  budget?: number;
+  deadline?: string;
+  technicalSpecs?: string;
+  quantity?: number;
+  tags: string[];
   status: 'active' | 'matched' | 'closed';
   createdAt: any;
+  updatedAt?: any;
 }
 
 export interface WhitepaperRequest {

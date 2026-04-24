@@ -17,16 +17,26 @@ import {
   ShieldAlert,
   Loader2,
   Building2,
-  Cpu
+  Cpu,
+  X,
+  Package
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { CATEGORIES } from "@/constants";
 
 import { scanAssetDocument, AssetVerificationResult, matchMarketplaceInventory } from "@/services/geminiService";
 
@@ -41,10 +51,14 @@ export default function RequestAsset() {
   const [formData, setFormData] = useState({
     title: location.state?.title || "",
     description: location.state?.description || "",
+    category: "",
     budget: "",
     deadline: "",
-    technicalSpecs: location.state?.technicalSpecs || ""
+    technicalSpecs: location.state?.technicalSpecs || "",
+    quantity: "1",
+    tags: [] as string[]
   });
+  const [tagInput, setTagInput] = useState("");
 
   const [showSuccess, setShowSuccess] = useState(false);
   
@@ -63,7 +77,7 @@ export default function RequestAsset() {
       const availableAssets = listingsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
       // 2. Use the centralized matching service
-      const requirementsStr = `Target: ${formData.title}. Details: ${formData.description}. Critical Specs: ${formData.technicalSpecs}. Deadline: ${formData.deadline}. Budget: £${formData.budget}`;
+      const requirementsStr = `Target: ${formData.title}. Category: ${formData.category}. Details: ${formData.description}. Critical Specs: ${formData.technicalSpecs}. Deadline: ${formData.deadline}. Budget: £${formData.budget}. Tags: ${formData.tags.join(", ")}`;
       const result = await matchMarketplaceInventory(requirementsStr, availableAssets);
 
       const matchedAssets = result.matches
@@ -97,14 +111,19 @@ export default function RequestAsset() {
     try {
       await addDoc(collection(db, "asset_requests"), {
         userId: user.uid,
+        userName: profile?.companyName || user.email || "Anonymous User",
         companyName: profile?.companyName || "Anonymous Buyer",
         title: formData.title,
         description: formData.description,
+        category: formData.category || "General",
         budget: parseFloat(formData.budget) || 0,
         deadline: formData.deadline,
         technicalSpecs: formData.technicalSpecs,
+        quantity: parseInt(formData.quantity) || 1,
+        tags: formData.tags,
         status: "active",
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
 
       toast.success("Request for Asset (RFA) published.");
@@ -243,6 +262,41 @@ export default function RequestAsset() {
                       />
                     </div>
 
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="grid gap-2">
+                        <Label htmlFor="category" className="font-mono text-[10px] uppercase opacity-70">Industrial Category</Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(v) => setFormData({...formData, category: v})}
+                        >
+                          <SelectTrigger className="rounded-xl border-primary/20 bg-primary/5 focus:ring-1 focus:ring-primary font-mono text-sm transition-all uppercase h-10">
+                            <SelectValue placeholder="Select Category" />
+                          </SelectTrigger>
+                          <SelectContent className="glass border-primary/20">
+                            {CATEGORIES.map(cat => (
+                              <SelectItem key={`rfa-cat-${cat}`} value={cat} className="font-mono text-xs uppercase tracking-tight">{cat}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="quantity" className="font-mono text-[10px] uppercase opacity-70">Quantity Required</Label>
+                        <div className="relative">
+                          <Package className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/60" />
+                          <Input 
+                            id="quantity"
+                            type="number"
+                            min="1"
+                            placeholder="1"
+                            className="pl-10 rounded-xl border-primary/20 bg-primary/5 focus:ring-1 focus:ring-primary font-mono text-sm transition-all h-10"
+                            value={formData.quantity}
+                            onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="grid gap-2">
                       <Label htmlFor="description" className="font-mono text-[10px] uppercase opacity-70">Project Context & Technical Need</Label>
                       <Textarea 
@@ -294,6 +348,57 @@ export default function RequestAsset() {
                         value={formData.technicalSpecs}
                         onChange={(e) => setFormData({...formData, technicalSpecs: e.target.value})}
                       />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="tags" className="font-mono text-[10px] uppercase opacity-70">Keywords / Service Tags</Label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {formData.tags.map((tag, i) => (
+                           <Badge key={`rfa-tag-${i}`} variant="secondary" className="pl-3 pr-1 py-1 rounded-none bg-primary/10 border-primary/20 text-primary font-mono text-[9px] uppercase tracking-widest">
+                            {tag}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 ml-1 hover:bg-primary/20"
+                              onClick={() => setFormData({ ...formData, tags: formData.tags.filter((_, idx) => idx !== i) })}
+                            >
+                              <X className="h-2.5 w-2.5" />
+                            </Button>
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input 
+                          id="tagInput"
+                          placeholder="Add technology tags (e.g. Siemens, PLC, 50Hz)..."
+                          className="rounded-xl border-primary/20 bg-primary/5 focus:ring-1 focus:ring-primary font-mono text-sm transition-all flex-1"
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+                                setFormData({...formData, tags: [...formData.tags, tagInput.trim()]});
+                                setTagInput("");
+                              }
+                            }
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="font-mono text-[10px] uppercase border-primary/20 rounded-xl"
+                          onClick={() => {
+                            if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+                              setFormData({...formData, tags: [...formData.tags, tagInput.trim()]});
+                              setTagInput("");
+                            }
+                          }}
+                        >
+                          Add Tag
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                   <div className="bg-primary/10 p-4 border-t border-primary/20 flex items-center justify-between">
