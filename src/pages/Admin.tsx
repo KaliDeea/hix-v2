@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth, db, onSnapshot, handleFirestoreError, OperationType } from "@/lib/firebase";
-import { UserProfile, Transaction, Report, AuditLog, Listing } from "@/types";
+import { UserProfile, Transaction, Report, AuditLog, Listing, WhitepaperRequest } from "@/types";
 import { 
   collection, 
   query, 
@@ -12,7 +12,8 @@ import {
   orderBy,
   limit,
   onSnapshot as firestoreOnSnapshot,
-  getDoc
+  getDoc,
+  addDoc, serverTimestamp, setDoc
 } from "firebase/firestore";
 import { 
   Card, 
@@ -80,7 +81,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
-import { addDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { compressImage } from "@/lib/image-utils";
 import { Input } from "@/components/ui/input";
 import { 
@@ -465,6 +465,7 @@ export default function Admin() {
   const [reports, setReports] = useState<Report[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [whitepaperRequests, setWhitepaperRequests] = useState<WhitepaperRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isSendingTest, setIsSendingTest] = useState(false);
@@ -536,6 +537,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [resolutionNote, setResolutionNote] = useState("");
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [errorLogs, setErrorLogs] = useState<any[]>([]);
   const [auditSearch, setAuditSearch] = useState("");
   const [auditActionFilter, setAuditActionFilter] = useState("all");
   const [suspensionReason, setSuspensionReason] = useState("");
@@ -569,6 +571,8 @@ export default function Admin() {
   const [vettingPage, setVettingPage] = useState(1);
   const [reportPage, setReportPage] = useState(1);
   const [auditPage, setAuditPage] = useState(1);
+  const [errorPage, setErrorPage] = useState(1);
+  const [whitepaperPage, setWhitepaperPage] = useState(1);
   const itemsPerPage = 10;
 
   // Reset pagination when filters change
@@ -789,12 +793,36 @@ export default function Admin() {
       console.error("Audit logs error:", error);
     });
 
+    const errorPath = "error_logs";
+    const unsubscribeErrorLogs = onSnapshot(query(collection(db, errorPath), orderBy("timestamp", "desc"), limit(100)), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setErrorLogs(data);
+    }, (error) => {
+      console.error("Error logs error:", error);
+    });
+
+    const whitepaperPath = "whitepaper_requests";
+    const unsubscribeWhitepaper = onSnapshot(query(collection(db, whitepaperPath), orderBy("createdAt", "desc")), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as WhitepaperRequest[];
+      setWhitepaperRequests(data);
+    }, (error) => {
+      console.error("Whitepaper requests error:", error);
+    });
+
     return () => {
       unsubscribeUsers();
       unsubscribeReports();
       unsubscribeTrans();
       unsubscribeListings();
       unsubscribeAudit();
+      unsubscribeErrorLogs();
+      unsubscribeWhitepaper();
     };
   }, [profile]);
 
@@ -1480,9 +1508,11 @@ export default function Admin() {
                   { value: "admins", label: "Admins", icon: ShieldCheck, show: isAdmin },
                   { value: "vetting", label: "Vetting Queue", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, badgeColor: "bg-amber-500", show: isEditor },
                   { value: "reports", label: "Reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, badgeColor: "bg-destructive", show: isEditor },
+                  { value: "requests", label: "Requests", icon: FileText, badge: whitepaperRequests.filter(r => r.status === 'pending').length, badgeColor: "bg-blue-500", show: isEditor },
                   { value: "bulk", label: "Bulk Upload", icon: Upload, show: isEditor },
                   { value: "esg", label: "ESG Impact", icon: Leaf, show: isViewer },
                   { value: "audit", label: "Audit Logs", icon: History, show: isViewer },
+                  { value: "errors", label: "System Errors", icon: AlertTriangle, show: isSuperAdmin, badge: errorLogs.length, badgeColor: "bg-destructive" },
                   { value: "settings", label: "Platform Settings", icon: Database, show: isAdmin },
                   { value: "system", label: "System Tools", icon: RefreshCw, show: isSuperAdmin },
                 ].filter(tab => tab.show).map((tab) => (
@@ -2068,6 +2098,97 @@ export default function Admin() {
                     totalItems={filteredTransactions.length}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setTransactionPage}
+                  />
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        )}
+
+        {isEditor && (
+          <TabsContent value="requests" className="mt-0 outline-none">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
+            >
+              <Card className="glass border-primary/20 overflow-hidden">
+                <CardHeader className="border-b border-white/5 bg-white/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-xl">Whitepaper Requests</CardTitle>
+                      <CardDescription>Review and track institutions requesting platform documentation.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
+                        <TableRow>
+                          <TableHead className="pl-6">Contact Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Company</TableHead>
+                          <TableHead>Interest Reason</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead className="text-right pr-6">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {whitepaperRequests.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                              <div className="flex flex-col items-center gap-2">
+                                <FileText className="h-8 w-8 opacity-20" />
+                                <p>No whitepaper requests found.</p>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          whitepaperRequests.slice((whitepaperPage - 1) * itemsPerPage, whitepaperPage * itemsPerPage).map((req) => (
+                            <TableRow key={req.id} className="hover:bg-primary/5 transition-colors">
+                              <TableCell className="pl-6 font-bold">{req.name}</TableCell>
+                              <TableCell className="text-xs">{req.email}</TableCell>
+                              <TableCell className="text-xs">{req.company} <span className="text-muted-foreground opacity-60">({req.jobTitle || 'N/A'})</span></TableCell>
+                              <TableCell className="text-xs max-w-[200px] truncate">{req.interestReason || '-'}</TableCell>
+                              <TableCell>
+                                <Badge className={`rounded-md ${req.status === 'sent' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                  {req.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-[10px] text-muted-foreground">
+                                {req.createdAt ? new Date(req.createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}
+                              </TableCell>
+                              <TableCell className="text-right pr-6">
+                                {req.status === 'pending' && (
+                                  <Button 
+                                    size="sm" 
+                                    className="h-8 rounded-lg text-[10px] uppercase font-bold"
+                                    onClick={async () => {
+                                      try {
+                                        await updateDoc(doc(db, "whitepaper_requests", req.id), { status: 'sent' });
+                                        toast.success("Marked as document sent!");
+                                      } catch (err) {
+                                        toast.error("Failed to update status");
+                                      }
+                                    }}
+                                  >
+                                    Mark as Sent
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <Pagination 
+                    currentPage={whitepaperPage}
+                    totalItems={whitepaperRequests.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setWhitepaperPage}
                   />
                 </CardContent>
               </Card>
@@ -2890,6 +3011,129 @@ export default function Admin() {
           </TabsContent>
         )}
 
+        {isSuperAdmin && (
+          <TabsContent value="errors" className="mt-0 outline-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-6"
+            >
+              <Card className="glass border-destructive/10">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      System Error Registry
+                    </CardTitle>
+                    <CardDescription>Real-time monitoring of application failures and Firestore security rejections.</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-full border-destructive/20 text-destructive hover:bg-destructive/5"
+                    onClick={async () => {
+                      if (confirm("Clear all error logs?")) {
+                        for (const log of errorLogs) {
+                          await deleteDoc(doc(db, "error_logs", log.id));
+                        }
+                        toast.success("Error logs cleared");
+                      }
+                    }}
+                  >
+                    Clear All Logs
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-muted/10">
+                        <TableRow>
+                          <TableHead className="text-[10px] uppercase font-bold tracking-widest pl-8 w-40">Timestamp</TableHead>
+                          <TableHead className="text-[10px] uppercase font-bold tracking-widest w-32">Type / Op</TableHead>
+                          <TableHead className="text-[10px] uppercase font-bold tracking-widest">Error Description</TableHead>
+                          <TableHead className="text-[10px] uppercase font-bold tracking-widest">User / Auth</TableHead>
+                          <TableHead className="text-[10px] uppercase font-bold tracking-widest w-24"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {errorLogs.slice((errorPage - 1) * itemsPerPage, errorPage * itemsPerPage).map((log) => (
+                          <TableRow key={log.id} className="hover:bg-muted/5 transition-colors group">
+                            <TableCell className="pl-8 text-[10px] font-mono opacity-60">
+                              {log.timestamp?.toDate ? format(log.timestamp.toDate(), 'dd/MM HH:mm:ss') : "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${
+                                log.type === 'REACT_ERROR_BOUNDARY' ? 'border-amber-500/20 text-amber-500 bg-amber-500/5' : 'border-destructive/20 text-destructive bg-destructive/5'
+                              }`}>
+                                {log.operationType || log.type || "ERR"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="max-w-md">
+                                <p className="text-xs font-bold text-foreground truncate group-hover:whitespace-normal group-hover:overflow-visible group-hover:z-10 relative">
+                                  {log.error}
+                                </p>
+                                <p className="text-[9px] font-mono text-muted-foreground mt-1 truncate">
+                                  Path: {log.path || log.url || "/"}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-[10px] font-medium">
+                                {log.authInfo?.email || "Anonymous"}
+                                <div className="text-[9px] opacity-60 font-mono italic">
+                                  {log.authInfo?.userId?.slice(0, 8) || "NO_UID"}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right pr-8">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-destructive transition-all">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="glass">
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Log Entry?</AlertDialogTitle>
+                                    <AlertDialogDescription>This will permanently remove this error report from the registry.</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      className="bg-destructive hover:bg-destructive/90 rounded-xl"
+                                      onClick={() => deleteDoc(doc(db, "error_logs", log.id))}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {errorLogs.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic text-xs">
+                              No system errors recorded. System stability optimal.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <Pagination 
+                    currentPage={errorPage}
+                    totalItems={errorLogs.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setErrorPage}
+                  />
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+        )}
+
         {canManageSettings && (
           <TabsContent value="settings" className="mt-0 outline-none">
           <motion.div 
@@ -3364,48 +3608,143 @@ export default function Admin() {
       />
 
       <Dialog open={!!selectedTransaction} onOpenChange={(open) => !open && setSelectedTransaction(null)}>
-        <DialogContent className="glass max-w-2xl">
+        <DialogContent className="glass max-w-2xl border-primary/20 shadow-2xl backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Transaction Details</DialogTitle>
-            <DialogDescription className="font-mono text-[10px]">ID: {selectedTransaction?.id}</DialogDescription>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <DollarSign className="h-6 w-6" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Transaction Details</DialogTitle>
+                <DialogDescription className="font-mono text-[10px]">Reference ID: {selectedTransaction?.id}</DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           
           {selectedTransaction && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Buyer ID</Label>
-                  <p className="font-mono text-xs bg-white/5 p-2 rounded-lg border border-white/10">{selectedTransaction.buyerId}</p>
+            <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto px-1 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="glass p-4 rounded-2xl border-white/10 space-y-3">
+                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary">Entities Involved</h4>
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-[9px] uppercase tracking-widest text-muted-foreground">Buyer</Label>
+                      <div className="flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
+                        <Avatar className="h-6 w-6 border border-white/10">
+                          <AvatarFallback className="text-[8px]">B</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold truncate">
+                            {users.find(u => u.uid === selectedTransaction.buyerId)?.companyName || 'Unknown Buyer'}
+                          </p>
+                          <p className="text-[8px] font-mono text-muted-foreground truncate">{selectedTransaction.buyerId}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[9px] uppercase tracking-widest text-muted-foreground">Seller</Label>
+                      <div className="flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
+                        <Avatar className="h-6 w-6 border border-white/10">
+                          <AvatarFallback className="text-[8px]">S</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold truncate">
+                            {users.find(u => u.uid === selectedTransaction.sellerId)?.companyName || 'Unknown Seller'}
+                          </p>
+                          <p className="text-[8px] font-mono text-muted-foreground truncate">{selectedTransaction.sellerId}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Seller ID</Label>
-                  <p className="font-mono text-xs bg-white/5 p-2 rounded-lg border border-white/10">{selectedTransaction.sellerId}</p>
+
+                <div className="glass p-4 rounded-2xl border-white/10 space-y-3">
+                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary">Financial Summary</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Subtotal ({selectedTransaction.quantity} items)</span>
+                      <span className="font-bold">£{selectedTransaction.amount?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px]">
+                      <span className="text-muted-foreground">Buyer Commission</span>
+                      <span className="text-destructive font-medium">+£{selectedTransaction.buyerCommission?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px]">
+                      <span className="text-muted-foreground">Seller Commission (Deducted)</span>
+                      <span className="text-amber-500 font-medium">-£{selectedTransaction.sellerCommission?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="h-px bg-white/10 my-1" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold uppercase tracking-widest">Total Value</span>
+                      <span className="text-lg font-black text-primary">£{(selectedTransaction.amount + (selectedTransaction.buyerCommission || 0)).toLocaleString()}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="glass p-4 rounded-2xl border-primary/10">
-                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Amount</Label>
-                  <p className="text-2xl font-black tracking-tighter text-primary">£{selectedTransaction.amount?.toLocaleString()}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="glass p-4 rounded-2xl border-white/10">
+                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary mb-3">Environmental Impact</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-green-500/10 text-green-500">
+                      <Leaf className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-black text-green-500 tracking-tighter">
+                        {selectedTransaction.co2Savings?.toLocaleString() || selectedTransaction.co2Saved?.toLocaleString() || 0} kg
+                      </p>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">CO2 Emissions Avoided</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="glass p-4 rounded-2xl border-primary/10">
-                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Quantity</Label>
-                  <p className="text-2xl font-black tracking-tighter">{selectedTransaction.quantity}</p>
-                </div>
-                <div className="glass p-4 rounded-2xl border-primary/10">
-                  <Label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">CO2 Saved</Label>
-                  <p className="text-2xl font-black tracking-tighter text-green-500">{selectedTransaction.co2Savings?.toLocaleString()} kg</p>
+                <div className="glass p-4 rounded-2xl border-white/10">
+                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary mb-3">Escrow Status</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500">
+                      <ShieldCheck className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] uppercase font-black">
+                        {selectedTransaction.escrowStatus?.replace('_', ' ') || 'Secured'}
+                      </Badge>
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">Platform Protection</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <Card className="glass border-primary/10">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
-                    <Package className="h-4 w-4 text-primary" />
-                    Associated Listing
+              {/* Logistics & Fulfillment */}
+              {(selectedTransaction.shippingMethod || selectedTransaction.trackingNumber) && (
+                <div className="glass p-4 rounded-2xl border-white/10 space-y-3">
+                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary">Logistics & Fulfillment</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-[9px] uppercase tracking-widest text-muted-foreground">Carrier / Method</Label>
+                      <p className="text-xs font-bold flex items-center gap-2">
+                        <Car className="h-3 w-3 text-muted-foreground" />
+                        {selectedTransaction.carrier ? `${selectedTransaction.carrier} (${selectedTransaction.shippingMethod})` : (selectedTransaction.shippingMethod || 'Direct Collection')}
+                      </p>
+                    </div>
+                    {selectedTransaction.trackingNumber && (
+                      <div className="space-y-1">
+                        <Label className="text-[9px] uppercase tracking-widest text-muted-foreground">Tracking Number</Label>
+                        <p className="text-[10px] font-mono bg-white/5 p-1 rounded-md border border-white/5 font-bold">
+                          {selectedTransaction.trackingNumber}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Card className="glass border-primary/10 overflow-hidden">
+                <CardHeader className="pb-2 bg-white/5 border-b border-white/5">
+                  <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-primary">
+                    <Package className="h-4 w-4" />
+                    Associated Technical Asset
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-4">
                   {loadingTransactionDetails ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -3413,44 +3752,74 @@ export default function Admin() {
                   ) : selectedTransactionListing ? (
                     <div className="flex gap-4">
                       {selectedTransactionListing.images?.[0] && (
-                        <img 
-                          src={selectedTransactionListing.images[0]} 
-                          alt={selectedTransactionListing.title}
-                          className="h-20 w-20 rounded-xl object-cover border border-white/10"
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="relative group shrink-0">
+                          <img 
+                            src={selectedTransactionListing.images[0]} 
+                            alt={selectedTransactionListing.title}
+                            className="h-20 w-20 rounded-xl object-cover border border-white/10 group-hover:scale-105 transition-transform duration-500"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+                        </div>
                       )}
-                      <div>
-                        <h4 className="font-bold text-lg leading-tight mb-1">{selectedTransactionListing.title}</h4>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{selectedTransactionListing.description}</p>
-                        <div className="flex gap-2 mt-2">
-                          <Badge variant="outline" className="text-[9px] uppercase font-black">{selectedTransactionListing.category}</Badge>
-                          <Badge variant="outline" className="text-[9px] uppercase font-black">{selectedTransactionListing.condition}</Badge>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm tracking-tight leading-tight mb-1 truncate">{selectedTransactionListing.title}</h4>
+                        <p className="text-[10px] text-muted-foreground line-clamp-2 italic mb-2">"{selectedTransactionListing.description}"</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className="text-[8px] h-4 px-1.5 uppercase font-black bg-white/5">{selectedTransactionListing.category}</Badge>
+                          <Badge variant="outline" className="text-[8px] h-4 px-1.5 uppercase font-black bg-white/5">{selectedTransactionListing.condition}</Badge>
+                          {selectedTransactionListing.year && (
+                             <Badge variant="outline" className="text-[8px] h-4 px-1.5 uppercase font-black bg-white/5">YOM: {selectedTransactionListing.year}</Badge>
+                          )}
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">Listing information unavailable (may have been deleted).</p>
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                       <AlertTriangle className="h-6 w-6 text-amber-500/50 mb-2" />
+                       <p className="text-xs text-muted-foreground italic">Listing information unavailable or asset has been archived.</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
 
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
-                <div className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${selectedTransaction.status === 'completed' ? 'bg-green-500' : 'bg-amber-500'}`} />
-                  <span className="text-sm font-bold uppercase tracking-widest">Status: {selectedTransaction.status}</span>
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`h-3 w-3 rounded-full shadow-[0_0_8px] ${
+                    selectedTransaction.status === 'completed' ? 'bg-green-500 shadow-green-500/40' : 
+                    selectedTransaction.status === 'failed' ? 'bg-destructive shadow-destructive/40' :
+                    'bg-amber-500 shadow-amber-500/40'
+                  }`} />
+                  <span className="text-xs font-black uppercase tracking-widest">Global Status: {selectedTransaction.status}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Processed on {selectedTransaction.createdAt ? new Date(selectedTransaction.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
-                </p>
+                <div className="flex flex-col items-end">
+                  <p className="text-[10px] text-muted-foreground font-medium">
+                    Opened {selectedTransaction.createdAt ? new Date(selectedTransaction.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
+                  </p>
+                  {selectedTransaction.updatedAt && (
+                    <p className="text-[9px] text-muted-foreground italic">
+                      Last modified {new Date(selectedTransaction.updatedAt.seconds * 1000).toLocaleString()}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}
           
-          <DialogFooter>
-            <Button variant="outline" className="rounded-xl w-full" onClick={() => setSelectedTransaction(null)}>
-              Close Details
-            </Button>
+          <DialogFooter className="border-t border-white/5 pt-4">
+            <div className="flex gap-2 w-full">
+               {selectedTransaction?.invoiceUrl && (
+                  <Button variant="outline" className="rounded-xl flex-1 h-10 text-[10px] font-bold uppercase tracking-widest border-primary/20" asChild>
+                    <a href={selectedTransaction.invoiceUrl} target="_blank" rel="noopener noreferrer">
+                      <FileText className="h-3.5 w-3.5 mr-2" />
+                      View Invoice
+                    </a>
+                  </Button>
+               )}
+               <Button className="rounded-xl flex-1 h-10 font-black uppercase tracking-widest text-[10px]" onClick={() => setSelectedTransaction(null)}>
+                 Close Investigation
+               </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

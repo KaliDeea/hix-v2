@@ -82,6 +82,7 @@ export interface Listing {
     };
   }[];
   co2Savings: number; // in kg
+  tags: string[];
   status: 'available' | 'sold' | 'draft';
   listingType: 'fixed';
   shippingOptions: ('collection' | 'standard' | 'express' | 'international')[];
@@ -236,6 +237,17 @@ export interface AssetRequest {
   deadline: string;
   technicalSpecs: string;
   status: 'active' | 'matched' | 'closed';
+  createdAt: any;
+}
+
+export interface WhitepaperRequest {
+  id: string;
+  email: string;
+  name: string;
+  company: string;
+  jobTitle?: string;
+  interestReason?: string;
+  status: 'pending' | 'sent';
   createdAt: any;
 }
 

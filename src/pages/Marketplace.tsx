@@ -81,6 +81,7 @@ export default function Marketplace() {
   const [year, setYear] = useState("");
   const [shipping, setShipping] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -320,9 +321,11 @@ export default function Marketplace() {
           l.title.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
           l.description.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
           l.brand?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-          l.model?.toLowerCase().includes(debouncedSearch.toLowerCase());
+          l.model?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          l.tags?.some(t => t.toLowerCase().includes(debouncedSearch.toLowerCase()));
           
         const matchesCategory = category === "all" || l.category === category;
+        const matchesTag = !selectedTag || l.tags?.includes(selectedTag);
         const matchesCondition = condition === "all" || l.condition === condition;
         const matchesLocation = !location || l.location.toLowerCase().includes(location.toLowerCase());
         const matchesMinPrice = !minPrice || l.price >= parseFloat(minPrice);
@@ -332,7 +335,7 @@ export default function Marketplace() {
         const matchesYear = !year || l.year?.toString() === year;
         const matchesShipping = shipping === "all" || l.shippingOptions?.includes(shipping as any);
         
-        return matchesSearch && matchesCategory && matchesCondition && matchesLocation && matchesMinPrice && matchesMaxPrice && matchesBrand && matchesModel && matchesYear && matchesShipping;
+        return matchesSearch && matchesCategory && matchesTag && matchesCondition && matchesLocation && matchesMinPrice && matchesMaxPrice && matchesBrand && matchesModel && matchesYear && matchesShipping;
       })
       .sort((a, b) => {
         if (sortBy === "price-asc") return a.price - b.price;
@@ -345,7 +348,15 @@ export default function Marketplace() {
         }
         return 0;
       });
-  }, [listings, debouncedSearch, category, condition, location, minPrice, maxPrice, brand, model, year, sortBy]);
+  }, [listings, debouncedSearch, category, selectedTag, condition, location, minPrice, maxPrice, brand, model, year, sortBy]);
+
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    listings.forEach(l => {
+      l.tags?.forEach(t => tags.add(t));
+    });
+    return Array.from(tags).sort();
+  }, [listings]);
 
   useEffect(() => {
     const getSemanticSuggestions = async (query: string) => {
@@ -479,6 +490,33 @@ export default function Marketplace() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Tag Cloud / Quick Filters */}
+      <div className="mb-8 flex flex-wrap gap-2 items-center">
+        <span className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mr-2">Quick Tags:</span>
+        <Button 
+          variant={selectedTag === null ? "default" : "outline"} 
+          size="sm" 
+          className="rounded-full text-[10px] h-7 uppercase font-bold"
+          onClick={() => setSelectedTag(null)}
+        >
+          All Assets
+        </Button>
+        {allTags.slice(0, 15).map(tag => (
+          <Button 
+            key={tag} 
+            variant={selectedTag === tag ? "default" : "outline"} 
+            size="sm" 
+            className={`rounded-full text-[10px] h-7 uppercase font-bold ${selectedTag === tag ? "bg-primary border-primary" : "border-primary/20 hover:border-primary/50"}`}
+            onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+          >
+            {tag}
+          </Button>
+        ))}
+        {allTags.length > 15 && (
+          <span className="text-[10px] text-muted-foreground uppercase font-bold px-2">+{allTags.length - 15} more</span>
+        )}
       </div>
 
       {showFilters && (
@@ -615,9 +653,16 @@ export default function Marketplace() {
                     <Link to={`/listing/${listing.id}`} className="text-xl font-bold tracking-tight hover:text-primary transition-colors truncate">
                       {listing.title}
                     </Link>
-                    <div className="flex items-center gap-2 mt-1.5">
-                       <MapPin className="h-3.5 w-3.5 text-primary/60" />
-                       <span className="text-xs text-muted-foreground font-medium uppercase tracking-tight">{listing.location || "UK Cluster"}</span>
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                       <div className="flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 text-primary/60" />
+                        <span className="text-xs text-muted-foreground font-medium uppercase tracking-tight">{listing.location || "UK Cluster"}</span>
+                       </div>
+                       {listing.tags?.slice(0, 3).map((tag, i) => (
+                         <Badge key={i} variant="secondary" className="bg-primary/5 text-primary/70 border-none text-[8px] h-4 font-mono px-1.5">
+                           #{tag}
+                         </Badge>
+                       ))}
                     </div>
                   </div>
                 </div>

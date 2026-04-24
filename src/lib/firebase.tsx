@@ -128,6 +128,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  
+  // Log to central system
+  addDoc(collection(db, "error_logs"), {
+    ...errInfo,
+    timestamp: serverTimestamp()
+  }).catch(e => console.error("Failed to log error to central system:", e));
+
   throw new Error(JSON.stringify(errInfo));
 }
 

@@ -311,6 +311,7 @@ export function Navbar() {
 
           <Link to="/messages" className="text-sm font-medium hover:text-primary transition-colors">Messages</Link>
           <Link to="/hauling" className="text-sm font-medium hover:text-primary transition-colors">Hauling</Link>
+          <Link to="/whitepaper" className="text-sm font-medium hover:text-primary transition-colors">Whitepaper</Link>
           <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors mr-2">About</Link>
         </div>
 
@@ -422,6 +423,14 @@ export function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Hauling
+                  <ArrowRight className="h-4 w-4 opacity-0 -translate-x-4 group-hover:opacity-50 group-hover:translate-x-0 transition-all" />
+                </Link>
+                <Link 
+                  to="/whitepaper" 
+                  className="text-lg font-medium px-4 py-3 rounded-xl border border-transparent hover:border-primary/50 hover:bg-primary/5 transition-all flex items-center justify-between group"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Whitepaper
                   <ArrowRight className="h-4 w-4 opacity-0 -translate-x-4 group-hover:opacity-50 group-hover:translate-x-0 transition-all" />
                 </Link>
                 <Link 

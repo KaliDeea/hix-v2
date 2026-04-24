@@ -26,6 +26,7 @@ import Terms from "@/pages/Terms";
 import Auth from "@/pages/Auth";
 import PublicProfile from "@/pages/PublicProfile";
 import RequestAsset from "@/pages/RequestAsset";
+import Whitepaper from "@/pages/Whitepaper";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/firebase";
@@ -101,6 +102,7 @@ export default function App() {
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/request-asset" element={<RequestAsset />} />
+                    <Route path="/whitepaper" element={<Whitepaper />} />
                   </Routes>
                 </main>
                 <Footer />

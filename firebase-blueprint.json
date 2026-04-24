@@ -55,6 +55,7 @@
         "category": { "type": "string" },
         "images": { "type": "array", "items": { "type": "string" } },
         "co2Savings": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } },
         "status": { "type": "string", "enum": ["available", "sold"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -184,6 +185,38 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["listingId", "buyerId", "sellerId", "amount", "quantity", "status"]
+    },
+    "WhitepaperRequest": {
+      "title": "Whitepaper Request",
+      "description": "Requests for the platform whitepaper to understand HIX's circular economy impact.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "company": { "type": "string" },
+        "jobTitle": { "type": "string" },
+        "interestReason": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "sent"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "name", "company", "status", "createdAt"]
+    },
+    "ErrorLog": {
+      "title": "Error Log Entry",
+      "description": "Schema for system error tracking",
+      "type": "object",
+      "properties": {
+        "error": { "type": "string" },
+        "operationType": { "type": "string" },
+        "path": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "authInfo": { "type": "object" },
+        "type": { "type": "string" },
+        "url": { "type": "string" },
+        "stack": { "type": "string" }
+      },
+      "required": ["error", "timestamp"]
     }
   },
   "firestore": {
@@ -226,6 +259,14 @@
     "/offers/{offerId}": {
       "schema": "Offer",
       "description": "Buyer counter-offers"
+    },
+    "/whitepaper_requests/{requestId}": {
+      "schema": "WhitepaperRequest",
+      "description": "Platform whitepaper requests"
+    },
+    "/error_logs/{logId}": {
+      "schema": "ErrorLog",
+      "description": "System error reports"
     }
   }
 }

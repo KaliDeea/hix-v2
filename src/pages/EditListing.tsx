@@ -69,6 +69,7 @@ export default function EditListing() {
     location: "",
     weight: "",
     dimensions: "",
+    tags: [] as string[],
     shippingOptions: [] as ('collection' | 'standard' | 'express' | 'international')[],
     shippingCost: ""
   });
@@ -77,6 +78,7 @@ export default function EditListing() {
   const [ledger, setLedger] = useState<LedgerEvent[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [tagInput, setTagInput] = useState("");
   const [verificationData, setVerificationData] = useState<AssetVerificationResult | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -135,6 +137,7 @@ export default function EditListing() {
             location: data.location || "",
             weight: data.weight?.toString() || "",
             dimensions: data.dimensions || "",
+            tags: data.tags || [],
             shippingOptions: data.shippingOptions || ['collection'],
             shippingCost: data.shippingCost?.toString() || ""
           });
@@ -360,6 +363,7 @@ export default function EditListing() {
           verifiedAt: new Date().toISOString(),
           verifiedBy: "HiX-AI"
         } : null,
+        tags: formData.tags || [],
         updatedAt: new Date().toISOString()
       });
       
@@ -432,6 +436,60 @@ export default function EditListing() {
                 />
                 {errors.title && <p className="text-[10px] text-destructive font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> {errors.title}</p>}
                 
+                <div className="grid gap-2 mt-4">
+                  <Label htmlFor="tags" className="text-[10px] uppercase font-black tracking-widest opacity-60">Asset Tags / Keywords</Label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {formData.tags?.map((tag, i) => (
+                      <Badge key={i} variant="secondary" className="pl-3 pr-1 py-1 rounded-lg bg-primary/10 border-primary/20 text-primary">
+                        {tag}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 ml-1 hover:bg-primary/20 rounded-full"
+                          onClick={() => setFormData({ ...formData, tags: formData.tags.filter((_, idx) => idx !== i) })}
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="tags"
+                      placeholder="Add tags (e.g. Siemens, 3-Phase, Heavy Duty)"
+                      className="rounded-xl border-primary/20 bg-primary/5 focus:bg-background"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && tagInput.trim()) {
+                          e.preventDefault();
+                          if (!formData.tags.includes(tagInput.trim())) {
+                            setFormData({ ...formData, tags: [...formData.tags, tagInput.trim()] });
+                          }
+                          setTagInput("");
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-xl border-primary/20"
+                      onClick={() => {
+                        if (tagInput.trim()) {
+                          if (!formData.tags.includes(tagInput.trim())) {
+                            setFormData({ ...formData, tags: [...formData.tags, tagInput.trim()] });
+                          }
+                          setTagInput("");
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-tight">Press enter to add tags for better discoverability.</p>
+                </div>
+
                 <Button 
                    type="button" 
                    variant="outline" 

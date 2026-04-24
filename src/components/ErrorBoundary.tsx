@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { db, collection, addDoc, serverTimestamp } from "@/lib/firebase";
 
 interface Props {
   children: ReactNode;
@@ -29,6 +30,15 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
+    
+    // Log to central system
+    addDoc(collection(db, "error_logs"), {
+      error: error.message,
+      componentStack: errorInfo.componentStack,
+      url: window.location.href,
+      type: 'REACT_ERROR_BOUNDARY',
+      timestamp: serverTimestamp()
+    }).catch(e => console.error("Failed to log error to central system:", e));
   }
 
   render() {
