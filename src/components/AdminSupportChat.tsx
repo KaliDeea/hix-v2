@@ -7,7 +7,9 @@ import {
   Loader2,
   ChevronLeft,
   Bot,
-  UserCheck
+  UserCheck,
+  CheckCircle2,
+  X
 } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,9 @@ import {
   orderBy, 
   serverTimestamp, 
   doc, 
-  updateDoc 
+  updateDoc,
+  handleFirestoreError,
+  OperationType
 } from "@/lib/firebase";
 import { Chat, Message } from "@/types";
 import { format } from "date-fns";
@@ -92,7 +96,7 @@ export default function AdminSupportChat({ chat, onBack }: AdminSupportChatProps
       });
 
     } catch (err) {
-      console.error("Error sending admin message:", err);
+      handleFirestoreError(err, OperationType.UPDATE, `chats/${chat.id}`);
     } finally {
       setLoading(false);
     }
@@ -115,7 +119,35 @@ export default function AdminSupportChat({ chat, onBack }: AdminSupportChatProps
         createdAt: serverTimestamp()
       });
     } catch (err) {
-      console.error("Error toggling AI mode:", err);
+      handleFirestoreError(err, OperationType.UPDATE, `chats/${chat.id}`);
+    }
+  };
+
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  const handleCloseChat = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      await updateDoc(doc(db, "chats", chat.id), {
+        status: "closed",
+        updatedAt: serverTimestamp()
+      });
+      
+      await addDoc(collection(db, `chats/${chat.id}/messages`), {
+        chatId: chat.id,
+        senderId: "SYSTEM",
+        text: `The support ticket has been marked as resolved by ${profile?.companyName || user.email || "Support"}.`,
+        createdAt: serverTimestamp()
+      });
+      
+      onBack();
+      setShowCloseConfirm(false);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `chats/${chat.id}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -148,18 +180,52 @@ export default function AdminSupportChat({ chat, onBack }: AdminSupportChatProps
               </div>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={toggleAI}
-            className="rounded-xl font-bold uppercase tracking-widest text-[10px] h-9 gap-2"
-          >
-            {chat.supportMode === 'ai' ? (
-              <><UserCheck className="h-3.5 w-3.5" /> Take Over</>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={toggleAI}
+              className="rounded-xl font-bold uppercase tracking-widest text-[10px] h-9 gap-2"
+            >
+              {chat.supportMode === 'ai' ? (
+                <><UserCheck className="h-3.5 w-3.5" /> Take Over</>
+              ) : (
+                <><Bot className="h-3.5 w-3.5" /> Hand back to AI</>
+              )}
+            </Button>
+            
+            {showCloseConfirm ? (
+              <div className="flex items-center bg-emerald-500/10 rounded-xl px-2 py-1 gap-1 border border-emerald-500/20">
+                <span className="text-[9px] font-bold text-emerald-500 uppercase ml-1">Resolve?</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleCloseChat} 
+                  className="h-7 w-7 rounded-lg hover:bg-emerald-500 text-emerald-500 hover:text-white"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowCloseConfirm(false)} 
+                  className="h-7 w-7 rounded-lg hover:bg-white/10 text-white/50"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             ) : (
-              <><Bot className="h-3.5 w-3.5" /> Hand back to AI</>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowCloseConfirm(true)}
+                disabled={loading}
+                className="rounded-xl font-bold uppercase tracking-widest text-[10px] h-9 gap-2 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" /> Resolve Ticket
+              </Button>
             )}
-          </Button>
+          </div>
         </div>
       </CardHeader>
       

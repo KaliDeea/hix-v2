@@ -160,6 +160,114 @@ async function startServer() {
     res.json({ received: true });
   });
 
+  // Gemini AI Matching
+  app.post("/api/ai/match", async (req, res) => {
+    try {
+      const { request, listings } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+
+      if (!apiKey) {
+        // Fallback matching logic if no API key
+        console.warn("GEMINI_API_KEY is missing. Using fallback matching logic.");
+        const results = listings
+          .map((listing: any) => {
+            const categoryMatch = listing.category.toLowerCase() === request.category.toLowerCase();
+            const titleMatch = (listing.title?.toLowerCase() || "").includes(request.title?.toLowerCase() || "") || 
+                              (request.title?.toLowerCase() || "").includes(listing.title?.toLowerCase() || "");
+            
+            let score = 0;
+            if (categoryMatch) score += 50;
+            if (titleMatch) score += 30;
+            
+            const commonTags = (listing.tags || []).filter((t: string) => (request.tags || []).includes(t));
+            score += commonTags.length * 5;
+
+            return {
+              listingId: listing.id,
+              score: Math.min(score, 100),
+              reasoning: categoryMatch ? "Categories match exactly." : "Partial title overlap detected.",
+              matchType: score > 80 ? 'perfect' : score > 50 ? 'good' : 'potential'
+            };
+          })
+          .filter((m: any) => m.score > 30)
+          .sort((a: any, b: any) => b.score - a.score);
+        
+        return res.json(results);
+      }
+
+      const sdk = await import("@google/genai");
+      const genAI = new sdk.GoogleGenAI({ apiKey });
+      const model = (genAI as any).getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const listingsData = listings.map((l: any) => ({
+        id: l.id,
+        title: l.title,
+        category: l.category,
+        description: l.description,
+        price: l.price,
+        tags: l.tags
+      }));
+
+      const prompt = `
+        Compare this industrial asset request with the provided listings.
+        Request: "${request.title}" - Category: ${request.category} - Description: ${request.description} - Budget: £${request.budget || 'Any'}
+        
+        Listings: ${JSON.stringify(listingsData)}
+        
+        Return a JSON array of match results. Each result must have listingId, score (0-100), reasoning (brief), and matchType ('perfect', 'good', 'potential').
+        Only include listings that have a score > 40.
+        Format your response EXACTLY as a JSON array. Do not include markdown formatting.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const cleanJson = text.replace(/```json|```/g, "").trim();
+      res.json(JSON.parse(cleanJson));
+    } catch (error: any) {
+      console.error("AI Matching Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generic AI Route for various tasks
+  app.post("/api/ai/generate", async (req, res) => {
+    try {
+      const { contents, systemInstruction, responseSchema, modelName, generationConfig } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing on server." });
+
+      const sdk = await import("@google/genai");
+      const genAI = new sdk.GoogleGenAI({ apiKey });
+      const model = (genAI as any).getGenerativeModel({ 
+        model: modelName || "gemini-1.5-flash",
+        systemInstruction
+      });
+
+      const result = await model.generateContent({
+        contents,
+        generationConfig: responseSchema ? {
+          ...generationConfig,
+          responseMimeType: "application/json",
+          responseSchema
+        } : (generationConfig || undefined)
+      });
+
+      const responseText = result.response.text();
+      if (responseSchema) {
+        try {
+          return res.json(JSON.parse(responseText.replace(/```json|```/g, "").trim()));
+        } catch (e) {
+          console.error("JSON Parse Error:", e, responseText);
+          return res.json({ text: responseText });
+        }
+      }
+      res.json({ text: responseText });
+    } catch (error: any) {
+      console.error("AI Generate Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Automatic Production detection if NODE_ENV not set
   const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(__dirname, 'dist'));
 

@@ -237,7 +237,7 @@ export default function PublicProfile() {
                       />
                       <div className="absolute top-3 right-3">
                         <Badge className="bg-black/60 backdrop-blur-md border-white/10 text-white font-bold">
-                          £{listing.price.toLocaleString()}
+                          £{listing.price?.toLocaleString() || '0'}
                         </Badge>
                       </div>
                     </div>

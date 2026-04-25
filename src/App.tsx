@@ -27,9 +27,12 @@ import Auth from "@/pages/Auth";
 import PublicProfile from "@/pages/PublicProfile";
 import RequestAsset from "@/pages/RequestAsset";
 import Whitepaper from "@/pages/Whitepaper";
+import CompareAssets from "@/pages/CompareAssets";
 import SupportChatWidget from "@/components/SupportChatWidget";
+import { ComparisonBar } from "@/components/ComparisonBar";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ComparisonProvider } from "@/components/ComparisonProvider";
 import { useAuth } from "@/lib/firebase";
 import { AlertTriangle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -73,8 +76,9 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light" storageKey="hix-theme">
         <AuthProvider>
-          <TooltipProvider>
-            <SuspendedOverlay />
+          <ComparisonProvider>
+            <TooltipProvider>
+              <SuspendedOverlay />
             <Router>
               <ScrollToTop />
               <div className="flex min-h-screen flex-col overflow-x-hidden">
@@ -104,15 +108,18 @@ export default function App() {
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/request-asset" element={<RequestAsset />} />
                     <Route path="/whitepaper" element={<Whitepaper />} />
+                    <Route path="/compare" element={<CompareAssets />} />
                   </Routes>
                 </main>
                 <Footer />
                 <SupportChatWidget />
+                <ComparisonBar />
               </div>
               <Toaster />
             </Router>
           </TooltipProvider>
-        </AuthProvider>
+        </ComparisonProvider>
+      </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

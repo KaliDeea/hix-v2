@@ -78,7 +78,8 @@ import {
   ChevronRight,
   Menu,
   X,
-  ShoppingCart
+  ShoppingCart,
+  Zap
 } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -118,6 +119,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 import { jsPDF } from "jspdf";
+import { 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  PieChart, 
+  Pie, 
+  Cell,
+  BarChart,
+  Bar
+} from "recharts";
 
 const ESGCertificateModal = ({ 
   isOpen, 
@@ -416,6 +431,130 @@ const ESGCertificateModal = ({
     </AlertDialog>
   );
 };
+
+const ESGBreakdownModal = ({ 
+  isOpen, 
+  onClose, 
+  listing 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  listing: Listing | null;
+}) => {
+  if (!listing) return null;
+
+  // Calculation Logic
+  const co2Points = Math.min(listing.co2Savings * 2, 20); // Max 20
+  const reusePoints = (listing.materialReuse || 85) * 0.4; // Max 40
+  const logisticsPoints = (listing.logisticsOptimization || 78) * 0.4; // Max 40
+  const totalScore = Math.min(Math.round(co2Points + reusePoints + logisticsPoints), 100);
+
+  const breakdownData = [
+    { name: 'CO2 Savings', value: listing.co2Savings, max: 10, unit: 'kg/unit', points: co2Points, weight: '20%', icon: Leaf, desc: 'Direct carbon sequestration or emissions avoided through asset lifecycle extension.' },
+    { name: 'Material Reuse', value: listing.materialReuse || 85, max: 100, unit: '%', points: reusePoints, weight: '40%', icon: RefreshCw, desc: 'Percentage of industrial materials recovered and returned to production cycles.' },
+    { name: 'Logistics Opt.', value: listing.logisticsOptimization || 78, max: 100, unit: '%', points: logisticsPoints, weight: '40%', icon: Car, desc: 'Optimization of transport routes and load factors to minimize supply chain impact.' }
+  ];
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl h-[85vh] glass border-white/20 p-0 overflow-hidden flex flex-col shadow-2xl backdrop-blur-xl bg-slate-950/40">
+        <div className="p-8 pb-10 border-b border-white/10 bg-white/5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500 shadow-inner">
+              <BarChart3 className="h-8 w-8" />
+            </div>
+            <div>
+              <DialogTitle className="text-3xl font-black tracking-tight text-white uppercase italic">ESG Impact Breakdown</DialogTitle>
+              <DialogDescription className="text-base text-white/50 font-medium">
+                Proprietary ESG Calculation Engine &bull; Asset Verification
+              </DialogDescription>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-all">
+            <X className="h-7 w-7" />
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+          {/* Asset Info */}
+          <div className="flex items-end justify-between border-b border-white/5 pb-6">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2">Analyzing Asset</p>
+              <h3 className="text-2xl font-black text-white leading-tight">{listing.title}</h3>
+              <p className="text-sm text-white/40 mt-1 font-medium">{listing.category} &bull; ID: {listing.id.slice(0, 12)}</p>
+            </div>
+            <div className="text-right">
+              <div className="text-5xl font-black text-primary tracking-tighter tabular-nums leading-none mb-2">{totalScore}<span className="text-xl">.0</span></div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Total ESG Grade</p>
+            </div>
+          </div>
+
+          {/* Breakdown Cards */}
+          <div className="space-y-4">
+            {breakdownData.map((item, idx) => (
+              <div key={idx} className="p-6 rounded-3xl bg-white/5 border border-white/10 group hover:border-primary/30 transition-all duration-500">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-white/5 text-white/70 group-hover:bg-primary group-hover:text-white transition-all duration-500">
+                      <item.icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-black text-white tracking-tight uppercase tabular-nums">{item.name}</h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-black text-primary uppercase tracking-widest">{item.weight} Weighting</span>
+                        <div className="h-1 w-1 rounded-full bg-white/20" />
+                        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">Verified HiX-AI</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-black text-white tabular-nums">{item.value}{item.unit}</div>
+                    <div className="text-[10px] font-black text-white/20 uppercase tracking-widest">Raw Input Value</div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(item.points / (idx === 0 ? 20 : 40)) * 100}%` }}
+                      transition={{ duration: 1, delay: idx * 0.2 }}
+                      className="h-full bg-primary rounded-full shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em]">
+                    <span className="text-white/40">Point Contribution</span>
+                    <span className="text-primary">{item.points.toFixed(1)} / {idx === 0 ? '20' : '40'}</span>
+                  </div>
+                  <p className="text-xs text-white/40 leading-relaxed font-medium pt-2 italic">
+                    "{item.desc}"
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Logic Summary */}
+          <div className="p-8 rounded-3xl bg-primary/5 border border-primary/20 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Zap className="h-24 w-24" />
+            </div>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-4">Calculation Policy</h4>
+            <p className="text-xs text-white/60 leading-relaxed font-medium">
+              ESG scores on HiX are calculated using a weighted vector analysis. CO2 savings are mapped to a logarithmic scale, while Circularity (Material Reuse) and Logistics Efficiency are linearly weighted based on verified industrial standards. All data is subject to post-transaction auditing through our ledger system.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-white/10 bg-white/5 shrink-0 flex justify-end">
+          <Button onClick={onClose} className="rounded-2xl px-10 h-14 bg-white text-black hover:bg-white/90 font-black uppercase tracking-[0.2em] text-xs transition-transform active:scale-95 shadow-xl">
+            Close Analysis
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 const Pagination = ({ 
   currentPage, 
   totalItems, 
@@ -498,6 +637,159 @@ export default function Admin() {
 
   const [announcement, setAnnouncement] = useState({ title: "", message: "" });
   const [isSendingAnnouncement, setIsSendingAnnouncement] = useState(false);
+
+  const generatePlatformDocs = async (recipient: { name: string; email: string; company: string }) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Logo
+      if (platformSettings.hixLogoUrl) {
+        try {
+          doc.addImage(platformSettings.hixLogoUrl, 'PNG', 170, 15, 25, 25);
+        } catch (e) {
+          console.error("Could not add logo to PDF:", e);
+        }
+      }
+
+      // Title Section
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(24);
+      doc.setTextColor(15, 23, 42); // Slate 900
+      doc.text('HiX PLATFORM', 20, 30);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(71, 85, 105); // Slate 600
+      doc.text('Official Platform Documentation & Institutional Overview', 20, 38);
+
+      // Recipient Info
+      doc.setDrawColor(203, 213, 225); // Slate 300
+      doc.line(20, 45, 190, 45);
+      
+      doc.setTextColor(51, 65, 85); // Slate 700
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PREPARED FOR:', 20, 55);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${recipient.name}`, 55, 55);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('ORGANIZATION:', 20, 60);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${recipient.company}`, 55, 60);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('DATE:', 20, 65);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${new Date().toLocaleDateString()}`, 55, 65);
+
+      // Section 1: Executive Summary
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text('1. Executive Summary', 20, 80);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+      const summary = `HiX is an enterprise-grade industrial resource management platform designed to facilitate the circular economy within the industrial sector. Our platform connects industrial entities to optimize the reuse of raw materials, machinery, and industrial components, significantly reducing waste and carbon footprints through digital transformation and strategic asset matching.`;
+      doc.text(doc.splitTextToSize(summary, 170), 20, 88);
+
+      // Section 2: Core Capabilities
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text('2. Core Capabilities', 20, 110);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const capabilities = [
+        "Real-time Asset Tracking: Comprehensive inventory management for surplus industrial materials.",
+        "Verified Vetting: Multi-stage institutional verification for all platform participants.",
+        "ESG Impact Analytics: Proprietary algorithms to quantify CO2 savings and circularity rates.",
+        "Direct B2B Logic: Secure transaction flow with commission structures for sustainable growth."
+      ];
+      
+      let yPos = 118;
+      capabilities.forEach(cap => {
+        doc.text("•", 22, yPos);
+        doc.text(cap, 28, yPos);
+        yPos += 7;
+      });
+
+      // Section 3: Technical Compliance
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(15, 23, 42);
+      doc.text('3. Technical Compliance', 20, 155);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const technical = `The HiX platform infrastructure utilizes a zero-trust architecture. All document transfers, transactional data, and user profile information are protected by industry-standard encryption. Our vetting process ensures all VAT and corporate registration numbers are verified through official channels before platform access is granted, maintaining the integrity of our B2B marketplace.`;
+      doc.text(doc.splitTextToSize(technical, 170), 20, 163);
+
+      // Contact
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 23, 42);
+      doc.text('Contact Information:', 20, 200);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('Institutional Relations: institutions@hix-platform.com', 20, 208);
+      doc.text('Technical Support: support@hix-platform.com', 20, 215);
+
+      // Footer
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 275, 190, 275);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184); // Slate 400
+      doc.text('HiX Platform | Sustainable Industrial Solutions | Confidential Institutional Document', 105, 282, { align: 'center' });
+      doc.text(`Page 1 of 1`, 190, 282, { align: 'right' });
+
+      doc.save(`HiX_Platform_Documentation_${recipient.company.replace(/\s+/g, '_')}.pdf`);
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  };
+
+  const listingStats = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    listings.forEach(l => {
+      const cat = l.category || 'Other';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [listings]);
+
+  const COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+  const dailyActivity = useMemo(() => {
+    const days = 7;
+    const data = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = format(date, "MMM dd");
+      
+      const dayUsers = users.filter(u => {
+        const created = u.createdAt?.toDate ? u.createdAt.toDate() : (u.createdAt ? new Date(u.createdAt) : new Date(0));
+        return format(created, "MMM dd") === dateStr;
+      }).length;
+      
+      const dayDeals = transactions.filter(t => {
+        const created = t.createdAt?.toDate ? t.createdAt.toDate() : (t.createdAt ? new Date(t.createdAt) : new Date(0));
+        return format(created, "MMM dd") === dateStr;
+      }).length;
+
+      data.push({ name: dateStr, Users: dayUsers, Deals: dayDeals });
+    }
+    return data;
+  }, [users, transactions]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [selectedReportTransaction, setSelectedReportTransaction] = useState<Transaction | null>(null);
   const [selectedReportUser, setSelectedReportUser] = useState<UserProfile | null>(null);
@@ -554,11 +846,14 @@ export default function Admin() {
   const [reportReasonFilter, setReportReasonFilter] = useState("all");
   const [showESGCertModal, setShowESGCertModal] = useState(false);
   const [selectedUserForCert, setSelectedUserForCert] = useState<UserProfile | null>(null);
+  const [selectedListingForEsg, setSelectedListingForEsg] = useState<Listing | null>(null);
+  const [showEsgBreakdownModal, setShowEsgBreakdownModal] = useState(false);
   const [editedVatNumber, setEditedVatNumber] = useState("");
   const [isUpdatingVat, setIsUpdatingVat] = useState(false);
   const [selectedSupportChat, setSelectedSupportChat] = useState<Chat | null>(null);
   const [supportSearchQuery, setSupportSearchQuery] = useState("");
   const [supportFilter, setSupportFilter] = useState<"all" | "ai" | "agent">("all");
+  const [supportStatusFilter, setSupportStatusFilter] = useState<"all" | "open" | "closed">("open");
   const [supportDateFilter, setSupportDateFilter] = useState<"all" | "today" | "week">("all");
 
   const filteredSupportChats = useMemo(() => {
@@ -571,6 +866,10 @@ export default function Admin() {
       const matchesFilter = supportFilter === 'all' || 
                             (supportFilter === 'ai' && chat.supportMode === 'ai') ||
                             (supportFilter === 'agent' && chat.supportMode === 'agent');
+
+      const matchesStatus = supportStatusFilter === 'all' ||
+                            (supportStatusFilter === 'open' && chat.status !== 'closed') ||
+                            (supportStatusFilter === 'closed' && chat.status === 'closed');
       
       let matchesDate = true;
       if (supportDateFilter !== 'all') {
@@ -585,9 +884,9 @@ export default function Admin() {
         }
       }
       
-      return matchesSearch && matchesFilter && matchesDate;
+      return matchesSearch && matchesFilter && matchesStatus && matchesDate;
     });
-  }, [supportChats, supportSearchQuery, supportFilter, supportDateFilter]);
+  }, [supportChats, supportSearchQuery, supportFilter, supportStatusFilter, supportDateFilter]);
 
   useEffect(() => {
     if (selectedUserForVetting) {
@@ -1351,6 +1650,8 @@ export default function Admin() {
           location: "Manchester, UK",
           images: ["https://picsum.photos/seed/compressor/800/600"],
           co2Savings: 450,
+          materialReuse: 82,
+          logisticsOptimization: 75,
           status: "available",
           listingType: "fixed",
           sellerId: profile.uid,
@@ -1370,6 +1671,8 @@ export default function Admin() {
           location: "Leeds, UK",
           images: ["https://picsum.photos/seed/racking/800/600"],
           co2Savings: 1200,
+          materialReuse: 95,
+          logisticsOptimization: 88,
           status: "available",
           listingType: "fixed",
           sellerId: profile.uid,
@@ -1389,6 +1692,8 @@ export default function Admin() {
           location: "Sheffield, UK",
           images: ["https://picsum.photos/seed/cnc/800/600"],
           co2Savings: 3500,
+          materialReuse: 78,
+          logisticsOptimization: 82,
           status: "available",
           listingType: "auction",
           reservePrice: 4500,
@@ -1533,57 +1838,149 @@ export default function Admin() {
           </div>
         </motion.div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
-          <div className="sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-white/10 -mx-4 px-4 py-4 sm:mx-0 sm:px-6 sm:rounded-3xl sm:border sm:mt-4 sm:shadow-lg sm:border-primary/10">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 shrink-0 hidden sm:flex">
-                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Management</h3>
-                  <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest text-nowrap">Admin Control</p>
-                </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex flex-col lg:flex-row gap-8 relative">
+            {/* Desktop Sidebar Navigation */}
+            <aside className="hidden lg:block w-64 shrink-0 space-y-8 sticky top-24 h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar pr-4">
+              {[
+                {
+                  title: "Oversight",
+                  items: [
+                    { value: "dashboard", label: "Overview", icon: BarChart3, show: isViewer },
+                    { value: "vetting", label: "Vetting Queue", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, badgeColor: "bg-amber-500", show: isEditor },
+                  ]
+                },
+                {
+                  title: "Operations",
+                  items: [
+                    { value: "users", label: "User Directory", icon: Users, show: isViewer },
+                    { value: "transactions", label: "Transactions", icon: DollarSign, show: isViewer },
+                    { value: "requests", label: "Information Requests", icon: FileText, badge: whitepaperRequests.filter(r => r.status === 'pending').length, badgeColor: "bg-blue-500", show: isEditor },
+                    { value: "bulk", label: "Data Integration", icon: Upload, show: isEditor },
+                  ]
+                },
+                {
+                  title: "Communication",
+                  items: [
+                    { value: "support", label: "Live Support", icon: Headphones, badge: supportChats.filter(c => c.supportMode === 'agent').length, badgeColor: "bg-red-500", show: isEditor },
+                    { value: "reports", label: "User Reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, badgeColor: "bg-destructive", show: isEditor },
+                  ]
+                },
+                {
+                  title: "Infrastructure",
+                  items: [
+                    { value: "esg", label: "ESG Analysis", icon: Leaf, show: isViewer },
+                    { value: "audit", label: "Audit Trails", icon: History, show: isViewer },
+                    { value: "errors", label: "System Health", icon: Activity, show: isSuperAdmin, badge: errorLogs.length, badgeColor: "bg-destructive" },
+                  ]
+                },
+                {
+                  title: "Security & Config",
+                  items: [
+                    { value: "admins", label: "Access Control", icon: UserCog, show: isAdmin },
+                    { value: "settings", label: "Global Settings", icon: Database, show: isAdmin },
+                    { value: "system", label: "Maintenance", icon: RefreshCw, show: isSuperAdmin },
+                  ]
+                }
+              ].map((category, idx) => {
+                const visibleItems = category.items.filter(i => i.show);
+                if (visibleItems.length === 0) return null;
+                
+                return (
+                  <div key={idx} className="space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 px-4">
+                      {category.title}
+                    </h4>
+                    <div className="space-y-1">
+                      {visibleItems.map((item) => (
+                        <button
+                          key={item.value}
+                          onClick={() => setActiveTab(item.value)}
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 group relative
+                            ${activeTab === item.value 
+                              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                              : "hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <item.icon className={`h-4 w-4 ${activeTab === item.value ? "text-white" : "group-hover:text-primary transition-colors"}`} />
+                            <span className="text-xs font-bold tracking-tight">
+                              {item.label}
+                            </span>
+                          </div>
+                          {item.badge !== undefined && item.badge > 0 && (
+                            <span className={`px-1.5 py-0.5 rounded-full ${activeTab === item.value ? "bg-white text-primary" : item.badgeColor + " text-white"} text-[9px] font-black min-w-[18px] flex items-center justify-center`}>
+                              {item.badge}
+                            </span>
+                          )}
+                          {activeTab === item.value && (
+                            <motion.div 
+                              layoutId="activeTabIndicator"
+                              className="absolute -left-1 w-1 h-6 bg-white rounded-full lg:hidden"
+                            />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              
+              <div className="pt-8 px-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/")}
+                  className="w-full rounded-2xl border-white/10 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white h-12 gap-3 font-bold uppercase tracking-widest text-[10px]"
+                >
+                  <Home className="h-4 w-4" />
+                  Exit To Platform
+                </Button>
               </div>
+            </aside>
 
-              <TabsList className="flex h-auto bg-transparent border-none p-0 gap-1 overflow-x-auto justify-start flex-1 w-full custom-scrollbar pb-2">
+            {/* Mobile Navigation - Compact Horizontal Scroll */}
+            <div className="lg:hidden sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-white/10 -mx-4 px-4 py-4 mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Admin Control</h3>
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
                 {[
-                  { value: "dashboard", label: "Dashboard", icon: BarChart3, show: isViewer },
-                  { value: "users", label: "Users", icon: Users, show: isViewer },
-                  { value: "transactions", label: "Transactions", icon: DollarSign, show: isViewer },
-                  { value: "admins", label: "Admins", icon: ShieldCheck, show: isAdmin },
-                  { value: "vetting", label: "Vetting Queue", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, badgeColor: "bg-amber-500", show: isEditor },
-                  { value: "support", label: "Live Support", icon: Headphones, badge: supportChats.filter(c => c.supportMode === 'agent').length, badgeColor: "bg-red-500", show: isEditor },
-                  { value: "reports", label: "Reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, badgeColor: "bg-destructive", show: isEditor },
-                  { value: "requests", label: "Requests", icon: FileText, badge: whitepaperRequests.filter(r => r.status === 'pending').length, badgeColor: "bg-blue-500", show: isEditor },
-                  { value: "bulk", label: "Bulk Upload", icon: Upload, show: isEditor },
-                  { value: "esg", label: "ESG Impact", icon: Leaf, show: isViewer },
-                  { value: "audit", label: "Audit Logs", icon: History, show: isViewer },
-                  { value: "errors", label: "System Errors", icon: AlertTriangle, show: isSuperAdmin, badge: errorLogs.length, badgeColor: "bg-destructive" },
-                  { value: "settings", label: "Platform Settings", icon: Database, show: isAdmin },
-                  { value: "system", label: "System Tools", icon: RefreshCw, show: isSuperAdmin },
-                ].filter(tab => tab.show).map((tab) => (
-                  <TabsTrigger 
-                    key={`admin-tab-${tab.value}`}
-                    value={tab.value} 
-                    className="flex items-center justify-center gap-0 px-3 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/10 hover:bg-white/5 transition-all relative group shrink-0 border-none w-auto"
+                  { value: "dashboard", icon: BarChart3, show: isViewer },
+                  { value: "users", icon: Users, show: isViewer },
+                  { value: "transactions", icon: DollarSign, show: isViewer },
+                  { value: "vetting", icon: ShieldCheck, badge: users.filter(u => !u.isVetted || !u.isVatVerified).length, show: isEditor },
+                  { value: "support", icon: Headphones, badge: supportChats.filter(c => c.supportMode === 'agent').length, show: isEditor },
+                  { value: "reports", icon: AlertTriangle, badge: reports.filter(r => r.status === 'pending').length, show: isEditor },
+                  { value: "requests", icon: FileText, show: isEditor },
+                  { value: "bulk", icon: Upload, show: isEditor },
+                  { value: "esg", icon: Leaf, show: isViewer },
+                  { value: "audit", icon: History, show: isViewer },
+                  { value: "errors", icon: Activity, show: isSuperAdmin },
+                ].filter(i => i.show).map((item) => (
+                  <button
+                    key={`mob-${item.value}`}
+                    onClick={() => setActiveTab(item.value)}
+                    className={`h-10 w-10 shrink-0 flex items-center justify-center rounded-xl transition-all relative
+                      ${activeTab === item.value 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-white/5 text-muted-foreground"
+                      }`}
                   >
-                    <tab.icon className="h-4 w-4 shrink-0" />
-                    <span className="font-bold text-[10px] tracking-tight max-w-0 opacity-0 group-hover:max-w-[120px] group-hover:opacity-100 group-hover:ml-2 transition-all duration-300 whitespace-nowrap overflow-hidden">
-                      {tab.label}
-                    </span>
-                    {tab.badge !== undefined && tab.badge > 0 && (
-                      <span className={`h-4 w-4 rounded-full ${tab.badgeColor} text-white text-[9px] flex items-center justify-center font-bold shadow-sm shrink-0`}>
-                        {tab.badge}
+                    <item.icon className="h-4 w-4" />
+                    {item.badge !== undefined && item.badge > 0 && (
+                      <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center font-bold">
+                        {item.badge}
                       </span>
                     )}
-                  </TabsTrigger>
+                  </button>
                 ))}
-              </TabsList>
+              </div>
             </div>
-          </div>
 
-          <div className="w-full min-w-0">
+            <div className="flex-1 min-w-0">
             {isViewer && (
               <TabsContent value="dashboard" className="mt-0 outline-none">
               <motion.div 
@@ -1628,6 +2025,91 @@ export default function Admin() {
                   </Card>
                 </motion.div>
               ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="glass border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    Growth & Performance
+                  </CardTitle>
+                  <CardDescription>User and transaction activity over the last 7 days.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px] relative">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <AreaChart data={dailyActivity}>
+                      <defs>
+                        <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorDeals" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                      <XAxis 
+                        dataKey="name" 
+                        stroke="#ffffff40" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false} 
+                      />
+                      <YAxis 
+                        stroke="#ffffff40" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #ffffff20', borderRadius: '12px' }}
+                        itemStyle={{ fontSize: '10px', fontWeight: 'bold' }}
+                      />
+                      <Area type="monotone" dataKey="Users" stroke="#22c55e" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="Deals" stroke="#3b82f6" fillOpacity={1} fill="url(#colorDeals)" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="glass border-primary/20">
+                <CardHeader>
+                  <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                    <PieChart className="h-4 w-4 text-primary" />
+                    Category Distribution
+                  </CardTitle>
+                  <CardDescription>Asset listing distribution across industrial sectors.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px] relative">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <PieChart>
+                      <Pie
+                        data={listingStats}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {listingStats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #ffffff20', borderRadius: '12px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-black text-white">{listings.length}</span>
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase">Assets</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1953,7 +2435,7 @@ export default function Admin() {
                                 )}
                               </TableCell>
                               <TableCell className="text-xs text-muted-foreground">
-                                {u.lastLogin ? (
+                                {u.lastLogin && u.lastLogin.seconds ? (
                                   new Date(u.lastLogin.seconds * 1000).toLocaleString()
                                 ) : (
                                   "Never"
@@ -2123,7 +2605,7 @@ export default function Admin() {
                               </TableCell>
                               <TableCell className="text-[10px] font-mono">{t.buyerId.substring(0, 8)}...</TableCell>
                               <TableCell className="text-[10px] font-mono">{t.sellerId.substring(0, 8)}...</TableCell>
-                              <TableCell className="font-bold">£{t.amount?.toLocaleString()}</TableCell>
+                              <TableCell className="font-bold">£{t.amount?.toLocaleString() || '0'}</TableCell>
                               <TableCell>{t.quantity}</TableCell>
                               <TableCell>
                                 <Badge className={`rounded-md ${
@@ -2209,20 +2691,47 @@ export default function Admin() {
                               </TableCell>
                               <TableCell className="text-right pr-6">
                                 {req.status === 'pending' && (
-                                  <Button 
-                                    size="sm" 
-                                    className="h-8 rounded-lg text-[10px] uppercase font-bold"
-                                    onClick={async () => {
-                                      try {
-                                        await updateDoc(doc(db, "whitepaper_requests", req.id), { status: 'sent' });
-                                        toast.success("Marked as document sent!");
-                                      } catch (err) {
-                                        toast.error("Failed to update status");
-                                      }
-                                    }}
-                                  >
-                                    Mark as Sent
-                                  </Button>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      className="h-8 rounded-lg text-[10px] uppercase font-bold border-primary/30 text-primary hover:bg-primary/5"
+                                      onClick={async () => {
+                                        const success = await generatePlatformDocs({
+                                          name: req.name,
+                                          email: req.email,
+                                          company: req.company
+                                        });
+                                        if (success) {
+                                          try {
+                                            await updateDoc(doc(db, "whitepaper_requests", req.id), { status: 'sent' });
+                                            toast.success("Documentation generated and status updated!");
+                                          } catch (err) {
+                                            handleFirestoreError(err, OperationType.UPDATE, `whitepaper_requests/${req.id}`);
+                                          }
+                                        } else {
+                                          toast.error("Failed to generate documentation");
+                                        }
+                                      }}
+                                    >
+                                      <Upload className="h-3 w-3 mr-1" />
+                                      Send Documentation
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      className="h-8 rounded-lg text-[10px] uppercase font-bold"
+                                      onClick={async () => {
+                                        try {
+                                          await updateDoc(doc(db, "whitepaper_requests", req.id), { status: 'sent' });
+                                          toast.success("Marked as document sent!");
+                                        } catch (err) {
+                                          handleFirestoreError(err, OperationType.UPDATE, `whitepaper_requests/${req.id}`);
+                                        }
+                                      }}
+                                    >
+                                      Mark as Sent
+                                    </Button>
+                                  </div>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -2670,6 +3179,32 @@ export default function Admin() {
                           <Button 
                             variant="ghost" 
                             size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportStatusFilter === 'open' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportStatusFilter('open')}
+                          >
+                            Open
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportStatusFilter === 'closed' ? 'bg-zinc-500/20 text-zinc-500' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportStatusFilter('closed')}
+                          >
+                            Closed
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportStatusFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                            onClick={() => setSupportStatusFilter('all')}
+                          >
+                            All
+                          </Button>
+                        </div>
+                        <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
                             className={`h-7 px-3 rounded-lg text-[9px] uppercase font-bold tracking-widest ${supportDateFilter === 'all' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
                             onClick={() => setSupportDateFilter('all')}
                           >
@@ -3106,6 +3641,82 @@ export default function Admin() {
                                 </TableCell>
                               </TableRow>
                             ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="glass border-primary/10 overflow-hidden">
+                    <CardHeader className="pb-4">
+                      <div>
+                        <CardTitle className="text-lg font-black uppercase tracking-tight">Asset Sustainability Analysis</CardTitle>
+                        <CardDescription>Detailed ESG impact breakdown for industrial listings.</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="rounded-2xl border border-white/5 overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-white/5">
+                            <TableRow className="hover:bg-transparent border-white/10">
+                              <TableHead className="font-bold text-xs uppercase tracking-widest">Asset</TableHead>
+                              <TableHead className="font-bold text-xs uppercase tracking-widest">Seller</TableHead>
+                              <TableHead className="font-bold text-xs uppercase tracking-widest text-center">ESG Score</TableHead>
+                              <TableHead className="text-right font-bold text-xs uppercase tracking-widest">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {listings.slice(0, 5).map((listing) => {
+                              // ESG Score logic: (CO2/5 + Reuse*0.4 + Logistics*0.4) normalized
+                              const co2Weight = Math.min(listing.co2Savings * 2, 20); // Max 20 points
+                              const reuseWeight = (listing.materialReuse || 85) * 0.4; // Max 40 points
+                              const logisticsWeight = (listing.logisticsOptimization || 78) * 0.4; // Max 40 points
+                              const totalScore = Math.min(Math.round(co2Weight + reuseWeight + logisticsWeight), 100);
+
+                              return (
+                                <TableRow key={`esg-listing-${listing.id}`} className="hover:bg-white/5 border-white/5 transition-colors">
+                                  <TableCell>
+                                    <div className="flex items-center gap-3">
+                                      <div className="h-8 w-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
+                                        <Package className="h-4 w-4" />
+                                      </div>
+                                      <div>
+                                        <p className="font-bold text-sm truncate max-w-[200px]">{listing.title}</p>
+                                        <p className="text-[10px] text-muted-foreground">{listing.category}</p>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-xs font-medium">
+                                    {listing.sellerName}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-col items-center gap-1">
+                                      <div className="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden">
+                                        <div 
+                                          className={`h-full rounded-full ${totalScore > 80 ? 'bg-primary' : totalScore > 60 ? 'bg-blue-500' : 'bg-amber-500'}`} 
+                                          style={{ width: `${totalScore}%` }} 
+                                        />
+                                      </div>
+                                      <span className="text-xs font-bold">{totalScore}/100</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="rounded-lg h-8 px-4 text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-primary/10 transition-all font-black"
+                                      onClick={() => {
+                                        setSelectedListingForEsg(listing);
+                                        setShowEsgBreakdownModal(true);
+                                      }}
+                                    >
+                                      <BarChart3 className="h-3 w-3 mr-2" />
+                                      View Breakdown
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>
@@ -3609,6 +4220,7 @@ export default function Admin() {
             </motion.div>
           </TabsContent>
         )}
+        </div>
       </div>
     </Tabs>
 
@@ -3819,6 +4431,12 @@ export default function Admin() {
         platformLogo={platformSettings.hixLogoUrl}
       />
 
+      <ESGBreakdownModal
+        isOpen={showEsgBreakdownModal}
+        onClose={() => setShowEsgBreakdownModal(false)}
+        listing={selectedListingForEsg}
+      />
+
       <Dialog open={!!selectedTransaction} onOpenChange={(open) => !open && setSelectedTransaction(null)}>
         <DialogContent className="glass max-w-2xl border-primary/20 shadow-2xl backdrop-blur-xl">
           <DialogHeader>
@@ -3875,7 +4493,7 @@ export default function Admin() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-muted-foreground">Subtotal ({selectedTransaction.quantity} items)</span>
-                      <span className="font-bold">£{selectedTransaction.amount?.toLocaleString()}</span>
+                      <span className="font-bold">£{selectedTransaction.amount?.toLocaleString() || '0'}</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px]">
                       <span className="text-muted-foreground">Buyer Commission</span>
@@ -3888,7 +4506,7 @@ export default function Admin() {
                     <div className="h-px bg-white/10 my-1" />
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold uppercase tracking-widest">Total Value</span>
-                      <span className="text-lg font-black text-primary">£{(selectedTransaction.amount + (selectedTransaction.buyerCommission || 0)).toLocaleString()}</span>
+                      <span className="text-lg font-black text-primary">£{(selectedTransaction.amount + (selectedTransaction.buyerCommission || 0))?.toLocaleString() || '0'}</span>
                     </div>
                   </div>
                 </div>
@@ -4006,11 +4624,17 @@ export default function Admin() {
                 </div>
                 <div className="flex flex-col items-end">
                   <p className="text-[10px] text-muted-foreground font-medium">
-                    Opened {selectedTransaction.createdAt ? new Date(selectedTransaction.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
+                    Opened {selectedTransaction.createdAt ? (
+                      selectedTransaction.createdAt.seconds 
+                        ? new Date(selectedTransaction.createdAt.seconds * 1000).toLocaleString()
+                        : new Date(selectedTransaction.createdAt).toLocaleString()
+                    ) : 'N/A'}
                   </p>
                   {selectedTransaction.updatedAt && (
                     <p className="text-[9px] text-muted-foreground italic">
-                      Last modified {new Date(selectedTransaction.updatedAt.seconds * 1000).toLocaleString()}
+                      Last modified {selectedTransaction.updatedAt.seconds 
+                        ? new Date(selectedTransaction.updatedAt.seconds * 1000).toLocaleString()
+                        : new Date(selectedTransaction.updatedAt).toLocaleString()}
                     </p>
                   )}
                 </div>

@@ -23,7 +23,6 @@ import {
   getESGImpactColorBadge, 
   getESGImpactScoreLabel 
 } from "@/lib/qualityScore";
-import { GoogleGenAI, Type } from "@google/genai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,13 +57,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowRight, LayoutGrid, List as ListIcon, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2, AlertTriangle } from "lucide-react";
+import { Search, Filter, Leaf, ShieldCheck, Heart, Clock, ArrowRight, LayoutGrid, List as ListIcon, X, MapPin, Package, Truck, Calendar, MessageSquare, Loader2, AlertTriangle, Scale } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import { useComparison } from "@/components/ComparisonProvider";
 
 export default function Marketplace() {
   const { user, profile } = useAuth();
+  const { addToListings, removeFromListings, isInComparison } = useComparison();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [listings, setListings] = useState<Listing[]>([]);
@@ -362,27 +363,28 @@ export default function Marketplace() {
     const getSemanticSuggestions = async (query: string) => {
       setIsAiLoadingSuggestions(true);
       try {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: [{
-            parts: [{
-              text: `As an industrial equipment specialist, suggest exactly one technical alternative for the search query: "${query}". 
-              If searching for 'forklift', suggest 'Reach Truck'. If searching for 'drill', suggest 'Magnetic Drill Press'. 
-              Return JSON: suggestion (string).`
-            }]
-          }],
-          config: {
-            responseMimeType: "application/json",
+        const response = await fetch("/api/ai/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `As an industrial equipment specialist, suggest exactly one technical alternative for the search query: "${query}". 
+                If searching for 'forklift', suggest 'Reach Truck'. If searching for 'drill', suggest 'Magnetic Drill Press'. 
+                Return JSON: suggestion (string).`
+              }]
+            }],
             responseSchema: {
-              type: Type.OBJECT,
+              type: "object",
               properties: {
-                suggestion: { type: Type.STRING }
+                suggestion: { type: "string" }
               }
             }
-          }
+          })
         });
-        const result = JSON.parse(response.text);
+
+        if (!response.ok) throw new Error("Suggestion request failed");
+        const result = await response.json();
         setSemanticSuggestion(result.suggestion);
       } catch (err) {
         console.error("Semantic search failed:", err);
@@ -724,7 +726,7 @@ export default function Marketplace() {
                 </div>
 
                 {/* Action */}
-                <div className="col-span-1 md:col-span-1 p-6 flex items-center justify-center border-t md:border-t-0 md:border-l border-border md:bg-muted/5">
+                <div className="col-span-1 md:col-span-1 p-6 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-border md:bg-muted/5 gap-3">
                   <Button 
                     size="icon" 
                     className="h-12 w-12 rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:scale-110 transition-all bg-primary text-primary-foreground group/btn" 
@@ -733,6 +735,15 @@ export default function Marketplace() {
                     <Link to={`/listing/${listing.id}`}>
                       <ArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-0.5" />
                     </Link>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`h-8 w-8 rounded-full border-primary/20 hover:bg-primary/10 transition-all ${isInComparison(listing.id) ? 'bg-primary/20 text-primary border-primary' : 'text-muted-foreground'}`}
+                    onClick={() => isInComparison(listing.id) ? removeFromListings(listing.id) : addToListings(listing)}
+                  >
+                    <Scale className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </motion.div>

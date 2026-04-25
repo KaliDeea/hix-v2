@@ -141,7 +141,7 @@ service cloud.firestore {
     }
 
     function isValidChat(data) {
-      return hasOnlyAllowedFields(['participants', 'participantNames', 'participantLogos', 'listingId', 'listingTitle', 'listingImage', 'lastMessage', 'lastMessageTime', 'updatedAt', 'createdAt', 'isSupport', 'supportMode', 'lastRead']) &&
+      return hasOnlyAllowedFields(['participants', 'participantNames', 'participantLogos', 'listingId', 'listingTitle', 'listingImage', 'lastMessage', 'lastMessageTime', 'updatedAt', 'createdAt', 'isSupport', 'supportMode', 'lastRead', 'status']) &&
              (request.auth.uid in data.participants || isAdmin()) &&
              data.participants.size() >= 2;
     }
@@ -438,6 +438,7 @@ service cloud.firestore {
     match /whitepaper_requests/{requestId} {
       allow read: if isAdmin();
       allow create: if isValidWhitepaperRequest(request.resource.data);
+      allow update: if isAdmin();
     }
   }
 }

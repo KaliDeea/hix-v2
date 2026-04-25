@@ -87,6 +87,9 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { Skeleton } from "@/components/ui/skeleton";
+import { findMatches, MatchResult } from "../services/aiMatcher";
+import { LogisticsTracker } from "@/components/LogisticsTracker";
+import { generateSustainabilityReport } from "@/lib/pdf";
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
@@ -98,6 +101,9 @@ export default function Dashboard() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [assetRequests, setAssetRequests] = useState<AssetRequest[]>([]);
   const [logisticsJobs, setLogisticsJobs] = useState<LogisticsJob[]>([]);
+  const [allListings, setAllListings] = useState<Listing[]>([]);
+  const [matchingResults, setMatchingResults] = useState<{[requestId: string]: MatchResult[]}>({});
+  const [isMatching, setIsMatching] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
   const [counterAmount, setCounterAmount] = useState("");
@@ -290,6 +296,11 @@ export default function Dashboard() {
       setAssetRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as AssetRequest[]);
     });
 
+    const unsubAllListings = onSnapshot(query(collection(db, "listings"), where("status", "==", "available")), (snapshot) => {
+      const all = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Listing[];
+      setAllListings(all.filter(l => l.sellerId !== user.uid));
+    });
+
     const unsubLogisticsBuyer = onSnapshot(query(collection(db, "logistics_jobs"), where("buyerId", "==", user.uid)), (snapshot) => {
       const bJobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LogisticsJob[];
       setLogisticsJobs(prev => {
@@ -475,7 +486,7 @@ export default function Dashboard() {
 
         if (newStatus === 'accepted') {
           msgTitle = "Offer Accepted";
-          msgContent = `Your offer of £${offer.amount.toLocaleString()} for ${offer.listingTitle || offer.listingId} has been accepted.`;
+          msgContent = `Your offer of £${offer.amount?.toLocaleString() || '0'} for ${offer.listingTitle || offer.listingId} has been accepted.`;
         } else if (newStatus === 'rejected') {
           msgTitle = "Offer Rejected";
           msgContent = `Your offer for ${offer.listingTitle || offer.listingId} was declined.`;
@@ -538,6 +549,32 @@ export default function Dashboard() {
       setIsUpdateStatusDialogOpen(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `transactions/${selectedTransaction.id}`);
+    }
+  };
+
+  const handleRunAiMatching = async (request: AssetRequest) => {
+    if (allListings.length === 0) {
+      toast.error("No marketplace listings available for matching.");
+      return;
+    }
+    
+    setIsMatching(request.id);
+    try {
+      const results = await findMatches(request, allListings);
+      setMatchingResults(prev => ({ ...prev, [request.id]: results }));
+      
+      if (results.length > 0) {
+        toast.success(`Found ${results.length} semantic matches!`);
+        // Update request status if matched
+        await updateDoc(doc(db, "asset_requests", request.id), { status: 'matched' });
+      } else {
+        toast.info("No high-confidence matches found for this request.");
+      }
+    } catch (error) {
+      console.error("Matching error:", error);
+      toast.error("AI matching failed to respond.");
+    } finally {
+      setIsMatching(null);
     }
   };
 
@@ -692,7 +729,7 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">£{stats.revenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">£{stats.revenue?.toLocaleString() || '0'}</div>
             <p className="text-xs text-muted-foreground">Generated from sales</p>
           </CardContent>
         </Card>
@@ -702,7 +739,7 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">£{stats.commissions.toLocaleString()}</div>
+            <div className="text-2xl font-bold">£{stats.commissions?.toLocaleString() || '0'}</div>
             <p className="text-xs text-muted-foreground">HiX platform fees</p>
           </CardContent>
         </Card>
@@ -713,8 +750,23 @@ export default function Dashboard() {
               <Leaf className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.co2Saved} kg</div>
-              <p className="text-xs text-muted-foreground">≈ {Math.round(stats.co2Saved / 20)} trees/yr</p>
+              <div className="flex justify-between items-end">
+                <div>
+                   <div className="text-2xl font-bold">{stats.co2Saved.toLocaleString()} kg</div>
+                   <p className="text-xs text-muted-foreground">≈ {Math.round(stats.co2Saved / 20)} trees/yr</p>
+                </div>
+                {profile && transactions.length > 0 && (
+                   <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-full text-primary hover:bg-primary/10"
+                    onClick={() => generateSustainabilityReport(profile, transactions)}
+                    title="Export ESG Audit Report"
+                   >
+                      <Download className="h-4 w-4" />
+                   </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
@@ -855,9 +907,9 @@ export default function Dashboard() {
                   <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_12px_var(--primary)]" />
                 </div>
               </CardHeader>
-              <CardContent className="h-[320px] pt-8 bg-primary/[0.02]">
+              <CardContent className="h-[320px] pt-8 bg-primary/[0.02] relative">
                 {cumulativeCo2Data.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <AreaChart data={cumulativeCo2Data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorImpact" x1="0" y1="0" x2="0" y2="1">
@@ -894,7 +946,7 @@ export default function Dashboard() {
                           boxShadow: '0 10px 15px -3px oklch(0.75 0.22 145 / 0.1)'
                         }}
                         cursor={{ stroke: 'oklch(0.75 0.22 145)', strokeWidth: 1 }}
-                        formatter={(value: number) => [`${value.toLocaleString()} kg CO2`, 'IMPACT']}
+                        formatter={(value: number) => [`${value?.toLocaleString() || '0'} kg CO2`, 'IMPACT']}
                       />
                       <Area 
                         type="stepAfter" 
@@ -941,7 +993,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-center font-mono">
                   <div className="text-3xl font-black text-primary tracking-tighter tabular-nums leading-none mb-2">
-                    {stats.co2Saved.toLocaleString()}<span className="text-xs uppercase ml-1">kg</span>
+                    {(stats.co2Saved || 0).toLocaleString()}<span className="text-xs uppercase ml-1">kg</span>
                   </div>
                   <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest leading-none">
                     Verified Contribution
@@ -955,9 +1007,9 @@ export default function Dashboard() {
                 <CardTitle>CO2 Savings by Category</CardTitle>
                 <CardDescription>Breakdown of environmental impact across different asset classes.</CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
+              <CardContent className="h-[300px] relative">
                 {esgChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={esgChartData}
@@ -1057,7 +1109,7 @@ export default function Dashboard() {
                     {filteredMyListings.map((listing) => (
                       <TableRow key={`my-listing-${listing.id}`}>
                         <TableCell className="font-medium whitespace-nowrap">{listing.title}</TableCell>
-                        <TableCell className="whitespace-nowrap">£{listing.price.toLocaleString()}</TableCell>
+                        <TableCell className="whitespace-nowrap">£{listing.price?.toLocaleString() || '0'}</TableCell>
                         <TableCell className="whitespace-nowrap">{listing.quantity}</TableCell>
                         <TableCell className="whitespace-nowrap">
                           <Badge variant={listing.status === 'available' ? 'default' : 'secondary'}>
@@ -1149,7 +1201,7 @@ export default function Dashboard() {
                           {t.createdAt?.toDate ? format(t.createdAt.toDate(), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d, yyyy')}
                         </TableCell>
                         <TableCell className="font-mono text-xs whitespace-nowrap">{t.id}</TableCell>
-                        <TableCell className="whitespace-nowrap">£{t.amount.toLocaleString()}</TableCell>
+                        <TableCell className="whitespace-nowrap">£{t.amount?.toLocaleString() || '0'}</TableCell>
                         <TableCell className="text-primary font-medium whitespace-nowrap">{t.co2Saved} kg</TableCell>
                         <TableCell className="whitespace-nowrap">
                           <Badge 
@@ -1230,7 +1282,7 @@ export default function Dashboard() {
                           <TableRow key={`offer-received-${offer.id}`}>
                             <TableCell className="font-medium">{offer.buyerName}</TableCell>
                             <TableCell>{offer.listingTitle || offer.listingId}</TableCell>
-                            <TableCell className="font-mono">£{offer.amount.toLocaleString()}</TableCell>
+                            <TableCell className="font-mono">£{offer.amount?.toLocaleString() || '0'}</TableCell>
                             <TableCell>{offer.quantity}</TableCell>
                             <TableCell>
                               <Badge className="capitalize">{offer.status}</Badge>
@@ -1245,7 +1297,7 @@ export default function Dashboard() {
                                   disabled={isUpdatingPrice === offer.listingId}
                                 >
                                   {isUpdatingPrice === offer.listingId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <DollarSign className="h-3 w-3 mr-1" />}
-                                  Update Listing Price to £{offer.amount.toLocaleString()}
+                                  Update Listing Price to £{offer.amount?.toLocaleString() || '0'}
                                 </Button>
                               )}
                               {offer.status === 'pending' && (
@@ -1290,7 +1342,7 @@ export default function Dashboard() {
                         {offers.filter(o => o.buyerId === user.uid).map((offer) => (
                           <TableRow key={`offer-sent-${offer.id}`}>
                             <TableCell className="font-medium">{offer.listingTitle || offer.listingId}</TableCell>
-                            <TableCell className="font-mono">£{offer.amount.toLocaleString()}</TableCell>
+                            <TableCell className="font-mono">£{offer.amount?.toLocaleString() || '0'}</TableCell>
                             <TableCell>{offer.quantity}</TableCell>
                             <TableCell>
                               <Badge className="capitalize">{offer.status}</Badge>
@@ -1452,11 +1504,48 @@ export default function Dashboard() {
                       <p className="text-[9px] opacity-50 uppercase tracking-widest">Specifications</p>
                       <p className="text-[10px] font-bold truncate">{req.technicalSpecs || 'Standard Protocol'}</p>
                     </div>
+
+                    {matchingResults[req.id] && (
+                      <div className="pt-3 border-t border-white/5 space-y-2">
+                        <p className="text-[9px] font-black text-primary uppercase tracking-widest">AI Matching Diagnostics</p>
+                        {matchingResults[req.id].slice(0, 2).map((match, idx) => {
+                          const matchedListing = allListings.find(l => l.id === match.listingId);
+                          return (
+                            <div key={idx} className="bg-white/5 p-2 rounded flex justify-between items-center gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[10px] font-bold truncate">{matchedListing?.title || 'Unknown Asset'}</p>
+                                <p className="text-[8px] opacity-50 truncate">{match.reasoning}</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <Badge className="text-[8px] bg-primary/20 text-primary h-4">{match.score}%</Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </CardContent>
-                  <CardFooter className="p-6 pt-0">
-                    <Button variant="outline" className="w-full rounded-xl h-10 font-mono text-[10px] uppercase tracking-widest hover:bg-primary/10 border-primary/20" asChild>
-                      <Link to="/request-asset">View AI Matches</Link>
+                  <CardFooter className="p-6 pt-0 flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 rounded-xl h-10 font-mono text-[10px] uppercase tracking-widest hover:bg-primary/10 border-primary/20"
+                      onClick={() => handleRunAiMatching(req)}
+                      disabled={isMatching === req.id}
+                    >
+                      {isMatching === req.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                      ) : (
+                        <Globe className="h-3 w-3 mr-2 text-primary" />
+                      )}
+                      Sync AI Matches
                     </Button>
+                    {matchingResults[req.id] && (
+                       <Button variant="ghost" className="h-10 w-10 p-0 rounded-xl border border-white/5" asChild>
+                          <Link to={`/listing/${matchingResults[req.id][0].listingId}`}>
+                             <ExternalLink className="h-4 w-4" />
+                          </Link>
+                       </Button>
+                    )}
                   </CardFooter>
                 </Card>
               ))}
@@ -1506,31 +1595,13 @@ export default function Dashboard() {
                       <p className="text-[10px] text-muted-foreground font-mono mt-2">Job ID: {job.id.slice(0, 8)}</p>
                     </div>
 
-                    {/* Route Section */}
-                    <div className="flex-1 p-6 flex flex-col sm:flex-row items-center gap-8 justify-between">
-                      <div className="flex items-center gap-6 flex-1 w-full sm:w-auto">
-                        <div className="space-y-1">
-                          <p className="text-[9px] font-black uppercase opacity-40">Origin</p>
-                          <p className="text-sm font-bold truncate max-w-[120px]">{job.origin}</p>
-                        </div>
-                        <div className="flex-1 border-t-2 border-dashed border-primary/20 relative">
-                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-background p-1 rounded-full border border-primary/20">
-                            <Truck className="h-4 w-4 text-primary" />
-                          </div>
-                        </div>
-                        <div className="space-y-1 text-right">
-                          <p className="text-[9px] font-black uppercase opacity-40">Destination</p>
-                          <p className="text-sm font-bold truncate max-w-[120px]">{job.destination}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="h-10 w-[1px] bg-primary/10 hidden sm:block" />
-                      
-                      <div className="w-full sm:w-48 space-y-1">
-                        <p className="text-[9px] font-black uppercase opacity-40">Asset</p>
-                        <p className="text-xs font-bold truncate text-primary">{job.listingTitle}</p>
-                        <p className="text-[10px] opacity-60 truncate">Tracking: {job.trackingNumber || 'Pending Node Assignment'}</p>
-                      </div>
+                    {/* Route Tracker Section */}
+                    <div className="flex-1 p-6">
+                      <LogisticsTracker 
+                        origin={job.origin} 
+                        destination={job.destination} 
+                        status={job.status} 
+                      />
                     </div>
 
                     {/* Actions Section */}
@@ -1652,7 +1723,7 @@ export default function Dashboard() {
                   required
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground italic">Buyer's original offer: £{selectedOffer?.amount.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground italic">Buyer's original offer: £{selectedOffer?.amount?.toLocaleString() || '0'}</p>
             </div>
           </div>
           <DialogFooter className="mt-8 gap-3 sm:flex-col">

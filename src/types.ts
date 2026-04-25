@@ -51,6 +51,26 @@ export interface LedgerEvent {
   icon?: string;
 }
 
+export interface DigitalProductPassport {
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  manufacturingYear?: number;
+  powerRating?: string;
+  voltage?: string;
+  materialComposition?: {
+    material: string;
+    percentage: number;
+  }[];
+  maintenanceHistory?: {
+    date: string;
+    action: string;
+    technician?: string;
+  }[];
+  circularValueScore: number; // 0-100
+  lastAuditedAt?: any;
+}
+
 export interface Listing {
   id: string;
   sellerId: string;
@@ -81,7 +101,10 @@ export interface Listing {
       isManual?: boolean;
     };
   }[];
+  passport?: DigitalProductPassport;
   co2Savings: number; // in kg
+  materialReuse?: number; // percentage 0-100
+  logisticsOptimization?: number; // percentage 0-100
   tags: string[];
   status: 'available' | 'sold' | 'draft';
   listingType: 'fixed';
@@ -108,6 +131,7 @@ export interface Chat {
   lastRead?: { [uid: string]: any };
   isSupport?: boolean;
   supportMode?: 'ai' | 'agent';
+  status?: 'open' | 'closed';
   updatedAt: any;
   createdAt: any;
 }

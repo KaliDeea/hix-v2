@@ -54,6 +54,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { DigitalProductPassport } from "@/types";
 import { 
   Leaf, 
   ShieldCheck, 
@@ -79,7 +80,11 @@ import {
   ShieldAlert,
   Sparkles,
   Search,
-  ClipboardList
+  ClipboardList,
+  CheckCircle2,
+  Calendar,
+  Zap,
+  Box
 } from "lucide-react";
 import { 
   Tooltip,
@@ -434,7 +439,7 @@ export default function ListingDetail() {
       await addDoc(collection(db, "notifications"), {
         userId: listing.sellerId,
         title: "New Counter-Offer Received",
-        message: `${profile.companyName} has submitted an offer of £${amount.toLocaleString()} for ${listing.title}.`,
+        message: `${profile?.companyName || 'A buyer'} has submitted an offer of £${(amount || 0).toLocaleString()} for ${listing.title}.`,
         type: "bid",
         link: `/dashboard?tab=offers&subtab=received`, 
         read: false,
@@ -663,6 +668,144 @@ export default function ListingDetail() {
                 })()}
               </div>
 
+              {/* Digital Product Passport (DPP) Node */}
+              {listing.passport && (
+                <div className="mt-8 glass p-8 rounded-3xl border-primary/30 bg-primary/5 shadow-2xl shadow-primary/10 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all duration-700 -rotate-12 translate-x-12 -translate-y-12">
+                    <Globe className="h-48 w-48 text-primary" />
+                  </div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30 shadow-lg shadow-primary/20">
+                          <Globe className="h-7 w-7 text-primary" />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-black uppercase tracking-tighter italic text-primary">Digital Product Passport</h2>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-primary text-white border-none rounded-none text-[8px] font-black uppercase tracking-widest px-2 h-4">Verified Lineage</Badge>
+                            <span className="text-[10px] font-mono text-muted-foreground uppercase opacity-60">Protocol V2.0 // Node: {listing.id.slice(0,8).toUpperCase()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="hidden md:block text-right">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary opacity-60">Circular Value</p>
+                        <p className="text-2xl font-black font-mono text-emerald-500">{listing.passport.circularValueScore}%</p>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6 mb-8">
+                      <div className="p-4 rounded-2xl bg-background/50 border border-primary/10 hover:border-primary/30 transition-colors">
+                        <div className="flex items-center gap-2 mb-2 text-primary">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span className="text-[9px] font-black uppercase tracking-[0.2em]">Identification</span>
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[8px] uppercase opacity-40 font-bold mb-0.5">OEM Manufacturer</p>
+                            <p className="font-bold text-sm">{listing.passport.manufacturer || 'Information not supplied'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] uppercase opacity-40 font-bold mb-0.5">Model Identity</p>
+                            <p className="font-bold text-sm">{listing.passport.model || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] uppercase opacity-40 font-bold mb-0.5">Serial Registry</p>
+                            <p className="font-mono text-xs font-bold">{listing.passport.serialNumber || 'LOGGED_ANONYMOUS'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-background/50 border border-primary/10 hover:border-primary/30 transition-colors">
+                        <div className="flex items-center gap-2 mb-2 text-primary">
+                          <Zap className="h-3.5 w-3.5" />
+                          <span className="text-[9px] font-black uppercase tracking-[0.2em]">Technical Stats</span>
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-[8px] uppercase opacity-40 font-bold mb-0.5">Power Rating</p>
+                            <p className="font-bold text-sm">{listing.passport.powerRating || 'Inferred from use'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] uppercase opacity-40 font-bold mb-0.5">Design Voltage</p>
+                            <p className="font-bold text-sm">{listing.passport.voltage || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] uppercase opacity-40 font-bold mb-0.5">Production Year</p>
+                            <p className="font-bold text-sm">{listing.passport.manufacturingYear || 'Inferred'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-background/50 border border-primary/10 hover:border-primary/30 transition-colors">
+                        <div className="flex items-center gap-2 mb-2 text-emerald-500">
+                          <Box className="h-3.5 w-3.5" />
+                          <span className="text-[9px] font-black uppercase tracking-[0.2em]">Material Node</span>
+                        </div>
+                        <div className="space-y-4">
+                           {listing.passport.materialComposition && listing.passport.materialComposition.length > 0 ? (
+                             <div className="grid grid-cols-1 gap-2">
+                               {listing.passport.materialComposition.map((m, i) => (
+                                 <div key={i} className="space-y-1">
+                                   <div className="flex justify-between items-center text-[9px] font-bold uppercase">
+                                     <span>{m.material}</span>
+                                     <span>{m.percentage}%</span>
+                                   </div>
+                                   <div className="h-1 w-full bg-emerald-500/10 rounded-full overflow-hidden">
+                                     <div className="h-full bg-emerald-500" style={{ width: `${m.percentage}%` }}></div>
+                                   </div>
+                                 </div>
+                               ))}
+                             </div>
+                           ) : (
+                             <p className="text-[10px] text-muted-foreground italic">Material composition data pending lab analysis node.</p>
+                           )}
+                           <Badge variant="outline" className="w-full justify-center text-[8px] h-5 border-emerald-500/20 text-emerald-500 uppercase tracking-tighter">Recyclability: HIGH</Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    {listing.passport.maintenanceHistory && listing.passport.maintenanceHistory.length > 0 && (
+                      <div className="p-6 rounded-2xl bg-background/40 border border-primary/10 mb-8 overflow-hidden relative">
+                         <div className="flex items-center gap-2 mb-4">
+                           <Calendar className="h-3 w-3 text-primary" />
+                           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Service & Maintenance Oracle</span>
+                         </div>
+                         <div className="space-y-4">
+                            {listing.passport.maintenanceHistory.map((log, i) => (
+                              <div key={i} className="flex gap-4 items-start relative pb-4 last:pb-0 last:after:hidden after:absolute after:left-[5px] after:top-[12px] after:bottom-0 after:w-[1px] after:bg-primary/20">
+                                 <div className="h-[11px] w-[11px] rounded-full bg-primary border-2 border-background shrink-0 mt-0.5 z-10" />
+                                 <div className="flex-1">
+                                    <div className="flex justify-between items-center mb-1">
+                                       <p className="text-[9px] font-mono font-black text-primary/60">{log.date}</p>
+                                       {log.technician && <Badge variant="ghost" className="h-4 p-0 text-[8px] uppercase tracking-widest font-black opacity-60">ID: {log.technician}</Badge>}
+                                    </div>
+                                    <p className="text-xs font-bold leading-tight">{log.action}</p>
+                                 </div>
+                              </div>
+                            ))}
+                         </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 bg-primary/10 rounded-2xl border border-primary/20">
+                       <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/20">
+                             <QrCode className="h-4 w-4 text-primary" />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground leading-tight">
+                            The HiX <b>Digital Product Passport</b> ensures transparent technical lineage for secondary-market industrial assets. 
+                          </p>
+                       </div>
+                       <Button variant="outline" className="rounded-full h-8 text-[9px] font-black uppercase tracking-widest border-primary/40 text-primary hover:bg-primary/10 shrink-0">
+                          View Public Node Lineage
+                       </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* AI Verification Report Node */}
               {listing.verificationData && (
                 <div className="mt-8 p-8 rounded-3xl bg-emerald-500/5 border-2 border-emerald-500/20 relative overflow-hidden group">
@@ -787,7 +930,7 @@ export default function ListingDetail() {
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Trees/Yr</p>
                       </div>
                       <div className="p-3 rounded-2xl bg-white/5 border border-white/10">
-                        <p className="text-xl font-bold text-primary">{Math.round(listing.co2Savings / 0.4).toLocaleString()}</p>
+                        <p className="text-xl font-bold text-primary">{Math.round((listing.co2Savings || 0) / 0.4).toLocaleString()}</p>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Car Miles</p>
                       </div>
                     </div>
@@ -974,7 +1117,7 @@ export default function ListingDetail() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/10 flex flex-col items-center justify-center text-center">
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Unit Valuation</p>
-                    <p className="text-3xl font-black font-mono tracking-tighter text-primary">£{listing.price.toLocaleString()}</p>
+                    <p className="text-3xl font-black font-mono tracking-tighter text-primary">£{listing.price?.toLocaleString() || '0'}</p>
                   </div>
                   <div className="p-6 bg-background/40 backdrop-blur-md rounded-2xl border border-primary/10 flex flex-col items-center justify-center text-center">
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Buffer Stock</p>
@@ -1013,7 +1156,7 @@ export default function ListingDetail() {
                   </div>
                   <div className="flex justify-between items-center px-1">
                      <span className="text-[10px] font-mono opacity-70 uppercase tracking-tight">Total Commitment</span>
-                     <span className="text-lg font-black font-mono text-primary">£{(listing.price * quantity).toLocaleString()}</span>
+                     <span className="text-lg font-black font-mono text-primary">£{((listing.price || 0) * (quantity || 1)).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -1423,7 +1566,7 @@ export default function ListingDetail() {
                   </div>
                   {listing.shippingCost !== undefined && listing.shippingCost > 0 && (
                     <p className="text-xs font-medium text-primary">
-                      Base Shipping: £{listing.shippingCost.toLocaleString()}
+                      Base Shipping: £{listing.shippingCost?.toLocaleString() || '0'}
                     </p>
                   )}
                   <p className="text-[10px] text-muted-foreground">

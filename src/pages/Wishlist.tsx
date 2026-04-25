@@ -152,7 +152,7 @@ export default function Wishlist() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0 flex-1">
                     <div className="text-2xl font-bold text-primary">
-                      £{listing.price.toLocaleString()}
+                      £{listing.price?.toLocaleString() || '0'}
                     </div>
                   </CardContent>
                   <CardFooter className="p-4 pt-0 gap-2">

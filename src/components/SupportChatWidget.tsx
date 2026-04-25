@@ -7,7 +7,8 @@ import {
   ShieldCheck, 
   Headphones,
   Loader2,
-  Minimize2
+  Minimize2,
+  CheckCircle2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ export default function SupportChatWidget() {
       chatsRef,
       where("participants", "array-contains", user.uid),
       where("isSupport", "==", true),
+      where("status", "==", "open"),
       orderBy("updatedAt", "desc"),
       limit(1)
     );
@@ -72,6 +74,7 @@ export default function SupportChatWidget() {
           },
           isSupport: true,
           supportMode: "ai",
+          status: "open",
           updatedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
           lastMessage: "How can we help you today?",
@@ -88,8 +91,8 @@ export default function SupportChatWidget() {
             text: "Hello! I'm the HIX Support AI. How can I assist you with your industrial asset trading today?",
             createdAt: serverTimestamp()
           });
-        } catch (e) {
-          console.error("Error creating support chat", e);
+        } catch (err) {
+          handleFirestoreError(err, OperationType.CREATE, "chats/support");
         }
       } else {
         const chat = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Chat;
@@ -146,7 +149,8 @@ export default function SupportChatWidget() {
       await updateDoc(doc(db, "chats", activeChat.id), {
         lastMessage: text,
         lastMessageTime: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        status: "open" // Ensure it stays open if it was somehow marked otherwise
       });
 
       // If in AI mode, trigger AI response
@@ -204,6 +208,37 @@ export default function SupportChatWidget() {
     }
   };
 
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+
+  const handleCloseChat = async () => {
+    if (!activeChat || !user) return;
+    
+    try {
+      setLoading(true);
+      await updateDoc(doc(db, "chats", activeChat.id), {
+        status: "closed",
+        updatedAt: serverTimestamp()
+      });
+      
+      await addDoc(collection(db, `chats/${activeChat.id}/messages`), {
+        chatId: activeChat.id,
+        senderId: "SYSTEM",
+        senderName: "System",
+        text: "The support session has been closed by the user.",
+        createdAt: serverTimestamp()
+      });
+      
+      setActiveChat(null);
+      setMessages([]);
+      setIsOpen(false);
+      setShowCloseConfirm(false);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, "chats");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -240,9 +275,42 @@ export default function SupportChatWidget() {
                       </CardDescription>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-full hover:bg-white/5 h-8 w-8">
-                    <Minimize2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {showCloseConfirm ? (
+                      <div className="flex items-center bg-red-500/10 rounded-full px-2 py-1 gap-1">
+                        <span className="text-[8px] font-bold text-red-500 uppercase ml-1">End?</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleCloseChat} 
+                          className="h-6 w-6 rounded-full hover:bg-red-500 text-red-500 hover:text-white"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setShowCloseConfirm(false)} 
+                          className="h-6 w-6 rounded-full hover:bg-white/10 text-white/50"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setShowCloseConfirm(true)} 
+                        className="rounded-full hover:bg-red-500/10 text-red-500/50 hover:text-red-500 h-8 w-8 transition-colors"
+                        title="Close Ticket"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-full hover:bg-white/5 h-8 w-8">
+                      <Minimize2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               

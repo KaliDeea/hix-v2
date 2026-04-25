@@ -295,7 +295,7 @@ export default function Profile() {
                  <div className="space-y-2">
                     <div className="flex justify-between text-[10px] font-mono uppercase">
                        <span>Marketplace Contribution</span>
-                       <span>{profile?.totalCo2Saved.toLocaleString() || 0} kg CO2 Saved</span>
+                       <span>{(profile?.totalCo2Saved || 0).toLocaleString()} kg CO2 Saved</span>
                     </div>
                     <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                        <motion.div 
@@ -361,7 +361,7 @@ export default function Profile() {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <div className="text-xl font-black text-primary">£{tx.amount?.toLocaleString()}</div>
+                          <div className="text-xl font-black text-primary">£{tx.amount?.toLocaleString() || '0'}</div>
                           <Badge className={`${
                             tx.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                             tx.status === 'pending' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
