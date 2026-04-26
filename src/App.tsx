@@ -81,10 +81,11 @@ export default function App() {
               <SuspendedOverlay />
             <Router>
               <ScrollToTop />
-              <div className="flex min-h-screen flex-col overflow-x-hidden">
+              <div className="flex min-h-screen flex-col overflow-x-hidden bg-blueprint-dense">
                 <SystemBanner />
                 <Navbar />
-                <main className="flex-1">
+                <main className="flex-1 relative">
+                  <div className="absolute inset-0 bg-blueprint pointer-events-none opacity-40" />
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/marketplace" element={<Marketplace />} />

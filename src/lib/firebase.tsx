@@ -91,6 +91,7 @@ export enum OperationType {
 
 export interface FirestoreErrorInfo {
   error: string;
+  friendlyMessage?: string;
   operationType: OperationType;
   path: string | null;
   authInfo: {
@@ -109,8 +110,16 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const rawError = error instanceof Error ? error.message : String(error);
+  let friendlyMessage = rawError;
+
+  if (rawError.includes("permission-denied") || rawError.includes("insufficient permissions")) {
+    friendlyMessage = "Access Denied: It looks like you don't have permission to perform this action. This may be because your company is still undergoing the vetting process. Please check your Dashboard for vetting status or contact support.";
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: rawError,
+    friendlyMessage: friendlyMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -135,7 +144,9 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     timestamp: serverTimestamp()
   }).catch(e => console.error("Failed to log error to central system:", e));
 
-  throw new Error(JSON.stringify(errInfo));
+  // If we're in a client context, we might want to toast here, 
+  // but throwing with the friendly message is usually cleaner for the UI to catch.
+  throw new Error(friendlyMessage);
 }
 
 interface AuthContextType {

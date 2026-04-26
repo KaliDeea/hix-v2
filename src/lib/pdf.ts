@@ -63,7 +63,7 @@ export function generateTradeCertificate(transaction: Transaction, listing: List
   doc.save(`HiX-Certificate-${transaction.id}.pdf`);
 }
 
-export function generateSustainabilityReport(profile: UserProfile, transactions: Transaction[]) {
+export async function generateSustainabilityReport(profile: UserProfile, transactions: Transaction[], logoUrl?: string) {
   const doc = new jsPDF();
   const totalCo2 = transactions.reduce((acc, curr) => acc + (curr.co2Saved || 0), 0);
   const totalVolume = transactions.reduce((acc, curr) => acc + (curr.amount || 0), 0);
@@ -72,11 +72,34 @@ export function generateSustainabilityReport(profile: UserProfile, transactions:
   doc.setFillColor(15, 23, 42); // slate-900
   doc.rect(0, 0, 210, 60, 'F');
   
+  // Attempt to add logo if available
+  if (logoUrl) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = logoUrl;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      
+      // Draw circular frame
+      doc.setDrawColor(34, 197, 94); // HiX Green
+      doc.setLineWidth(1);
+      doc.circle(25, 30, 15, 'D'); // Circular border
+      
+      // Add image inside (centered in the circle)
+      doc.addImage(img, 'PNG', 13, 18, 24, 24);
+    } catch (e) {
+      console.error("Could not add logo to sustainability report", e);
+    }
+  }
+
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(28);
-  doc.text("HiX Sustainability Audit", 105, 30, { align: "center" });
+  doc.text("HiX Sustainability Audit", 115, 30, { align: "center" });
   doc.setFontSize(12);
-  doc.text(`Official Environmental Impact Report for ${profile.companyName}`, 105, 45, { align: "center" });
+  doc.text(`Environmental Impact Report for ${profile.companyName}`, 115, 45, { align: "center" });
   
   // High Level Stats Card
   doc.setFillColor(34, 197, 94); // emerald-500

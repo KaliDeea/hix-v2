@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, query, getDocs, where } from "firebase/firestore";
+import { GoogleGenAI, Type } from "@google/genai";
 import { 
   ClipboardList, 
   Search, 

@@ -260,10 +260,10 @@ export function Navbar() {
             </div>
           ) : (
             <>
-              <div className="flex h-10 w-10 sm:h-14 sm:w-14 md:h-20 md:w-20 items-center justify-center rounded-full bg-primary font-black text-lg sm:text-2xl md:text-3xl text-primary-foreground transition-all group-hover:rotate-12 group-hover:scale-110 shadow-lg shadow-primary/30 logo-primary-glow">
+              <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-primary font-mono font-black text-lg sm:text-2xl text-primary-foreground shadow-lg shadow-primary/20">
                 H
               </div>
-              <span className="text-lg sm:text-2xl md:text-4xl hidden min-[400px]:block font-black tracking-tighter uppercase text-primary drop-shadow-sm ml-1 sm:ml-2">HiX</span>
+              <span className="text-lg sm:text-3xl hidden min-[400px]:block font-black tracking-tighter uppercase text-primary ml-2 font-mono">HiX</span>
             </>
           )}
         </Link>
@@ -272,8 +272,8 @@ export function Navbar() {
           <form onSubmit={handleSearch} className="relative w-full group">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input 
-              placeholder="Search marketplace..." 
-              className="pl-10 pr-10 rounded-full bg-muted/20 border-border focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+              placeholder="SYSTEM SEARCH..." 
+              className="pl-10 pr-10 rounded-sm bg-muted/10 border-primary/20 focus:border-primary/50 transition-all font-mono text-xs uppercase"
               value={navbarSearch}
               onChange={(e) => setNavbarSearch(e.target.value)}
             />
@@ -340,8 +340,8 @@ export function Navbar() {
           {user ? (
             <UserDropdown user={user} profile={profile} logout={logout} />
           ) : (
-            <Button asChild className="rounded-full px-4 sm:px-6 h-9 sm:h-10 text-xs sm:text-sm">
-              <Link to="/auth">Get Started</Link>
+            <Button asChild className="rounded-sm px-6 h-10 text-[10px] uppercase font-black tracking-widest bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">
+              <Link to="/auth">Initialize</Link>
             </Button>
           )}
           

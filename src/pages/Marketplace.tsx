@@ -23,6 +23,7 @@ import {
   getESGImpactColorBadge, 
   getESGImpactScoreLabel 
 } from "@/lib/qualityScore";
+import { GoogleGenAI, Type } from "@google/genai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -363,28 +364,27 @@ export default function Marketplace() {
     const getSemanticSuggestions = async (query: string) => {
       setIsAiLoadingSuggestions(true);
       try {
-        const response = await fetch("/api/ai/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `As an industrial equipment specialist, suggest exactly one technical alternative for the search query: "${query}". 
-                If searching for 'forklift', suggest 'Reach Truck'. If searching for 'drill', suggest 'Magnetic Drill Press'. 
-                Return JSON: suggestion (string).`
-              }]
-            }],
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: [{
+            parts: [{
+              text: `As an industrial equipment specialist, suggest exactly one technical alternative for the search query: "${query}". 
+              If searching for 'forklift', suggest 'Reach Truck'. If searching for 'drill', suggest 'Magnetic Drill Press'. 
+              Return JSON: suggestion (string).`
+            }]
+          }],
+          config: {
+            responseMimeType: "application/json",
             responseSchema: {
-              type: "object",
+              type: Type.OBJECT,
               properties: {
-                suggestion: { type: "string" }
+                suggestion: { type: Type.STRING }
               }
             }
-          })
+          }
         });
-
-        if (!response.ok) throw new Error("Suggestion request failed");
-        const result = await response.json();
+        const result = JSON.parse(response.text);
         setSemanticSuggestion(result.suggestion);
       } catch (err) {
         console.error("Semantic search failed:", err);

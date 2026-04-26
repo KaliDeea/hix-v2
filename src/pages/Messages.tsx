@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Search, Building2, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Send, Search, Building2, Image as ImageIcon, Loader2, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "motion/react";
 import { analyzeMessage } from "@/lib/gemini";
 import { toast } from "sonner";
 import { ShieldAlert, Info } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function Messages() {
   const { user, profile } = useAuth();
@@ -174,8 +175,15 @@ export default function Messages() {
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : chats.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  No conversations yet.
+                <div className="text-center py-20 px-4">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto mb-4 border border-primary/10">
+                    <MessageSquare className="h-6 w-6 text-primary/40" />
+                  </div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-foreground mb-1">Silence is Golden</h3>
+                  <p className="text-[10px] text-muted-foreground font-medium mb-6 uppercase tracking-tighter">No active transmissions detected</p>
+                  <Button variant="outline" size="sm" className="rounded-full text-[10px] uppercase font-black tracking-widest h-8" asChild>
+                    <Link to="/marketplace">Start Negotiating</Link>
+                  </Button>
                 </div>
               ) : (
                 chats.map((chat) => {
@@ -291,12 +299,28 @@ export default function Messages() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
-              <div className="h-16 w-16 rounded-full bg-muted/10 flex items-center justify-center mb-4">
-                <Send className="h-8 w-8 opacity-20" />
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center bg-primary/[0.01]">
+              <div className="h-24 w-24 rounded-full bg-primary/5 flex items-center justify-center mb-8 border border-primary/10 shadow-[0_0_40px_rgba(33,197,94,0.05)]">
+                <Send className="h-10 w-10 text-primary opacity-40 animate-pulse" />
               </div>
-              <h3 className="text-lg font-bold text-foreground uppercase tracking-tighter">Your Conversations</h3>
-              <p className="max-w-xs text-sm font-medium">Select a chat from the left to start messaging with other members of the exchange.</p>
+              <h3 className="text-2xl font-black text-foreground uppercase tracking-tighter mb-4 italic">Secure Trade Line</h3>
+              <div className="space-y-2 max-w-sm">
+                <p className="text-sm font-bold text-primary tracking-widest uppercase mb-4">Select a partner to initialize protocol</p>
+                <div className="text-xs font-medium space-y-3 opacity-60">
+                   <p className="flex items-center gap-2">
+                     <span className="h-1 w-1 rounded-full bg-primary"></span>
+                     All chats are high-bandwidth and end-to-end encrypted
+                   </p>
+                   <p className="flex items-center gap-2">
+                     <span className="h-1 w-1 rounded-full bg-primary"></span>
+                     AI moderation protects you against external trade risks
+                   </p>
+                   <p className="flex items-center gap-2">
+                     <span className="h-1 w-1 rounded-full bg-primary"></span>
+                     Share technical specifications and logistics notes instantly
+                   </p>
+                </div>
+              </div>
             </div>
           )}
         </Card>

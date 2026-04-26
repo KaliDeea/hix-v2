@@ -33,6 +33,12 @@ export interface UserProfile {
   vettingStatus: 'pending' | 'approved' | 'rejected' | 'under_review';
   totalCo2Saved: number;
   logoUrl?: string;
+  verificationDocs?: { 
+    name: string; 
+    url: string; 
+    type: string;
+    uploadedAt: any;
+  }[];
   createdAt: any;
   lastLogin?: any;
   stripeAccountId?: string;
@@ -49,26 +55,6 @@ export interface LedgerEvent {
   status: string;
   type: 'audit' | 'maintenance' | 'certification' | 'transfer' | 'genesis';
   icon?: string;
-}
-
-export interface DigitalProductPassport {
-  manufacturer?: string;
-  model?: string;
-  serialNumber?: string;
-  manufacturingYear?: number;
-  powerRating?: string;
-  voltage?: string;
-  materialComposition?: {
-    material: string;
-    percentage: number;
-  }[];
-  maintenanceHistory?: {
-    date: string;
-    action: string;
-    technician?: string;
-  }[];
-  circularValueScore: number; // 0-100
-  lastAuditedAt?: any;
 }
 
 export interface Listing {
@@ -101,7 +87,6 @@ export interface Listing {
       isManual?: boolean;
     };
   }[];
-  passport?: DigitalProductPassport;
   co2Savings: number; // in kg
   materialReuse?: number; // percentage 0-100
   logisticsOptimization?: number; // percentage 0-100
@@ -165,6 +150,8 @@ export interface Transaction {
   buyerCommission: number;
   sellerCommission: number;
   co2Saved: number;
+  resourceSavings?: number; // In kg
+  circularityRate?: number; // 0-100 (percentage)
   shippingMethod?: 'collection' | 'standard' | 'express' | 'international';
   shippingCost?: number;
   status: 'pending' | 'escrow' | 'shipped' | 'delivered' | 'completed' | 'failed' | 'refunded' | 'cancelled' | 'disputed';

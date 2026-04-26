@@ -99,12 +99,19 @@ export default function Wishlist() {
       </div>
 
       {listings.length === 0 ? (
-        <Card className="glass p-12 text-center">
-          <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-          <h2 className="text-xl font-semibold mb-2">Your wishlist is empty</h2>
-          <p className="text-muted-foreground mb-8">Start exploring the marketplace to save assets you like.</p>
-          <Button asChild className="rounded-full">
-            <Link to="/marketplace">Explore Marketplace</Link>
+        <Card className="glass border-dashed border-primary/20 py-20 text-center flex flex-col items-center justify-center">
+          <div className="h-20 w-20 rounded-3xl bg-primary/5 flex items-center justify-center mb-6 border border-primary/10 shadow-[0_0_20px_rgba(33,197,94,0.05)]">
+            <Heart className="h-10 w-10 text-primary/40" />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter mb-2">No Saved Assets</h2>
+          <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-8 font-medium">
+            Your wishlist is currently dormant. Monitor high-value assets and industrial machinery by saving them to your registry.
+          </p>
+          <Button asChild size="lg" className="rounded-full px-8 shadow-lg shadow-primary/20">
+            <Link to="/marketplace">
+              <ArrowRight className="mr-2 h-4 w-4" />
+              Explore Marketplace
+            </Link>
           </Button>
         </Card>
       ) : (

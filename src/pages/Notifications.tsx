@@ -4,7 +4,7 @@ import { Notification } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Bell, Trash2, CheckCircle2, MessageSquare, Gavel, Info, Heart } from "lucide-react";
 import { toast } from "sonner";
@@ -111,10 +111,17 @@ export default function Notifications() {
         </div>
 
         {notifications.length === 0 ? (
-          <Card className="glass p-12 text-center">
-            <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-            <h2 className="text-xl font-semibold mb-2">No notifications yet</h2>
-            <p className="text-muted-foreground">We'll notify you when something important happens.</p>
+          <Card className="glass border-dashed border-primary/20 py-24 text-center flex flex-col items-center justify-center">
+            <div className="h-20 w-20 rounded-3xl bg-primary/5 flex items-center justify-center mb-6 border border-primary/10 shadow-[0_0_20px_rgba(33,197,94,0.05)]">
+              <Bell className="h-10 w-10 text-primary/40" />
+            </div>
+            <h2 className="text-2xl font-black uppercase tracking-tighter mb-2">Zero Alerts</h2>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-8 font-medium">
+              Your transmission feed is clear. High-value trade alerts, system updates and important marketplace signals will appear here.
+            </p>
+            <Button variant="outline" size="lg" className="rounded-full px-8 border-primary/20 hover:bg-primary/5" asChild>
+              <Link to="/dashboard">Return to Overview</Link>
+            </Button>
           </Card>
         ) : (
           <div className="space-y-4">

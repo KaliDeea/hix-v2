@@ -1,4 +1,18 @@
+import { GoogleGenAI } from "@google/genai";
 import { Message } from "@/types";
+
+let genAI: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!genAI) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not defined. Please ensure it is set in your environment.");
+    }
+    genAI = new GoogleGenAI({ apiKey });
+  }
+  return genAI;
+}
 
 const SYSTEM_INSTRUCTION = `
 You are the HIX Circular Economy Support Assistant. 
@@ -22,26 +36,22 @@ Always encourage the circular economy.
 
 export async function generateSupportResponse(history: Message[]): Promise<string> {
   try {
+    const ai = getAI();
     const formattedHistory = history.map(msg => ({
       role: msg.senderId === 'HIX_SUPPORT_AI' ? 'model' : 'user',
       parts: [{ text: msg.text }]
     }));
 
-    const response = await fetch("/api/ai/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: formattedHistory,
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: formattedHistory,
+      config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        generationConfig: {
-          temperature: 0.7
-        }
-      })
+        temperature: 0.7,
+      },
     });
 
-    if (!response.ok) throw new Error("Support request failed");
-    const data = await response.json();
-    return data.text || "I'm sorry, I encountered an issue processing your request. Please try again or ask for a live agent.";
+    return response.text || "I'm sorry, I encountered an issue processing your request. Please try again or ask for a live agent.";
   } catch (error) {
     console.error("Support AI Error:", error);
     return "I'm having trouble connecting to my knowledge base. Would you like to speak with a human support agent instead? [HANDOVER_REQUESTED]";

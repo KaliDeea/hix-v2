@@ -62,7 +62,8 @@ import {
   ClipboardList,
   Truck,
   Headphones,
-  Info
+  Info,
+  ShieldAlert
 } from "lucide-react";
 import { useSearchParams, Link } from "react-router-dom";
 import { 
@@ -723,61 +724,72 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card className="glass">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
+        <Card className="glass border-primary/20 hover:border-primary/40 transition-all duration-500 overflow-hidden group">
+          <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+            <DollarSign className="h-12 w-12" />
+          </div>
+          <CardHeader className="pb-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Terminal Revenue</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">£{stats.revenue?.toLocaleString() || '0'}</div>
-            <p className="text-xs text-muted-foreground">Generated from sales</p>
+            <div className="text-3xl font-black font-mono tracking-tighter tabular-nums leading-none">
+              £{stats.revenue?.toLocaleString() || '0'}<span className="text-xs ml-1 opacity-40 italic">GBP</span>
+            </div>
+            <p className="text-[8px] uppercase font-bold text-muted-foreground mt-2 opacity-60">Verified sales capital</p>
           </CardContent>
         </Card>
-        <Card className="glass">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Commissions Paid</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
+        <Card className="glass border-primary/20 hover:border-primary/40 transition-all duration-500 overflow-hidden group">
+          <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+            <TrendingUp className="h-12 w-12" />
+          </div>
+          <CardHeader className="pb-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Exchange Fees</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">£{stats.commissions?.toLocaleString() || '0'}</div>
-            <p className="text-xs text-muted-foreground">HiX platform fees</p>
+            <div className="text-3xl font-black font-mono tracking-tighter tabular-nums leading-none">
+              £{stats.commissions?.toLocaleString() || '0'}<span className="text-xs ml-1 opacity-40 italic">COMM</span>
+            </div>
+            <p className="text-[8px] uppercase font-bold text-muted-foreground mt-2 opacity-60">Network maintenance share</p>
           </CardContent>
         </Card>
-        <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
-          <Card className="glass border-primary/20 shadow-[0_0_8px_var(--primary)]">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">CO2 Saved</CardTitle>
-              <Leaf className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-end">
-                <div>
-                   <div className="text-2xl font-bold">{stats.co2Saved.toLocaleString()} kg</div>
-                   <p className="text-xs text-muted-foreground">≈ {Math.round(stats.co2Saved / 20)} trees/yr</p>
+        <Card className="glass border-primary border-t-2 shadow-[0_4px_20px_rgba(34,197,94,0.1)] group">
+          <CardHeader className="pb-1 flex flex-row items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary">Sustainability Yield</span>
+            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-between items-end">
+              <div>
+                <div className="text-3xl font-black font-mono tracking-tighter tabular-nums leading-none text-primary">
+                  {stats.co2Saved.toLocaleString()}<span className="text-xs ml-1 opacity-70">KG</span>
                 </div>
-                {profile && transactions.length > 0 && (
-                   <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 rounded-full text-primary hover:bg-primary/10"
-                    onClick={() => generateSustainabilityReport(profile, transactions)}
-                    title="Export ESG Audit Report"
-                   >
-                      <Download className="h-4 w-4" />
-                   </Button>
-                )}
+                <p className="text-[8px] uppercase font-bold text-muted-foreground mt-2 opacity-60">Avoided carbon emissions</p>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        <Card className="glass">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-primary" />
+              {profile && transactions.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="rounded-full h-8 w-8 p-0 text-primary hover:bg-primary/10"
+                  onClick={() => generateSustainabilityReport(profile, transactions, profile.logoUrl)}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="glass border-primary/20 hover:border-primary/40 transition-all duration-500 overflow-hidden group">
+          <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Package className="h-12 w-12" />
+          </div>
+          <CardHeader className="pb-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary/70">Inventory Delta</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeListings}</div>
-            <p className="text-xs text-muted-foreground">Items in marketplace</p>
+            <div className="text-3xl font-black font-mono tracking-tighter tabular-nums leading-none">
+              {stats.activeListings}<span className="text-xs ml-1 opacity-40 italic">UNITS</span>
+            </div>
+            <p className="text-[8px] uppercase font-bold text-muted-foreground mt-2 opacity-60">Active marketplace registry nodes</p>
           </CardContent>
         </Card>
 
@@ -797,6 +809,38 @@ export default function Dashboard() {
             </Button>
           </CardContent>
         </Card>
+
+        {profile?.vettingStatus !== 'approved' && (
+          <Card className="glass md:col-span-2 lg:col-span-4 border-amber-500/30 bg-amber-500/5">
+            <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
+                  <ShieldAlert className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">
+                    Vetting Status: {profile?.vettingStatus?.replace('_', ' ') || 'Pending'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {profile?.vettingStatus === 'pending' && "Your account is currently in the queue for company vetting. Most applications are reviewed within 24-48 hours."}
+                    {profile?.vettingStatus === 'under_review' && "An administrator is currently reviewing your company documentation. We'll notify you once complete."}
+                    {profile?.vettingStatus === 'rejected' && "Your application was not approved. Please contact support@hix.co.uk to find out why or resubmit documents."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {!profile?.isVatVerified && (
+                  <Button variant="outline" size="sm" className="rounded-full border-amber-500/30 text-amber-500 hover:bg-amber-500/10 text-[10px] font-black uppercase h-9 px-6" asChild>
+                    <Link to="/settings#company">Update VAT Info</Link>
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" className="rounded-full border-amber-500/30 text-amber-500 hover:bg-amber-500/10 text-[10px] font-black uppercase h-9 px-6" asChild>
+                  <Link to="/contact">Support Center</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="glass md:col-span-2 lg:col-span-4 border-emerald-500/30 bg-emerald-500/5">
           <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -895,150 +939,130 @@ export default function Dashboard() {
           </TabsList>
         </div>
 
-        <TabsContent value="overview" className="space-y-6 mt-0">
-          <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-            <Card className="glass lg:col-span-2 border-primary/20 overflow-hidden shadow-xl shadow-primary/10 pt-0">
-              <CardHeader className="border-b border-primary/20 bg-primary/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Cumulative Impact Node</CardTitle>
-                    <CardDescription className="font-mono text-[10px] uppercase opacity-90 text-primary/70">Temporal sustainability distribution</CardDescription>
+        <TabsContent value="overview" className="space-y-4 mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            {/* Main Area Chart - Impact Velocity */}
+            <Card className="glass md:col-span-8 border-primary/10 overflow-hidden p-0">
+              <div className="p-4 border-b border-white/5 flex items-center justify-between bg-primary/[0.03]">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                    <TrendingUp className="h-4 w-4" />
                   </div>
-                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_12px_var(--primary)]" />
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-widest text-foreground">Impact Velocity Monitor</h3>
+                    <p className="text-[9px] text-muted-foreground uppercase opacity-70">Temporal distribution of verified carbon offsets</p>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="h-[320px] pt-8 bg-primary/[0.02] relative">
+                <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-primary px-2 py-1 bg-primary/5 rounded border border-primary/10">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  LIVE TELEMETRY
+                </div>
+              </div>
+              <div className="h-[300px] p-4 relative">
+                <div className="absolute inset-0 bg-blueprint-dense pointer-events-none opacity-30" />
                 {cumulativeCo2Data.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <AreaChart data={cumulativeCo2Data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={cumulativeCo2Data}>
                       <defs>
-                        <linearGradient id="colorImpact" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="oklch(0.75 0.22 145)" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="oklch(0.75 0.22 145)" stopOpacity={0}/>
+                        <linearGradient id="colorGrid" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.75 0.22 145)" strokeOpacity={0.1} vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="oklch(0.75 0.22 145)" 
-                        opacity={0.5}
-                        fontSize={8}
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fill: 'oklch(0.75 0.22 145)', fontWeight: 'bold' }}
-                      />
-                      <YAxis 
-                        stroke="oklch(0.75 0.22 145)" 
-                        opacity={0.5}
-                        fontSize={8}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v) => `${v}kg`}
-                        tick={{ fill: 'oklch(0.75 0.22 145)', fontWeight: 'bold' }}
-                      />
+                      <CartesianGrid strokeDasharray="2 2" stroke="var(--color-primary)" strokeOpacity={0.1} />
+                      <XAxis dataKey="date" hide />
+                      <YAxis hide />
                       <Tooltip 
                         contentStyle={{ 
-                          backgroundColor: 'var(--card)', 
-                          border: '1px solid oklch(0.75 0.22 145 / 0.3)', 
-                          borderRadius: '12px',
+                          backgroundColor: 'rgba(0,0,0,0.8)', 
+                          border: '1px solid var(--color-primary)', 
+                          borderRadius: '8px',
+                          color: '#fff',
                           fontFamily: 'monospace',
-                          fontSize: '10px',
-                          boxShadow: '0 10px 15px -3px oklch(0.75 0.22 145 / 0.1)'
+                          fontSize: '10px'
                         }}
-                        cursor={{ stroke: 'oklch(0.75 0.22 145)', strokeWidth: 1 }}
-                        formatter={(value: number) => [`${value?.toLocaleString() || '0'} kg CO2`, 'IMPACT']}
                       />
-                      <Area 
-                        type="stepAfter" 
-                        dataKey="total" 
-                        stroke="oklch(0.75 0.22 145)" 
-                        fillOpacity={1} 
-                        fill="url(#colorImpact)" 
-                        strokeWidth={2}
-                        animationDuration={1500}
-                      />
+                      <Area type="monotone" dataKey="total" stroke="var(--color-primary)" fill="url(#colorGrid)" strokeWidth={3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 font-mono text-[10px]">
-                    <TrendingUp className="h-8 w-8 opacity-10" />
-                    <p>NO IMPACT DATA DETECTED IN LOCAL BUFFER</p>
+                  <div className="h-full flex items-center justify-center text-[10px] font-mono text-muted-foreground italic">
+                    Initializing data streams...
                   </div>
                 )}
-              </CardContent>
+              </div>
             </Card>
 
-            <Card className="glass border-primary/20 shadow-xl shadow-primary/10 pt-0">
-              <CardHeader className="border-b border-primary/20 bg-primary/10">
-                <CardTitle className="text-xl font-black uppercase tracking-tighter text-primary">Impact Density Map</CardTitle>
-                <CardDescription className="font-mono text-[10px] uppercase opacity-90 text-primary/70 italic tracking-wider">Visual Verification Protocol</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-10 bg-primary/[0.02]">
-                <div className="grid grid-cols-10 gap-1.5 mb-8">
-                  {Array.from({ length: Math.min(100, Math.ceil(stats.co2Saved / 10)) }).map((_, i) => (
-                    <motion.div 
-                      key={`impact-dot-${i}`}
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.01, ease: "easeOut" }}
-                      className="h-2.5 w-2.5 rounded-sm bg-primary shadow-[0_0_4px_var(--primary)]"
-                    />
-                  ))}
-                  {stats.co2Saved === 0 && (
-                    <div className="col-span-10 text-[8px] font-mono opacity-40 text-primary text-center py-12 flex flex-col items-center gap-2">
-                      <div className="h-4 w-4 rounded-full border border-primary/40 border-t-primary animate-spin" />
-                      CALIBRATING...
-                    </div>
-                  )}
-                </div>
-                <div className="text-center font-mono">
-                  <div className="text-3xl font-black text-primary tracking-tighter tabular-nums leading-none mb-2">
-                    {(stats.co2Saved || 0).toLocaleString()}<span className="text-xs uppercase ml-1">kg</span>
-                  </div>
-                  <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest leading-none">
-                    Verified Contribution
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass lg:col-span-3">
-              <CardHeader>
-                <CardTitle>CO2 Savings by Category</CardTitle>
-                <CardDescription>Breakdown of environmental impact across different asset classes.</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] relative">
-                {esgChartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <PieChart>
-                      <Pie
-                        data={esgChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {esgChartData.map((entry, index) => (
-                          <Cell key={`dashboard-esg-cell-${index}`} fill={`oklch(0.75 0.22 145 / ${1 - (index * 0.15)})`} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid var(--primary)', borderRadius: '12px' }}
-                        itemStyle={{ color: 'var(--primary)' }}
-                        formatter={(value: number) => [`${value} kg CO2`, 'Savings']}
+            {/* Verification Density Grid */}
+            <Card className="glass md:col-span-4 border-primary/10 flex flex-col p-0">
+               <div className="p-4 border-b border-white/5 bg-primary/[0.03]">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-foreground">Registry Density</h3>
+                  <p className="text-[9px] text-muted-foreground uppercase opacity-70 italic font-medium">Proof-of-Transition sequence</p>
+               </div>
+               <CardContent className="flex-1 flex flex-col items-center justify-center py-6">
+                  <div className="grid grid-cols-8 gap-1 mb-6">
+                    {Array.from({ length: 48 }).map((_, i) => (
+                      <motion.div 
+                        key={`grid-node-${i}`}
+                        initial={{ opacity: 0.1 }}
+                        animate={{ opacity: i < (stats.co2Saved / 50) ? 1 : 0.1 }}
+                        className={`h-2 w-2 rounded-sm ${i < (stats.co2Saved / 50) ? 'bg-primary shadow-[0_0_8px_var(--color-primary)]' : 'bg-white/5'}`}
                       />
-                      <Legend verticalAlign="bottom" height={36}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
-                    <Leaf className="h-8 w-8 opacity-20" />
-                    <p>No trade data available for ESG breakdown.</p>
+                    ))}
                   </div>
-                )}
-              </CardContent>
+                  <div className="text-center">
+                    <span className="block text-4xl font-black font-mono leading-none tracking-tighter mb-1 tabular-nums">
+                      {stats.co2Saved.toLocaleString()}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-primary/70">Verified Kilograms Avoided</span>
+                  </div>
+               </CardContent>
+            </Card>
+
+            {/* ESG Asset Mix */}
+            <Card className="glass md:col-span-4 border-primary/10 p-0">
+              <div className="p-4 border-b border-white/5 bg-primary/[0.03]">
+                 <h3 className="text-xs font-black uppercase tracking-widest text-foreground">Impact Geometry</h3>
+                 <p className="text-[9px] text-muted-foreground uppercase opacity-70">Asset class verified distribution</p>
+              </div>
+              <div className="h-[200px] p-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={esgChartData} dataKey="value" innerRadius={40} outerRadius={70} paddingAngle={2}>
+                      {esgChartData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={`var(--color-primary)`} opacity={1 - (index * 0.2)} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            {/* System Status / Network Health */}
+            <Card className="glass md:col-span-8 border-primary/10 overflow-hidden p-0 flex flex-col md:flex-row">
+              <div className="flex-1 p-6 border-r border-white/5">
+                <div className="flex items-center gap-2 mb-4">
+                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                   <span className="text-[10px] font-black uppercase tracking-widest">Network Integrated</span>
+                </div>
+                <h4 className="text-2xl font-black uppercase italic leading-tight mb-4 tracking-tighter">Verified Industrial Exchange Operational</h4>
+                <div className="flex gap-4">
+                  <div className="flex-1 space-y-1">
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase">Nodes</p>
+                    <p className="text-lg font-black font-mono leading-none">1.2k</p>
+                  </div>
+                  <div className="flex-1 space-y-1 border-l border-white/5 pl-4">
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase">Latency</p>
+                    <p className="text-lg font-black font-mono leading-none">42ms</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 bg-primary/10 p-6 flex items-center justify-center">
+                 <Button className="rounded-full px-8 shadow-xl shadow-primary/20 hover:scale-105 transition-transform font-black uppercase tracking-widest text-[10px] h-12" asChild>
+                   <Link to="/marketplace">Enter Exchange</Link>
+                 </Button>
+              </div>
             </Card>
           </div>
         </TabsContent>
@@ -1094,63 +1118,74 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">Asset</TableHead>
-                      <TableHead className="whitespace-nowrap">Price</TableHead>
-                      <TableHead className="whitespace-nowrap">Quantity</TableHead>
-                      <TableHead className="whitespace-nowrap">Status</TableHead>
-                      <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredMyListings.map((listing) => (
-                      <TableRow key={`my-listing-${listing.id}`}>
-                        <TableCell className="font-medium whitespace-nowrap">{listing.title}</TableCell>
-                        <TableCell className="whitespace-nowrap">£{listing.price?.toLocaleString() || '0'}</TableCell>
-                        <TableCell className="whitespace-nowrap">{listing.quantity}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <Badge variant={listing.status === 'available' ? 'default' : 'secondary'}>
-                            {listing.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-2 whitespace-nowrap">
-                          <Button variant="ghost" size="sm" asChild title="View Listing">
-                            <Link to={`/listing/${listing.id}`}>
-                              <ExternalLink className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="sm" asChild title="Edit Listing">
-                            <Link to={`/edit-listing/${listing.id}`}>
-                              <Pencil className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => {
-                              setListingToDelete(listing.id);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                            disabled={isDeleting === listing.id}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {myListings.length === 0 && (
+              <div className="overflow-x-auto min-h-[300px]">
+                {filteredMyListings.length > 0 ? (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                          You haven't listed any assets yet.
-                        </TableCell>
+                        <TableHead className="whitespace-nowrap">Asset</TableHead>
+                        <TableHead className="whitespace-nowrap">Price</TableHead>
+                        <TableHead className="whitespace-nowrap">Quantity</TableHead>
+                        <TableHead className="whitespace-nowrap">Status</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMyListings.map((listing) => (
+                        <TableRow key={`my-listing-${listing.id}`}>
+                          <TableCell className="font-medium whitespace-nowrap">{listing.title}</TableCell>
+                          <TableCell className="whitespace-nowrap">£{listing.price?.toLocaleString() || '0'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{listing.quantity}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <Badge variant={listing.status === 'available' ? 'default' : 'secondary'}>
+                              {listing.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right space-x-2 whitespace-nowrap">
+                            <Button variant="ghost" size="sm" asChild title="View Listing">
+                              <Link to={`/listing/${listing.id}`}>
+                                <ExternalLink className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="sm" asChild title="Edit Listing">
+                              <Link to={`/edit-listing/${listing.id}`}>
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => {
+                                setListingToDelete(listing.id);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              disabled={isDeleting === listing.id}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-20 text-center flex flex-col items-center justify-center">
+                    <div className="h-20 w-20 rounded-3xl bg-primary/5 flex items-center justify-center mb-6 border border-primary/10">
+                      <Package className="h-10 w-10 text-primary/40" />
+                    </div>
+                    <h3 className="text-xl font-bold uppercase tracking-tight mb-2">Inventory Empty</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-8 font-medium">
+                      You haven't deployed any industrial assets to the registry yet. Start trading to earn revenue and save carbon.
+                    </p>
+                    <Button className="rounded-full px-8 shadow-lg shadow-primary/20" asChild>
+                      <Link to="/create-listing">
+                         <Plus className="mr-2 h-4 w-4" />
+                         Post New Asset
+                      </Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1182,71 +1217,79 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">Date</TableHead>
-                      <TableHead className="whitespace-nowrap">ID</TableHead>
-                      <TableHead className="whitespace-nowrap">Amount</TableHead>
-                      <TableHead className="whitespace-nowrap">CO2 Saved</TableHead>
-                      <TableHead className="whitespace-nowrap">Status</TableHead>
-                      <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTransactions.map((t) => (
-                      <TableRow key={`transaction-${t.id}`}>
-                        <TableCell className="whitespace-nowrap">
-                          {t.createdAt?.toDate ? format(t.createdAt.toDate(), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs whitespace-nowrap">{t.id}</TableCell>
-                        <TableCell className="whitespace-nowrap">£{t.amount?.toLocaleString() || '0'}</TableCell>
-                        <TableCell className="text-primary font-medium whitespace-nowrap">{t.co2Saved} kg</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <Badge 
-                            variant={t.status === 'completed' ? 'default' : 'secondary'} 
-                            className={`capitalize ${t.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}`}
-                          >
-                            {t.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right space-x-2 whitespace-nowrap">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="gap-2"
-                            onClick={() => {
-                              toast.info("Generating certificate...");
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                            PDF
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="rounded-full h-8 w-8 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10 shadow-[0_0_8px_rgba(239,68,68,0.2)] hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
-                            onClick={() => {
-                              setSelectedTransaction(t);
-                              setIsReportModalOpen(true);
-                            }}
-                            title="Report Transaction"
-                          >
-                            <AlertTriangle className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {transactions.length === 0 && (
+              <div className="overflow-x-auto min-h-[400px]">
+                {filteredTransactions.length > 0 ? (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                          No trade history found.
-                        </TableCell>
+                        <TableHead className="whitespace-nowrap">Date</TableHead>
+                        <TableHead className="whitespace-nowrap">ID</TableHead>
+                        <TableHead className="whitespace-nowrap">Amount</TableHead>
+                        <TableHead className="whitespace-nowrap">CO2 Saved</TableHead>
+                        <TableHead className="whitespace-nowrap">Status</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTransactions.map((t) => (
+                        <TableRow key={`transaction-${t.id}`}>
+                          <TableCell className="whitespace-nowrap">
+                            {t.createdAt?.toDate ? format(t.createdAt.toDate(), 'MMM d, yyyy') : format(new Date(t.createdAt), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs whitespace-nowrap">{t.id}</TableCell>
+                          <TableCell className="whitespace-nowrap">£{t.amount?.toLocaleString() || '0'}</TableCell>
+                          <TableCell className="text-primary font-medium whitespace-nowrap">{t.co2Saved} kg</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <Badge 
+                              variant={t.status === 'completed' ? 'default' : 'secondary'} 
+                              className={`capitalize ${t.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}`}
+                            >
+                              {t.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right space-x-2 whitespace-nowrap">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="gap-2"
+                              onClick={() => {
+                                toast.info("Generating certificate...");
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
+                              PDF
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="rounded-full h-8 w-8 border-red-500/30 text-red-500 transition-all duration-300 hover:text-red-400 hover:bg-red-500/10 shadow-[0_0_8px_rgba(239,68,68,0.2)] hover:shadow-[0_0_15px_rgba(239,68,68,0.4)]"
+                              onClick={() => {
+                                setSelectedTransaction(t);
+                                setIsReportModalOpen(true);
+                              }}
+                              title="Report Transaction"
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-24 text-center flex flex-col items-center justify-center">
+                    <div className="h-20 w-20 rounded-3xl bg-primary/5 flex items-center justify-center mb-6 border border-primary/10">
+                      <History className="h-10 w-10 text-primary/40" />
+                    </div>
+                    <h3 className="text-xl font-bold uppercase tracking-tight mb-2">No Trade Lineage</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-8 font-medium">
+                      You haven't completed any trades on the exchange yet. Completed purchases and sales will appear here for auditing and ESG reporting.
+                    </p>
+                    <Button variant="outline" className="rounded-full" asChild>
+                      <Link to="/marketplace">Browse Marketplace</Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1265,102 +1308,122 @@ export default function Dashboard() {
                   <TabsTrigger value="sent">Sent</TabsTrigger>
                 </TabsList>
                 <TabsContent value="received">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Buyer</TableHead>
-                          <TableHead>Asset</TableHead>
-                          <TableHead>Offer Unit Price</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {offers.filter(o => o.sellerId === user.uid).map((offer) => (
-                          <TableRow key={`offer-received-${offer.id}`}>
-                            <TableCell className="font-medium">{offer.buyerName}</TableCell>
-                            <TableCell>{offer.listingTitle || offer.listingId}</TableCell>
-                            <TableCell className="font-mono">£{offer.amount?.toLocaleString() || '0'}</TableCell>
-                            <TableCell>{offer.quantity}</TableCell>
-                            <TableCell>
-                              <Badge className="capitalize">{offer.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right space-x-2">
-                              {offer.status === 'accepted' && (
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  className="h-8 border-primary/20 hover:bg-primary/5 text-primary"
-                                  onClick={() => handleUpdatePrice(offer.listingId, offer.amount)}
-                                  disabled={isUpdatingPrice === offer.listingId}
-                                >
-                                  {isUpdatingPrice === offer.listingId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <DollarSign className="h-3 w-3 mr-1" />}
-                                  Update Listing Price to £{offer.amount?.toLocaleString() || '0'}
-                                </Button>
-                              )}
-                              {offer.status === 'pending' && (
-                                <>
-                                  <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'accepted')}>Accept</Button>
-                                  <Button size="sm" variant="outline" className="h-8 border-primary/20" onClick={() => {
-                                    setSelectedOffer(offer);
-                                    setCounterAmount(offer.amount.toString());
-                                    setIsCounterDialogOpen(true);
-                                  }}>Counter</Button>
-                                  <Button size="sm" variant="destructive" className="h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'rejected')}>Reject</Button>
-                                </>
-                              )}
-                              <Button variant="ghost" size="sm" className="h-8" asChild>
-                                <Link to={`/listing/${offer.listingId}`}>View</Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {offers.filter(o => o.sellerId === user.uid).length === 0 && (
+                  <div className="overflow-x-auto min-h-[300px]">
+                    {offers.filter(o => o.sellerId === user.uid).length > 0 ? (
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No offers received yet.</TableCell>
+                            <TableHead>Buyer</TableHead>
+                            <TableHead>Asset</TableHead>
+                            <TableHead>Offer Unit Price</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {offers.filter(o => o.sellerId === user.uid).map((offer) => (
+                            <TableRow key={`offer-received-${offer.id}`}>
+                              <TableCell className="font-medium">{offer.buyerName}</TableCell>
+                              <TableCell>{offer.listingTitle || offer.listingId}</TableCell>
+                              <TableCell className="font-mono">£{offer.amount?.toLocaleString() || '0'}</TableCell>
+                              <TableCell>{offer.quantity}</TableCell>
+                              <TableCell>
+                                <Badge className="capitalize">{offer.status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right space-x-2">
+                                {offer.status === 'accepted' && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-8 border-primary/20 hover:bg-primary/5 text-primary"
+                                    onClick={() => handleUpdatePrice(offer.listingId, offer.amount)}
+                                    disabled={isUpdatingPrice === offer.listingId}
+                                  >
+                                    {isUpdatingPrice === offer.listingId ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <DollarSign className="h-3 w-3 mr-1" />}
+                                    Update Listing Price to £{offer.amount?.toLocaleString() || '0'}
+                                  </Button>
+                                )}
+                                {offer.status === 'pending' && (
+                                  <>
+                                    <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'accepted')}>Accept</Button>
+                                    <Button size="sm" variant="outline" className="h-8 border-primary/20" onClick={() => {
+                                      setSelectedOffer(offer);
+                                      setCounterAmount(offer.amount.toString());
+                                      setIsCounterDialogOpen(true);
+                                    }}>Counter</Button>
+                                    <Button size="sm" variant="destructive" className="h-8" onClick={() => handleUpdateOfferStatus(offer.id, 'rejected')}>Reject</Button>
+                                  </>
+                                )}
+                                <Button variant="ghost" size="sm" className="h-8" asChild>
+                                  <Link to={`/listing/${offer.listingId}`}>View</Link>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="py-20 text-center flex flex-col items-center justify-center">
+                        <div className="h-16 w-16 rounded-2xl bg-amber-500/5 flex items-center justify-center mb-4 border border-amber-500/10">
+                          <DollarSign className="h-8 w-8 text-amber-500/40" />
+                        </div>
+                        <h3 className="text-lg font-bold uppercase tracking-tight mb-1">Zero Bids Received</h3>
+                        <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-6">
+                          No organizations have submitted offers for your listed assets yet.
+                        </p>
+                        <Button variant="outline" size="sm" className="rounded-full" asChild>
+                          <Link to="/marketplace">Optimize Listings</Link>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
                 <TabsContent value="sent">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Asset</TableHead>
-                          <TableHead>Offer Unit Price</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {offers.filter(o => o.buyerId === user.uid).map((offer) => (
-                          <TableRow key={`offer-sent-${offer.id}`}>
-                            <TableCell className="font-medium">{offer.listingTitle || offer.listingId}</TableCell>
-                            <TableCell className="font-mono">£{offer.amount?.toLocaleString() || '0'}</TableCell>
-                            <TableCell>{offer.quantity}</TableCell>
-                            <TableCell>
-                              <Badge className="capitalize">{offer.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" className="h-8" asChild>
-                                <Link to={`/listing/${offer.listingId}`}>View Listing</Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {offers.filter(o => o.buyerId === user.uid).length === 0 && (
+                  <div className="overflow-x-auto min-h-[300px]">
+                    {offers.filter(o => o.buyerId === user.uid).length > 0 ? (
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">You haven't submitted any offers yet.</TableCell>
+                            <TableHead>Asset</TableHead>
+                            <TableHead>Offer Unit Price</TableHead>
+                            <TableHead>Quantity</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {offers.filter(o => o.buyerId === user.uid).map((offer) => (
+                            <TableRow key={`offer-sent-${offer.id}`}>
+                              <TableCell className="font-medium">{offer.listingTitle || offer.listingId}</TableCell>
+                              <TableCell className="font-mono">£{offer.amount?.toLocaleString() || '0'}</TableCell>
+                              <TableCell>{offer.quantity}</TableCell>
+                              <TableCell>
+                                <Badge className="capitalize">{offer.status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="sm" className="h-8" asChild>
+                                  <Link to={`/listing/${offer.listingId}`}>View Listing</Link>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="py-20 text-center flex flex-col items-center justify-center">
+                        <div className="h-16 w-16 rounded-2xl bg-primary/5 flex items-center justify-center mb-4 border border-primary/10">
+                          <DollarSign className="h-8 w-8 text-primary/40" />
+                        </div>
+                        <h3 className="text-lg font-bold uppercase tracking-tight mb-1">No Active Bids</h3>
+                        <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-6">
+                          You haven't submitted any offers for marketplace assets.
+                        </p>
+                        <Button variant="outline" size="sm" className="rounded-full" asChild>
+                          <Link to="/marketplace">Explore Opportunities</Link>
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>

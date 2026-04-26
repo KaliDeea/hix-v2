@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, db, onSnapshot, handleFirestoreError, OperationType } from "@/lib/firebase";
+import { useAuth, db, onSnapshot, handleFirestoreError, OperationType, storage, ref, uploadBytes, getDownloadURL } from "@/lib/firebase";
 import { UserProfile, Transaction, Report, AuditLog, Listing, WhitepaperRequest, Chat } from "@/types";
 import { 
   collection, 
@@ -79,7 +79,9 @@ import {
   Menu,
   X,
   ShoppingCart,
-  Zap
+  Zap,
+  Recycle,
+  CircleDot
 } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -198,7 +200,11 @@ const ESGCertificateModal = ({
       if (platformLogo) {
         try {
           const img = await loadImage(platformLogo);
-          doc.addImage(img, 'PNG', 20, 20, 25, 25);
+          // Circular frame
+          doc.setDrawColor(34, 197, 94);
+          doc.setLineWidth(1);
+          doc.circle(32.5, 32.5, 12.5, 'D');
+          doc.addImage(img, 'PNG', 22.5, 22.5, 20, 20);
         } catch (e) {
           console.error("Logo loading failed, skipping from PDF", e);
           // Fallback: Text logo
@@ -219,7 +225,7 @@ const ESGCertificateModal = ({
       doc.setFontSize(14);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139);
-      doc.text('This official document verifies the sustainable contributions of', 148.5, 75, { align: 'center' });
+      doc.text('This document verifies the sustainable contributions of', 148.5, 75, { align: 'center' });
 
       // Recipient
       doc.setTextColor(34, 197, 94);
@@ -311,7 +317,7 @@ const ESGCertificateModal = ({
             <div>
               <AlertDialogTitle className="text-3xl font-black tracking-tight text-white">ESG Certificate Generator</AlertDialogTitle>
               <AlertDialogDescription className="text-base text-white/60 font-medium">
-                HIX ADMIN &bull; Official impact documentation for <strong>{user?.companyName || user?.email}</strong>
+                HIX ADMIN &bull; Platform impact documentation for <strong>{user?.companyName || user?.email}</strong>
               </AlertDialogDescription>
             </div>
           </div>
@@ -634,6 +640,7 @@ export default function Admin() {
   const [vettingSearch, setVettingSearch] = useState("");
   const [vettingTypeFilter, setVettingTypeFilter] = useState("all");
   const [vettingStatusFilter, setVettingStatusFilter] = useState("all");
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   const [announcement, setAnnouncement] = useState({ title: "", message: "" });
   const [isSendingAnnouncement, setIsSendingAnnouncement] = useState(false);
@@ -663,7 +670,7 @@ export default function Admin() {
       
       doc.setFontSize(12);
       doc.setTextColor(71, 85, 105); // Slate 600
-      doc.text('Official Platform Documentation & Institutional Overview', 20, 38);
+      doc.text('Platform Documentation & Institutional Overview', 20, 38);
 
       // Recipient Info
       doc.setDrawColor(203, 213, 225); // Slate 300
@@ -1329,6 +1336,82 @@ export default function Admin() {
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
     } finally {
       setIsUpdatingVat(false);
+    }
+  };
+
+  const handleUploadVettingDoc = async (userId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingDoc(true);
+    try {
+      const storageRef = ref(storage, `vetting_docs/${userId}/${Date.now()}_${file.name}`);
+      const uploadResult = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(uploadResult.ref);
+
+      const newDoc = {
+        name: file.name,
+        url: url,
+        type: file.type || 'application/octet-stream',
+        uploadedAt: new Date()
+      };
+
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data() as UserProfile;
+      const currentDocs = userData.verificationDocs || [];
+      
+      const updatedDocs = [...currentDocs, newDoc];
+
+      await updateDoc(userRef, { 
+        verificationDocs: updatedDocs,
+        updatedAt: serverTimestamp()
+      });
+
+      await createAuditLog("UPLOAD_VETTING_DOC", `Uploaded verification document: ${file.name}`, userId, 'user', userData.companyName, userData.email);
+
+      toast.success("Document uploaded successfully");
+      
+      // Update local state
+      setUsers(prev => prev.map(u => u.uid === userId ? { ...u, verificationDocs: updatedDocs } : u));
+      if (selectedUserForVetting?.uid === userId) {
+        setSelectedUserForVetting(prev => prev ? { ...prev, verificationDocs: updatedDocs } : null);
+      }
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      toast.error("Failed to upload document");
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
+
+  const handleRemoveVettingDoc = async (userId: string, docUrl: string) => {
+    try {
+      const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      const userData = userSnap.data() as UserProfile;
+      const currentDocs = userData.verificationDocs || [];
+      
+      const removedDoc = currentDocs.find(d => d.url === docUrl);
+      const updatedDocs = currentDocs.filter(d => d.url !== docUrl);
+
+      await updateDoc(userRef, { 
+        verificationDocs: updatedDocs,
+        updatedAt: serverTimestamp()
+      });
+
+      await createAuditLog("REMOVE_VETTING_DOC", `Removed verification document: ${removedDoc?.name || 'Unknown'}`, userId, 'user', userData.companyName, userData.email);
+
+      toast.success("Document removed");
+      
+      // Update local state
+      setUsers(prev => prev.map(u => u.uid === userId ? { ...u, verificationDocs: updatedDocs } : u));
+      if (selectedUserForVetting?.uid === userId) {
+        setSelectedUserForVetting(prev => prev ? { ...prev, verificationDocs: updatedDocs } : null);
+      }
+    } catch (error) {
+      console.error("Error removing document:", error);
+      toast.error("Failed to remove document");
     }
   };
 
@@ -3322,48 +3405,46 @@ export default function Admin() {
                       <CardTitle className="text-xl">Vetting Queue</CardTitle>
                       <CardDescription>Review companies waiting for VAT and identity verification.</CardDescription>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="relative w-full sm:w-64 group">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                        <Input 
-                          placeholder="Search companies..." 
-                          className="pl-10 pr-9 rounded-xl glass border-primary/20 focus:ring-primary/50"
-                          value={vettingSearch}
-                          onChange={(e) => setVettingSearch(e.target.value)}
-                        />
-                        {vettingSearch && (
-                          <button 
-                            onClick={() => setVettingSearch("")}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
+                    <div className="flex flex-col sm:flex-row gap-4 items-center">
+                      <div className="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/5 w-full sm:w-auto">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-3 pr-1">Type</span>
+                        <Select value={vettingTypeFilter} onValueChange={setVettingTypeFilter}>
+                          <SelectTrigger className="w-full sm:w-[150px] border-none shadow-none focus:ring-0 h-9 bg-transparent">
+                            <SelectValue placeholder="All Pending" />
+                          </SelectTrigger>
+                          <SelectContent className="glass">
+                            <SelectItem value="all">All Pending</SelectItem>
+                            <SelectItem value="vat">VAT Pending</SelectItem>
+                            <SelectItem value="identity">Identity Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Select value={vettingTypeFilter} onValueChange={setVettingTypeFilter}>
-                        <SelectTrigger className="w-full sm:w-[160px] rounded-xl glass border-primary/20">
-                          <Filter className="h-4 w-4 mr-2" />
-                          <SelectValue placeholder="Filter Type" />
-                        </SelectTrigger>
-                        <SelectContent className="glass">
-                          <SelectItem value="all">All Pending</SelectItem>
-                          <SelectItem value="vat">VAT Pending</SelectItem>
-                          <SelectItem value="identity">Identity Pending</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select value={vettingStatusFilter} onValueChange={setVettingStatusFilter}>
-                        <SelectTrigger className="w-full sm:w-[160px] rounded-xl glass border-primary/20">
-                          <ShieldCheck className="h-4 w-4 mr-2" />
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent className="glass">
-                          <SelectItem value="all">All Statuses</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="under_review">Under Review</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      
+                      <div className="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/5 w-full sm:w-auto">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground pl-3 pr-1">Status</span>
+                        <Select value={vettingStatusFilter} onValueChange={setVettingStatusFilter}>
+                          <SelectTrigger className="w-full sm:w-[150px] border-none shadow-none focus:ring-0 h-9 bg-transparent">
+                            <SelectValue placeholder="All Statuses" />
+                          </SelectTrigger>
+                          <SelectContent className="glass">
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="under_review">Under Review</SelectItem>
+                            <SelectItem value="approved">Approved</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="relative w-full sm:w-48 group">
+                         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary" />
+                         <Input 
+                           placeholder="Search..." 
+                           className="pl-9 h-11 rounded-2xl glass border-primary/20 text-xs"
+                           value={vettingSearch}
+                           onChange={(e) => setVettingSearch(e.target.value)}
+                         />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -4285,7 +4366,7 @@ export default function Admin() {
                         <div className={`h-2.5 w-2.5 rounded-full mt-1 shrink-0 ${selectedUserForVetting.isVetted ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.5)]' : 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]'}`} />
                         <div className="flex flex-col gap-0.5">
                           <span className={selectedUserForVetting.isVetted ? 'text-foreground font-bold' : 'text-muted-foreground font-medium'}>Identity Vetting</span>
-                          <span className="text-[10px] text-muted-foreground/60 leading-tight">Official company documentation review</span>
+                          <span className="text-[10px] text-muted-foreground/60 leading-tight">Company documentation review</span>
                         </div>
                       </li>
                       <li className="flex items-start gap-4 text-sm opacity-40">
@@ -4313,6 +4394,75 @@ export default function Admin() {
                       })()}
                     </p>
                   </div>
+                </div>
+
+                {/* Document Verification Section */}
+                <div className="md:col-span-2 border-t border-white/5 pt-8 mt-4">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Company Verification Documents</h4>
+                        <p className="text-xs text-muted-foreground font-medium">Registration certificates, identity docs, tax IDs</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="h-10 rounded-xl font-bold uppercase tracking-widest text-[10px] gap-2 border-primary/20 hover:bg-primary/5 group" asChild>
+                      <label className="cursor-pointer">
+                        {isUploadingDoc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />}
+                        Upload Document
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          onChange={(e) => handleUploadVettingDoc(selectedUserForVetting.uid, e)} 
+                          disabled={isUploadingDoc} 
+                          accept=".pdf,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </Button>
+                  </div>
+
+                  {selectedUserForVetting.verificationDocs && selectedUserForVetting.verificationDocs.length > 0 ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                       {selectedUserForVetting.verificationDocs.map((doc, idx) => (
+                         <div key={`doc-${idx}`} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors group/doc">
+                           <div className="flex items-center gap-3 overflow-hidden">
+                             <div className="h-9 w-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                               <FileText className="h-4 w-4 text-muted-foreground" />
+                             </div>
+                             <div className="overflow-hidden">
+                               <p className="text-xs font-bold truncate pr-2">{doc.name}</p>
+                               <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">
+                                 {doc.uploadedAt?.toDate ? doc.uploadedAt.toDate().toLocaleDateString() : new Date(doc.uploadedAt).toLocaleDateString()}
+                               </p>
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-1 opacity-0 group-hover/doc:opacity-100 transition-opacity">
+                             <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg text-primary hover:bg-primary/20" asChild>
+                               <a href={doc.url} target="_blank" rel="noreferrer">
+                                 <Eye className="h-3.5 w-3.5" />
+                               </a>
+                             </Button>
+                             <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/20"
+                              onClick={() => handleRemoveVettingDoc(selectedUserForVetting.uid, doc.url)}
+                             >
+                               <Trash2 className="h-3.5 w-3.5" />
+                             </Button>
+                           </div>
+                         </div>
+                       ))}
+                    </div>
+                  ) : (
+                    <div className="p-10 border-2 border-dashed border-white/5 rounded-3xl flex flex-col items-center justify-center text-center opacity-40">
+                       <FileText className="h-10 w-10 mb-4" />
+                       <p className="text-sm font-medium">No verification documents uploaded yet</p>
+                       <p className="text-xs">Upload registration certificates or identity proof to verify this company.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -4512,33 +4662,62 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="glass p-4 rounded-2xl border-white/10">
-                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary mb-3">Environmental Impact</h4>
+                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary mb-3">Carbon Offset</h4>
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-green-500/10 text-green-500">
-                      <Leaf className="h-6 w-6" />
+                    <div className="p-2 rounded-xl bg-green-500/10 text-green-500">
+                      <Leaf className="h-4 w-4" />
                     </div>
                     <div>
-                      <p className="text-xl font-black text-green-500 tracking-tighter">
+                      <p className="text-sm font-black text-green-500 tracking-tighter">
                         {selectedTransaction.co2Savings?.toLocaleString() || selectedTransaction.co2Saved?.toLocaleString() || 0} kg
                       </p>
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase">CO2 Emissions Avoided</p>
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase">CO2 Avoided</p>
                     </div>
                   </div>
                 </div>
                 <div className="glass p-4 rounded-2xl border-white/10">
-                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary mb-3">Escrow Status</h4>
+                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-blue-500 mb-3">Resources</h4>
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500">
-                      <ShieldCheck className="h-6 w-6" />
+                    <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                      <Recycle className="h-4 w-4" />
                     </div>
                     <div>
-                      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] uppercase font-black">
-                        {selectedTransaction.escrowStatus?.replace('_', ' ') || 'Secured'}
-                      </Badge>
-                      <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">Platform Protection</p>
+                      <p className="text-sm font-black text-blue-500 tracking-tighter">
+                        {selectedTransaction.resourceSavings?.toLocaleString() || 'N/A'} kg
+                      </p>
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase">Materials Saved</p>
                     </div>
+                  </div>
+                </div>
+                <div className="glass p-4 rounded-2xl border-white/10">
+                  <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-purple-500 mb-3">Circularity</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
+                      <CircleDot className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-purple-500 tracking-tighter">
+                        {selectedTransaction.circularityRate !== undefined ? `${selectedTransaction.circularityRate}%` : 'N/A'}
+                      </p>
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase">Reuse Rate</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass p-4 rounded-2xl border-white/10">
+                <h4 className="text-[10px] uppercase font-black tracking-[0.2em] text-primary mb-3">Escrow Status</h4>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500">
+                    <ShieldCheck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] uppercase font-black">
+                      {selectedTransaction.escrowStatus?.replace('_', ' ') || 'Secured'}
+                    </Badge>
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase mt-1">Platform Protection</p>
                   </div>
                 </div>
               </div>

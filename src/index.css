@@ -7,9 +7,9 @@
 
 @theme inline {
     --breakpoint-xs: 400px;
-    --font-heading: var(--font-display);
-    --font-sans: 'Smooch Sans', sans-serif;
-    --font-display: 'Smooch Sans', sans-serif;
+    --font-heading: 'Inter', sans-serif;
+    --font-sans: 'Inter', sans-serif;
+    --font-display: 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
     --font-serif: 'Playfair Display', serif;
     --color-sidebar-ring: var(--sidebar-ring);
@@ -183,10 +183,24 @@
     @apply w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8;
   }
   .glass {
-    @apply bg-background/60 backdrop-blur-lg border border-primary/20 shadow-[0_2px_10px_-3px_var(--primary)] p-4 sm:p-6 md:p-8;
+    @apply bg-background/70 backdrop-blur-md border border-primary/20 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.1)] p-4 sm:p-6 md:p-8;
+    background-image: radial-gradient(circle at 1.5px 1.5px, var(--color-primary) 0.5px, transparent 0);
+    background-size: 24px 24px;
   }
   .glass-dark {
-    @apply bg-card/40 backdrop-blur-xl border border-primary/30 shadow-[0_4px_16px_0_rgba(0,0,0,0.25)];
+    @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.5)];
+  }
+  .bg-blueprint {
+    background-image: 
+      linear-gradient(to right, color-mix(in srgb, var(--color-primary) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 5%, transparent) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .bg-blueprint-dense {
+    background-image: 
+      linear-gradient(to right, color-mix(in srgb, var(--color-primary) 3%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 3%, transparent) 1px, transparent 1px);
+    background-size: 10px 10px;
   }
   .hix-gradient {
     @apply bg-gradient-to-br from-primary/10 via-transparent to-primary/5;

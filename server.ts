@@ -172,14 +172,14 @@ async function startServer() {
         const results = listings
           .map((listing: any) => {
             const categoryMatch = listing.category.toLowerCase() === request.category.toLowerCase();
-            const titleMatch = (listing.title?.toLowerCase() || "").includes(request.title?.toLowerCase() || "") || 
-                              (request.title?.toLowerCase() || "").includes(listing.title?.toLowerCase() || "");
+            const titleMatch = listing.title.toLowerCase().includes(request.title.toLowerCase()) || 
+                              request.title.toLowerCase().includes(listing.title.toLowerCase());
             
             let score = 0;
             if (categoryMatch) score += 50;
             if (titleMatch) score += 30;
             
-            const commonTags = (listing.tags || []).filter((t: string) => (request.tags || []).includes(t));
+            const commonTags = listing.tags.filter((t: string) => request.tags.includes(t));
             score += commonTags.length * 5;
 
             return {
@@ -225,45 +225,6 @@ async function startServer() {
       res.json(JSON.parse(cleanJson));
     } catch (error: any) {
       console.error("AI Matching Error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Generic AI Route for various tasks
-  app.post("/api/ai/generate", async (req, res) => {
-    try {
-      const { contents, systemInstruction, responseSchema, modelName, generationConfig } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing on server." });
-
-      const sdk = await import("@google/genai");
-      const genAI = new sdk.GoogleGenAI({ apiKey });
-      const model = (genAI as any).getGenerativeModel({ 
-        model: modelName || "gemini-1.5-flash",
-        systemInstruction
-      });
-
-      const result = await model.generateContent({
-        contents,
-        generationConfig: responseSchema ? {
-          ...generationConfig,
-          responseMimeType: "application/json",
-          responseSchema
-        } : (generationConfig || undefined)
-      });
-
-      const responseText = result.response.text();
-      if (responseSchema) {
-        try {
-          return res.json(JSON.parse(responseText.replace(/```json|```/g, "").trim()));
-        } catch (e) {
-          console.error("JSON Parse Error:", e, responseText);
-          return res.json({ text: responseText });
-        }
-      }
-      res.json({ text: responseText });
-    } catch (error: any) {
-      console.error("AI Generate Error:", error);
       res.status(500).json({ error: error.message });
     }
   });

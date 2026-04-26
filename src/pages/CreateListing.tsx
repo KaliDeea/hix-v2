@@ -40,8 +40,8 @@ import {
   Globe,
   Download
 } from "lucide-react";
-import { scanAssetDocument, AssetVerificationResult, scanTechnicalDocument, extractPassportData } from "@/services/geminiService";
-import { DigitalProductPassport } from "@/types";
+import { scanAssetDocument, AssetVerificationResult, scanTechnicalDocument } from "@/services/geminiService";
+import { GoogleGenAI, Type } from "@google/genai";
 import { 
   Tooltip, 
   TooltipContent, 
@@ -74,7 +74,6 @@ export default function CreateListing() {
     shippingOptions: ['collection'] as ('collection' | 'standard' | 'express' | 'international')[],
     shippingCost: ""
   });
-  const [passport, setPassport] = useState<Partial<DigitalProductPassport> | null>(null);
   const [images, setImages] = useState<{url: string, file?: File}[]>([]);
   const [documents, setDocuments] = useState<{
     name: string, 
@@ -100,35 +99,6 @@ export default function CreateListing() {
     } catch (error) {
       console.error("Doc Scan Error:", error);
       toast.error("AI Librarian failed to parse technical node specifications.", { id: toastId });
-      setDocuments(prev => prev.map((d, i) => i === index ? { ...d, isScanning: false } : d));
-    }
-  };
-
-  const handleExtractPassport = async (index: number) => {
-    const docToScan = documents[index];
-    if (!docToScan.file) return;
-
-    setDocuments(prev => prev.map((d, i) => i === index ? { ...d, isScanning: true } : d));
-    const toastId = toast.loading(`AI Engine generating Digital Product Passport for: ${docToScan.name}...`);
-
-    try {
-      const dpp = await extractPassportData(docToScan.file);
-      setPassport(dpp);
-      setDocuments(prev => prev.map((d, i) => i === index ? { ...d, isScanning: false } : d));
-      
-      // Auto-fill some form fields if empty
-      setFormData(prev => ({
-        ...prev,
-        brand: dpp.manufacturer || prev.brand,
-        model: dpp.model || prev.model,
-        year: dpp.manufacturingYear ? dpp.manufacturingYear.toString() : prev.year,
-        voltage: dpp.voltage || prev.voltage,
-      }));
-
-      toast.success("Digital Product Passport generated and linked!", { id: toastId });
-    } catch (error) {
-      console.error("DPP Extraction Error:", error);
-      toast.error("Failed to generate Digital Product Passport.", { id: toastId });
       setDocuments(prev => prev.map((d, i) => i === index ? { ...d, isScanning: false } : d));
     }
   };
@@ -172,33 +142,40 @@ export default function CreateListing() {
     const toastId = toast.loading("Analyzing industrial data plate...");
     
     try {
-      const response = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inlineData: { mimeType: "image/jpeg", data: base64Image.split(',')[1] } },
-              { text: "Extract technical specifications from this industrial machine nameplate. Return JSON: manufacturer, model, weightKg, voltageV, year, titleSuggestion." }
-            ]
-          }],
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const imagePart = {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: base64Image.split(',')[1],
+        },
+      };
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: {
+          parts: [
+            imagePart,
+            { text: "Extract technical specifications from this industrial machine nameplate. Return JSON: manufacturer, model, weightKg, voltageV, year, titleSuggestion." }
+          ]
+        },
+        config: {
+          responseMimeType: "application/json",
           responseSchema: {
-            type: "object",
+            type: Type.OBJECT,
             properties: {
-              manufacturer: { type: "string" },
-              model: { type: "string" },
-              weightKg: { type: "number" },
-              voltageV: { type: "string" },
-              year: { type: "number" },
-              titleSuggestion: { type: "string" }
+              manufacturer: { type: Type.STRING },
+              model: { type: Type.STRING },
+              weightKg: { type: Type.NUMBER },
+              voltageV: { type: Type.STRING },
+              year: { type: Type.NUMBER },
+              titleSuggestion: { type: Type.STRING }
             },
             required: ["manufacturer", "model"]
           }
-        })
+        }
       });
 
-      if (!response.ok) throw new Error("Extraction failed");
-      const result = await response.json();
+      const result = JSON.parse(response.text);
       setFormData(prev => ({
         ...prev,
         brand: result.manufacturer || prev.brand,
@@ -364,29 +341,27 @@ export default function CreateListing() {
 
     setIsAiGenerating(true);
     try {
-      const response = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ 
-            role: 'user', 
-            parts: [{ text: `Generate a professional industrial listing description and estimate CO2 savings (in kg) for an asset titled: "${formData.title}". 
-            Category: ${formData.category || 'Industrial'}. 
-            Condition: ${formData.condition}.` }] 
-          }],
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Generate a professional industrial listing description and estimate CO2 savings (in kg) for an asset titled: "${formData.title}". 
+        Category: ${formData.category || 'Industrial'}. 
+        Condition: ${formData.condition}.
+        Return the result in JSON format.`,
+        config: {
+          responseMimeType: "application/json",
           responseSchema: {
-            type: "object",
+            type: Type.OBJECT,
             properties: {
-              description: { type: "string" },
-              co2Savings: { type: "number" }
+              description: { type: Type.STRING },
+              co2Savings: { type: Type.NUMBER }
             },
             required: ["description", "co2Savings"]
           }
-        })
+        }
       });
 
-      if (!response.ok) throw new Error("Generation failed");
-      const result = await response.json();
+      const result = JSON.parse(response.text);
       setFormData(prev => ({
         ...prev,
         description: result.description,
@@ -517,10 +492,6 @@ export default function CreateListing() {
         co2Savings: parseFloat(formData.co2Savings) || 0,
         images: imageUrls.length > 0 ? imageUrls : ["https://picsum.photos/seed/" + listingId + "/800/600"],
         documents: finalDocs,
-        passport: passport ? {
-          ...passport,
-          lastAuditedAt: new Date().toISOString()
-        } : null,
         status: status,
         tags: formData.tags || [],
         listingType: 'fixed',
@@ -555,32 +526,34 @@ export default function CreateListing() {
             .map(doc => ({ id: doc.id, ...doc.data() } as any))
             .filter(req => req.status === 'active');
 
-            if (activeRequests.length > 0) {
-              const listingDetails = `Title: ${formData.title}. Description: ${formData.description}. Specs: ${formData.brand} ${formData.model} ${formData.voltage} ${formData.dimensions} ${formData.weight}. Category: ${formData.category}`;
+          if (activeRequests.length > 0) {
+            // We use the same service but we need to match a single listing against multiple RFAs.
+            // For simplicity and efficiency, we can do a semantic check using Gemini.
+            const listingDetails = `Title: ${formData.title}. Description: ${formData.description}. Specs: ${formData.brand} ${formData.model} ${formData.voltage} ${formData.dimensions} ${formData.weight}. Category: ${formData.category}`;
+            
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            const response = await ai.models.generateContent({
+              model: "gemini-3-flash-preview",
+              contents: `A new industrial asset has been listed: "${listingDetails}". 
+              Analyze the following buyer requirements and identify which ones are a technical match (confidence > 70%).
               
-              const response = await fetch("/api/ai/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  contents: [{
-                    parts: [{ text: `A new industrial asset has been listed: "${listingDetails}". 
-                    Analyze the following buyer requirements and identify which ones are a technical match (confidence > 70%).
-                    
-                    Requirements:
-                    ${JSON.stringify(activeRequests.map(r => ({ id: r.id, title: r.title, specs: r.technicalSpecs })))}` }]
-                  }],
-                  responseSchema: {
-                    type: "object",
-                    properties: {
-                      matchedRequestIds: { type: "array", items: { type: "string" } }
-                    },
-                    required: ["matchedRequestIds"]
-                  }
-                })
-              });
+              Requirements:
+              ${JSON.stringify(activeRequests.map(r => ({ id: r.id, title: r.title, specs: r.technicalSpecs })))}
+              
+              Return JSON: matchedRequestIds (array of strings).`,
+              config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: Type.OBJECT,
+                  properties: {
+                    matchedRequestIds: { type: Type.ARRAY, items: { type: Type.STRING } }
+                  },
+                  required: ["matchedRequestIds"]
+                }
+              }
+            });
 
-              if (!response.ok) throw new Error("Smart Matching failed");
-              const { matchedRequestIds } = await response.json();
+            const { matchedRequestIds } = JSON.parse(response.text);
 
             for (const reqId of matchedRequestIds) {
               const reqData = activeRequests.find(r => r.id === reqId);
@@ -1106,64 +1079,11 @@ export default function CreateListing() {
                     <Globe className="h-4 w-4" />
                     <Label className="text-base font-black uppercase tracking-tight">Digital Product Passport (DPP)</Label>
                   </div>
-                  <Badge variant="outline" className="text-[8px] font-mono border-primary/30 text-primary uppercase">HiX 2.0 DPP Protocol</Badge>
+                  <Badge variant="outline" className="text-[8px] font-mono border-primary/30 text-primary uppercase">v4.0 Protocol</Badge>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  Upload technical documentation like Operating Manuals, Calibration Certificates, and Maintenance Logs. These files will be used to generate a secure <b>Digital Product Passport</b> for this asset.
+                  Upload technical documentation like Operating Manuals, Calibration Certificates, and Maintenance Logs. These files will be securely embedded in the asset's Technical Lineage node.
                 </p>
-
-                {passport && (
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 space-y-4">
-                    <div className="flex justify-between items-center">
-                      <p className="text-[10px] font-black uppercase tracking-tighter text-primary">Generated Asset Passport</p>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 text-[8px] uppercase font-bold"
-                        onClick={() => setPassport(null)}
-                      >
-                        Reset Passport
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[8px] uppercase opacity-60 font-bold">Manufacturer / Model</p>
-                        <p className="text-xs font-bold">{passport.manufacturer || 'Unknown'} / {passport.model || 'Unknown'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] uppercase opacity-60 font-bold">Circular Value Score</p>
-                        <div className="flex items-center gap-2">
-                           <p className="text-xs font-bold text-emerald-500">{passport.circularValueScore || 0}%</p>
-                           <div className="h-1.5 flex-1 bg-emerald-500/10 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500" style={{ width: `${passport.circularValueScore}%` }}></div>
-                           </div>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[8px] uppercase opacity-60 font-bold">Power / Voltage</p>
-                        <p className="text-xs font-bold">{passport.powerRating || 'N/A'} @ {passport.voltage || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] uppercase opacity-60 font-bold">Serial Number</p>
-                        <p className="text-xs font-mono">{passport.serialNumber || 'N/A'}</p>
-                      </div>
-                    </div>
-
-                    {passport.materialComposition && passport.materialComposition.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-[8px] uppercase opacity-60 font-bold">Material Composition</p>
-                        <div className="flex flex-wrap gap-2">
-                          {passport.materialComposition.map((m, i) => (
-                            <Badge key={i} variant="outline" className="text-[9px] border-primary/20 bg-background/50">
-                              {m.material}: {m.percentage}%
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
                 
                 <div className="grid gap-3">
                   {documents.map((doc, idx) => (
@@ -1179,21 +1099,23 @@ export default function CreateListing() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 px-2"
-                            onClick={() => handleExtractPassport(idx)}
-                            disabled={doc.isScanning}
-                          >
-                            {doc.isScanning ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <Sparkles className="h-3 w-3 mr-1" />
-                            )}
-                            Generate Passport
-                          </Button>
+                          {!doc.extractedData && (
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 text-[9px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 px-2"
+                              onClick={() => handleScanDocument(idx)}
+                              disabled={doc.isScanning}
+                            >
+                              {doc.isScanning ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <Sparkles className="h-3 w-3 mr-1" />
+                              )}
+                              AI Scan
+                            </Button>
+                          )}
                           <Button 
                             type="button" 
                             variant="ghost" 
@@ -1205,6 +1127,32 @@ export default function CreateListing() {
                           </Button>
                         </div>
                       </div>
+
+                      {doc.extractedData && (
+                        <div className="bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-lg space-y-2">
+                          <div className="flex items-center gap-1.5 text-emerald-500">
+                             <CheckCircle2 className="h-3 w-3" />
+                             <span className="text-[8px] font-black uppercase tracking-widest">Metadata Extracted</span>
+                          </div>
+                          <p className="text-[9px] text-muted-foreground leading-relaxed italic line-clamp-2">"{doc.extractedData.summary}"</p>
+                          {(doc.extractedData.calibrationDate || doc.extractedData.expiryDate) && (
+                            <div className="flex gap-4">
+                              {doc.extractedData.calibrationDate && (
+                                <div className="space-y-0.5">
+                                  <p className="text-[7px] font-bold uppercase opacity-40">Calibrated</p>
+                                  <p className="text-[9px] font-mono font-bold">{doc.extractedData.calibrationDate}</p>
+                                </div>
+                              )}
+                              {doc.extractedData.expiryDate && (
+                                <div className="space-y-0.5">
+                                  <p className="text-[7px] font-bold uppercase opacity-40">Expiry</p>
+                                  <p className="text-[9px] font-mono font-bold">{doc.extractedData.expiryDate}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                   
@@ -1212,12 +1160,12 @@ export default function CreateListing() {
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                       <FileUp className="h-5 w-5 text-primary" />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Link Passport Documents</span>
-                    <span className="text-[8px] text-muted-foreground mt-1">PDF or CAD Documentation (Max 10MB)</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Upload Technical Node</span>
+                    <span className="text-[8px] text-muted-foreground mt-1">PDF or CSV only (Max 10MB)</span>
                     <input 
                       type="file" 
                       className="hidden" 
-                      accept=".pdf,.csv,.dwg,.dxf" 
+                      accept=".pdf,.csv" 
                       multiple
                       onChange={handleDocumentUpload}
                     />
